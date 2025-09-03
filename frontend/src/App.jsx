@@ -1,30 +1,34 @@
-import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import Navbar from './components/Navbar'
-import Footer from './components/Footer'
-import Queue from './components/Queue'
-import TicketList from './components/TicketList'
-import TicketForm from './components/TicketForm'
-import TicketDetail from './components/TicketDetail'
-import './App.css'
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { useAuth } from './context/AuthContext.jsx';
+import Protected from './components/Protected.jsx';
+import Supervisor from './pages/Supervisor.jsx';
+import CustomerService from './pages/CustomerService.jsx';
+import Login from './features/auth/login.jsx';
 
-function App() {
-  return (
-    <Router>
-      <div className="App">
-        <Navbar />
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Queue />} />
-            <Route path="/tickets" element={<TicketList />} />
-            <Route path="/tickets/new" element={<TicketForm />} />
-            <Route path="/tickets/:id" element={<TicketDetail />} />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
-    </Router>
-  )
+
+export default function App() {
+const { user, loading } = useAuth();
+if (loading) return <div>Loading...</div>;
+return (
+<Routes>
+<Route path="/" element={!user ? <Login /> : <Navigate to={user.role === 'Supervisor' ? '/supervisor' : '/cs'} replace />} />
+<Route
+path="/supervisor/*"
+element={
+<Protected roles={["Supervisor"]}>
+<Supervisor />
+</Protected>
 }
-
-export default App
+/>
+<Route
+path="/cs/*"
+element={
+<Protected roles={["CustomerService", "Supervisor"]}>
+<CustomerService />
+</Protected>
+}
+/>
+<Route path="*" element={<Navigate to="/" replace />} />
+</Routes>
+);
+}
