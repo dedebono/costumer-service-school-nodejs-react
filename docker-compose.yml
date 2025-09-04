@@ -1,0 +1,27 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - JWT_SECRET=your-super-secret-jwt-key-here
+      - SUPERVISOR_USERNAME=administrator
+      - SUPERVISOR_PASSWORD=admin123
+      - SUPERVISOR_EMAIL=email@mail.com
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - VITE_API_BASE=http://localhost:3000
+    depends_on:
+      - backend

@@ -1,135 +1,178 @@
-# Customer Service App
+# Customer Service School - Node.js React
 
-A full-stack customer service queue and ticketing system built with React (frontend) and Node.js/Express (backend).
+A full-stack customer service application for schools, built with Node.js, Express, React, and SQLite. This application provides a platform for managing customer service tickets, with different roles for customer service staff and supervisors.
 
-## Features
-
-- Customer ticket submission and management
-- Queue system for handling customer requests
-- User authentication and authorization
-- Real-time updates
-- Responsive design
-
-## Tech Stack
-
-### Frontend
-- React 18
-- Vite
-- React Router DOM
-- Axios for API calls
-- Lucide React for icons
-- Date-fns for date handling
+## Technologies Used
 
 ### Backend
-- Node.js
-- Express.js
-- SQLite database
-- JWT for authentication
-- bcryptjs for password hashing
-- Swagger for API documentation
+*   **Node.js**: JavaScript runtime environment.
+*   **Express.js**: Web framework for Node.js.
+*   **SQLite**: SQL database engine.
+*   **jsonwebtoken (JWT)**: For generating and verifying access tokens for authentication.
+*   **bcrypt**: For hashing passwords.
+*   **Swagger UI Express**: For API documentation.
 
-## Project Status
+### Frontend
+*   **React**: JavaScript library for building user interfaces.
+*   **Vite**: Next-generation frontend tooling for fast development.
+*   **React Router**: For declarative routing in the React application.
+*   **Axios**: For making HTTP requests to the backend API.
+*   **date-fns**: For modern JavaScript date utility library.
+*   **lucide-react**: For beautiful and consistent icons.
 
-This project is under active development. See `backend/TODO.md` for current development tasks and progress.
+### Development & Deployment
+*   **Docker & Docker Compose**: For containerizing and running the application services.
+*   **Nodemon**: For automatically restarting the backend server during development.
 
-## Getting Started
+## File Structure
 
-### Prerequisites
-- Node.js (v16 or higher)
-- npm or yarn
-
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd customer-service-app
-   ```
-
-2. Install backend dependencies:
-   ```bash
-   cd backend
-   npm install
-   ```
-
-3. Install frontend dependencies:
-   ```bash
-   cd ../frontend
-   npm install
-   ```
-
-4. Set up environment variables:
-   Create a `.env` file in the backend directory with:
-   ```
-   PORT=3001
-   JWT_SECRET=your-secret-key
-   DATABASE_URL=./customer_service.db
-   ```
-
-5. Initialize the database:
-   ```bash
-   cd backend
-   npm run init-db  # if available, or run schema.sql manually
-   ```
-
-### Running the Application
-
-1. Start the backend server:
-   ```bash
-   cd backend
-   npm run dev
-   ```
-
-2. Start the frontend development server:
-   ```bash
-   cd frontend
-   npm run dev
-   ```
-
-3. Open your browser and navigate to `http://localhost:5173`
-
-## API Documentation
-
-Once the backend is running, visit `http://localhost:3001/api-docs` for Swagger API documentation.
-
-## Project Structure
+The project is organized as a monorepo with two main directories: `backend` and `frontend`.
 
 ```
-customer-service-app/
+costumer-service-school-nodejs-react/
 ├── backend/
-│   ├── server.js
-│   ├── auth.js
-│   ├── db.js
-│   ├── schema.sql
-│   ├── package.json
-│   └── customer_service.db
+│   ├── src/
+│   │   ├── models/       # Database models and db connection
+│   │   ├── routes/       # API route definitions
+│   │   └── middleware/   # Express middleware (e.g., auth)
+│   ├── scripts/        # Scripts for database seeding/migration
+│   ├── Dockerfile      # Docker instructions for the backend
+│   ├── server.js       # Main entry point for the backend server
+│   └── package.json    # Backend dependencies and scripts
+│
 ├── frontend/
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── Navbar.jsx
-│   │   │   ├── Footer.jsx
-│   │   │   ├── Queue.jsx
-│   │   │   ├── TicketForm.jsx
-│   │   │   ├── TicketList.jsx
-│   │   │   └── TicketDetail.jsx
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── api.js
-│   ├── index.html
-│   ├── vite.config.js
-│   └── package.json
-├── README.md
-└── .gitignore
+│   │   ├── components/   # Reusable React components
+│   │   ├── context/      # React context for global state (e.g., AuthContext)
+│   │   ├── features/     # Components related to specific features (auth, tickets)
+│   │   ├── pages/        # Top-level page components
+│   │   ├── lib/          # Utility functions and API helpers
+│   │   ├── App.jsx       # Main application component with routing
+│   │   └── main.jsx      # Entry point for the React application
+│   ├── Dockerfile      # Docker instructions for the frontend
+│   └── package.json    # Frontend dependencies and scripts
+│
+├── docker-compose.yml  # Docker Compose configuration to run both services
+└── README.md           # You are here!
 ```
 
-## Contributing
+## Frontend Flow
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+The frontend application provides a user interface for interacting with the customer service system.
 
-## License
+1.  **Authentication**:
+    *   Users are prompted to log in.
+    *   Upon successful login, a JWT token is stored, and the user's information (including their role) is saved in the `AuthContext`.
+    *   This context is used to protect routes and display UI elements appropriate for the user's role.
 
-This project is licensed under the MIT License.
+2.  **User Roles & Features**:
+    *   **Customer Service (`cs`)**:
+        *   Can view the ticket queue.
+        *   Can create new tickets for customers.
+        *   Can view and update ticket details.
+        *   Can search for existing tickets.
+    *   **Supervisor (`supervisor`)**:
+        *   Has all the permissions of a Customer Service user.
+        *   Can create new user accounts (both `cs` and `supervisor`).
+
+## Setup and Running the Application
+
+You can run this project in two ways: using Docker (recommended for ease of use) or setting it up manually on your local machine.
+
+### 1. Using Docker (Recommended)
+
+This method uses Docker Compose to build and run the frontend and backend services in isolated containers.
+
+**Prerequisites**:
+*   [Docker](https://docs.docker.com/get-docker/)
+*   [Docker Compose](https://docs.docker.com/compose/install/)
+
+**Instructions**:
+1.  Clone the repository:
+    ```sh
+    git clone https://github.com/your_username_/costumer-service-school-nodejs-react.git
+    cd costumer-service-school-nodejs-react
+    ```
+2.  Run the application using Docker Compose:
+    ```sh
+    docker-compose up --build
+    ```
+    The `--build` flag ensures the Docker images are rebuilt if you've made changes to the code.
+
+3.  Access the application:
+    *   **Frontend**: `http://localhost:5173`
+    *   **Backend API**: `http://localhost:3000`
+
+### 2. Local Manual Setup
+
+This method involves running the frontend and backend servers directly on your machine.
+
+**Prerequisites**:
+*   [Node.js](https://nodejs.org/) (v16 or later recommended)
+*   [npm](https://www.npmjs.com/) (usually comes with Node.js)
+
+**Instructions**:
+
+1.  **Clone the repository** (if you haven't already):
+    ```sh
+    git clone https://github.com/your_username_/costumer-service-school-nodejs-react.git
+    cd costumer-service-school-nodejs-react
+    ```
+
+2.  **Setup the Backend**:
+    *   Navigate to the backend directory and install dependencies:
+        ```sh
+        cd backend
+        npm install
+        ```
+    *   Create a `.env` file in the `backend` directory. See the `Environment Variables` section below for the required content.
+    *   Start the backend development server:
+        ```sh
+        npm run dev
+        ```
+    The backend will be running at `http://localhost:3000`.
+
+3.  **Setup the Frontend**:
+    *   Open a **new terminal** and navigate to the frontend directory:
+        ```sh
+        cd frontend
+        npm install
+        ```
+    *   Create a `.env` file in the `frontend` directory. See the `Environment Variables` section below for the required content.
+    *   Start the frontend development server:
+        ```sh
+        npm run dev
+        ```
+    The frontend will be running at `http://localhost:5173`.
+
+## Environment Variables
+
+The application uses environment variables for configuration.
+
+### For Docker Setup
+
+The variables are already defined in the `docker-compose.yml` file. You can modify them there if needed.
+
+*   `JWT_SECRET`: Secret key for signing JWT tokens.
+*   `SUPERVISOR_USERNAME`: Username for the default supervisor account.
+*   `SUPERVISOR_PASSWORD`: Password for the default supervisor account.
+*   `SUPERVISOR_EMAIL`: Email for the default supervisor account.
+*   `VITE_API_BASE`: Base URL for the backend API (used by the frontend).
+
+### For Manual Setup
+
+For a manual setup, you need to create `.env` files in the respective directories.
+
+1.  **Backend (`backend/.env`)**:
+    Create this file and add the following content. Replace the placeholder values with your own secrets.
+    ```env
+    JWT_SECRET=your_super_secret_jwt_key
+    SUPERVISOR_USERNAME=admin
+    SUPERVISOR_PASSWORD=adminpassword
+    SUPERVISOR_EMAIL=admin@example.com
+    ```
+
+2.  **Frontend (`frontend/.env`)**:
+    Create this file and add the following content. This tells the frontend where to find the backend API.
+    ```env
+    VITE_API_BASE=http://localhost:3000
