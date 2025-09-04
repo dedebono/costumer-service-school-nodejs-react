@@ -10,11 +10,10 @@ export default function Supervisor() {
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: 16 }}>
       <Header user={user} onLogout={logout} />
-      <TabBar tabs={{ tickets: 'Fetch All Tickets', createUser: 'Create CS User', search: 'Search & Filters', delete: 'Delete Tickets' }} value={tab} onChange={setTab} />
+      <TabBar tabs={{ tickets: 'Fetch All Tickets', createUser: 'Create Costumer Service account', search: 'Search & Filters'}} value={tab} onChange={setTab} />
       {tab === 'tickets' && <TicketsTable supervisor />}
       {tab === 'createUser' && <CreateUserForm />}
       {tab === 'search' && <TicketSearch />}
-      {tab === 'delete' && <TicketsTable supervisor />}
     </div>
   );
 }

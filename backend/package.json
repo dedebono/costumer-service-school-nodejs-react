@@ -2,7 +2,7 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "seed:supervisor": "node scripts/delete-null-id.js"
+    "seed:supervisor": "node scripts/seed-supervisor.js"
   },
 "dependencies": {
 "bcrypt": "^5",

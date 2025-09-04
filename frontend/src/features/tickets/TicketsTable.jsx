@@ -77,10 +77,52 @@ export default function TicketsTable({ supervisor }) {
     }
   }
 
+function exportToCSV() {
+  const header = ['ID', 'Title', 'Customer Name', 'Phone', 'Description', 'Priority', 'Status', 'Created By', 'Created At'];
+
+  const rows = items.map(item => [
+    escapeCSV(item.id),
+    escapeCSV(item.title),
+    escapeCSV(item.customer_name),
+    escapeCSV(item.customer_phone),
+    escapeCSV(item.description),
+    escapeCSV(item.priority),
+    escapeCSV(item.status),
+    escapeCSV(item.created_by_username ?? item.created_by),
+    escapeCSV(fmtDate(item.created_at)),
+  ]);
+
+  const csvContent = [header, ...rows].map(row => row.join(',')).join('\n');
+
+  // Create a Blob and trigger the download
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  if (link.download !== undefined) {  // Feature detection for browsers that support download
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'tickets.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+}
+
+function escapeCSV(value) {
+  if (value == null) return '';
+  let str = value.toString();
+  // Escape double quotes by doubling them
+  str = str.replace(/"/g, '""');
+  // Wrap the value in double quotes if it contains a comma or newline
+  if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+    str = `"${str}"`;
+  }
+  return str;
+}
+
   const COLS = supervisor ? 10 : 9;
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
         <input
           value={q}
@@ -111,20 +153,25 @@ export default function TicketsTable({ supervisor }) {
         >
           Apply
         </button>
+        <button
+  onClick={exportToCSV}
+  style={btn}
+>
+  Export to CSV
+</button>
       </div>
 
       <div style={{ border: '1px solid #eee', borderRadius: 8, overflow: 'auto' }}>
-        <table style={{ width: '100%', fontSize: 14, minWidth: 980 }}>
+        <table style={{ width: '100%', fontSize: 12, minWidth: 980 }}>
           <thead style={{ background: '#f3f4f6', textAlign: 'left' }}>
             <tr>
               <th style={th}>ID</th>
               <th style={th}>Title</th>
-              <th style={th}>Description</th>
-              <th style={th}>Priority</th>
-              <th style={th}>Status</th>
               <th style={th}>Customer Name</th>
               <th style={th}>Phone</th>
-              <th style={th}>Created By</th>
+              <th style={th}>Description</th>
+              <th style={th}>Priority</th>
+              <th style={th}>Status</th>              <th style={th}>Created By</th>
               <th style={th}>Created At</th>
               {supervisor && <th style={th}>Actions</th>}
             </tr>
@@ -147,8 +194,10 @@ export default function TicketsTable({ supervisor }) {
                 <tr key={t.id ?? `row-${i}`} style={{ borderTop: '1px solid #eee' }}>
                   <td style={td}>{t.id ?? '-'}</td>
                   <td style={td}>{t.title}</td>
-                  <td style={{ ...td, maxWidth: 360 }} title={t.description || ''}>
-                    {truncate(t.description, 120)}
+                  <td style={td}>{t.customer_name || '-'}</td>
+                  <td style={td}>{t.customer_phone || '-'}</td>
+                  <td style={{ ...td, maxWidth: 360, overflow:'auto', whiteSpace: 'normal', wordWrap: 'break-word' }} title={t.description || ''}>
+                    {t.description}
                   </td>
                   <td style={td}>{t.priority}</td>
                   <td style={td}>
@@ -166,8 +215,6 @@ export default function TicketsTable({ supervisor }) {
                       {saving[t.id] && <span style={{ fontSize: 12, color: '#666' }}>saving…</span>}
                     </div>
                   </td>
-                  <td style={td}>{t.customer_name || '-'}</td>
-                  <td style={td}>{t.customer_phone || '-'}</td>
                   <td style={td}>{t.created_by_username ?? t.created_by ?? '-'}</td>
                   <td style={td}>{fmtDate(t.created_at)}</td>
                   {supervisor && (

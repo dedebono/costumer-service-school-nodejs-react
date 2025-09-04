@@ -153,6 +153,7 @@ export default function TicketCreate() {
       )}
 
       {/* Ticket fields */}
+      <div style={{ display: 'grid', gap: 8 }}>
       <label>Title</label>
       <input style={inp} value={title} onChange={(e) => setTitle(e.target.value)} />
       <label>Description</label>
@@ -161,6 +162,7 @@ export default function TicketCreate() {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
+      <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
       <label>Priority</label>
       <select style={inp} value={priority} onChange={(e) => setPriority(e.target.value)}>
         <option>low</option>
@@ -179,6 +181,8 @@ export default function TicketCreate() {
 
       <button style={btnPrimary}>Submit</button>
       {msg && <p style={{ marginTop: 8, fontSize: 14 }}>{msg}</p>}
+      </div>
+      </div>
     </form>
   );
 }
