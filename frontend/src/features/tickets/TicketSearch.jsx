@@ -1,201 +1,552 @@
 // src/features/tickets/TicketSearch.jsx
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import Swal from 'sweetalert2';
 import { api } from '../../lib/api.js';
 import { qs, fmtDate } from '../../lib/utils.js';
 
+const repeatCountRegex = /^(?:Follow\s*up\s*:?\s*)+/i;
+const numberedPrefixRegex = /^Follow\s*up\s*(\d+)\s*[xX]\s*:\s*/i;
+
+function computeFollowUpTitle(baseTitleRaw /*, customerName, customerPhone */) {
+  let baseTitle = (baseTitleRaw || '').trim();
+  let count = 0;
+
+  // Case A: "Follow up 3x:" or "Follow up 3X:"
+  const mNum = baseTitle.match(numberedPrefixRegex);
+  if (mNum) {
+    count = parseInt(mNum[1], 10) || 0;
+    baseTitle = baseTitle.replace(numberedPrefixRegex, '').trim();
+  } else {
+    // Case B: "Follow up: Follow up: Title"
+    const mRep = baseTitle.match(repeatCountRegex);
+    if (mRep) {
+      const prefix = mRep[0];
+      count = (prefix.match(/Follow/gi) || []).length;
+      baseTitle = baseTitle.replace(repeatCountRegex, '').trim();
+    }
+  }
+
+  const next = count + 1;
+  // REQUIRED format: uppercase X, no space before colon
+  return `Follow up ${next}X: ${baseTitle}`;
+}
+
+const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val || '');
+
+/* ---------- Main Component ---------- */
 export default function TicketSearch() {
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [showFollowUp, setShowFollowUp] = useState(false);
 
-  async function doSearch() {
-    // Backend must support q searching against customers.name / customers.phone (already added in model).
-    const q = [name, phone].filter(Boolean).join(' ');
+  // modal for follow-up
+  const [followUpOpen, setFollowUpOpen] = useState(false);
+
+  const [notice, setNotice] = useState('');
+  const isValidPhone = (val) => /^\d{12}$/.test(val || '');
+
+  function phoneKeyGuard(e) {
+  const k = e.key;
+
+  if (k === 'Enter') return;
+
+  // allow navigation/edit keys
+  const allowed = ['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End'];
+  if (allowed.includes(k)) return;
+
+  if (/^\d$/.test(k)) {
+    if ((e.target.value || '').length >= 12) e.preventDefault();
+    return;
+  }
+
+  e.preventDefault();
+}
+
+  const onPhoneChange = (e) => {
+    const digits = (e.target.value || '').replace(/\D/g, '').slice(0, 12);
+    setPhone(digits);
+  };
+
+async function refreshTickets({ preserveSelection = true, preserveModal = true } = {}) {
+  const nameQ  = (name || '').trim();
+  const emailQ = (email || '').trim().toLowerCase();
+  const phoneQ = (phone || '').trim();
+
+  // phone must be exactly 12 digits if provided
+  if (phoneQ && !isValidPhone(phoneQ)) {
+    await Swal.fire({
+      icon: 'error',
+      title: 'Invalid phone',
+      text: 'Phone must be numbers only and exactly 12 digits.',
+    });
+    return;
+  }
+
+  const q = [nameQ, emailQ, phoneQ].filter(Boolean).join(' ').trim();
+
+  try {
     const data = await api(`/api/tickets${qs({ q, page: 1, pageSize: 50 })}`);
-    setItems(data.data || []);
-    setSelected(null);
-    setShowFollowUp(false);
+    const list = data?.data || [];
+
+    setItems(list);
+    if (!preserveSelection) setSelected(null);
+    if (!preserveModal) setFollowUpOpen(false);
+    setNotice('');
+
+    if (list.length === 0) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Not found',
+        text: 'No tickets matched your search.',
+        confirmButtonText: 'OK',
+      });
+    }
+  } catch (e) {
+    const msg = e?.message || 'Unknown error';
+    setNotice(`Search failed: ${msg}`);
+    await Swal.fire({
+      icon: 'error',
+      title: 'Search error',
+      text: msg,
+    });
+  }
+}
+
+// prevent double submit per ticket
+const [closingId, setClosingId] = useState(null);
+
+async function handleCloseClick(t, e) {
+  e?.stopPropagation?.();
+  if (!t?.id) return;
+
+  const isClosed = (t.status || '').toLowerCase() === 'closed';
+  if (isClosed) {
+    await Swal.fire({ icon: 'info', title: 'Already closed', text: `Ticket ${t.id} is already closed.` });
+    return;
+  }
+
+  const res = await Swal.fire({
+    icon: 'warning',
+    title: 'Close this ticket?',
+    html: `<div style="text-align:left"><b>ID:</b> ${t.id}<br/><b>Title:</b> ${t.title || '-'}</div>`,
+    showCancelButton: true,
+    confirmButtonText: 'Yes, close it',
+    cancelButtonText: 'Cancel',
+  });
+  if (!res.isConfirmed) return;
+
+  try {
+    setClosingId(t.id);
+    const result = await closeOriginalTicket(t); // uses the in-scope function
+
+    if (result?.ok) {
+      await Swal.fire({ icon: 'success', title: 'Ticket closed', timer: 900, showConfirmButton: false });
+      // optional: hard refresh from server if you want to be 100% in sync
+      // await refreshTickets({ preserveSelection: true, preserveModal: true });
+    } else {
+      await Swal.fire({ icon: 'error', title: 'Failed to close', text: result?.error || 'Unknown error' });
+    }
+  } finally {
+    setClosingId(null);
+  }
+}
+
+function handleSearchEnter(e) {
+  // ignore IME composition (e.g., Japanese/Chinese input)
+  if (e.nativeEvent?.isComposing) return;
+  if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    e.preventDefault();
+    refreshTickets({ preserveSelection: false, preserveModal: false });
+  }
+}
+
+const grouped = useMemo(() => {
+    const map = new Map();
+    for (const t of items) {
+      const disp = t.customer_name?.trim() || '(No customer)';
+      const key = disp.toLowerCase();
+      if (!map.has(key)) map.set(key, { displayName: disp, items: [] });
+      map.get(key).items.push(t);
+    }
+    return Array.from(map.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [items]);
+
+  function openFollowUpModal(t) {
+    setSelected(t);
+    setFollowUpOpen(true);
+  }
+  function closeFollowUpModal() {
+    setFollowUpOpen(false);
+  }
+
+  function handleFollowUpClick(t) {
+    const isClosed = (t.status || '').toLowerCase() === 'closed';
+    if (isClosed) {
+      setNotice(`Ticket ${t.id ?? ''} is closed. You cannot create a follow-up.`);
+      return;
+    }
+    setNotice('');
+    openFollowUpModal(t);
+  }
+
+  /** Close a ticket (optimistic), same endpoint semantics as TicketsTable:
+   *    PATCH /api/tickets/:id/status  body: { status: 'closed' }
+   */
+  async function closeOriginalTicket(originalTicket) {
+    if (!originalTicket?.id) return { ok: false, error: 'Missing ticket id' };
+
+    const ticketId = originalTicket.id;
+    const prevStatus = originalTicket.status;
+    const nextStatus = 'closed';
+
+    // optimistic UI update in our local items and selected state
+    setItems((curr) =>
+      curr.map((it) => (it.id === ticketId ? { ...it, status: nextStatus } : it))
+    );
+    setSelected((curr) => (curr && curr.id === ticketId ? { ...curr, status: nextStatus } : curr));
+
+    try {
+      await api(`/api/tickets/${ticketId}/status`, {
+        method: 'PATCH',
+        body: { status: nextStatus },
+      });
+      return { ok: true };
+    } catch (e) {
+      // rollback on error
+      setItems((curr) =>
+        curr.map((it) => (it.id === ticketId ? { ...it, status: prevStatus } : it))
+      );
+      setSelected((curr) => (curr && curr.id === ticketId ? { ...curr, status: prevStatus } : curr));
+      setNotice(`Failed to close ticket ${ticketId}: ${e.message}`);
+      return { ok: false, error: e.message };
+    }
   }
 
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <div style={{ flex: 1 }}>
-          <label style={{ fontSize: 12 }}>Search by Name</label>
+    <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
+      <div style={{ display:'flex', flexDirection: 'row', gap: 12, alignItems: 'start', marginBottom: 8 }}>
+        <div style={{ display:'flex', flexDirection: 'column', gap: 6, flexGrow: 1 }}>
+          <label style={{ fontSize: 15, fontWeight:'600' }}>Search by Name</label>
           <input
-            style={inp}
+            style={{width: '60%', border: '1px solid #ddd', borderRadius: 8, padding: '8px 10px' }}
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Customer name"
+            onKeyDown={handleSearchEnter}
           />
-        </div>
-        <div style={{ flex: 1 }}>
-          <label style={{ fontSize: 12 }}>Search by Phone</label>
+        </div>  
+
+        <div style={{ display:'flex', flexDirection: 'column', gap: 6, flexGrow: 1 }}>
+          <label style={{ fontSize: 15, fontWeight:'600' }}>Search by Phone</label>
           <input
-            style={inp}
+            style={{width: '60%', border: '1px solid #ddd', borderRadius: 8, padding: '8px 10px' }}
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={onPhoneChange}             // keeps only digits & trims to 12
             placeholder="08xxxxxxxxxx"
+            inputMode="numeric"
+            maxLength={12}
+            onKeyDown={(e) => { phoneKeyGuard.call(null, e); handleSearchEnter(e); }}
           />
-        </div>
-        <button onClick={doSearch} style={btn}>
+       </div>
+      </div>
+
+      <div>
+        <button
+          onClick={() => refreshTickets({ preserveSelection: false, preserveModal: false })}
+          style={{ padding: '8px 12px', borderRadius: 8, background: '#111', color: '#fff', border: 'none', cursor: 'pointer' }}
+        >
           Search
         </button>
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: 12,
-        }}
-      >
-        {items.map((t, i) => (
-          <div
-            key={t.id ?? `ticket-${i}`}
-            style={{
-              border: '1px solid #eee',
-              borderRadius: 12,
-              padding: 12,
-              background: '#fff',
-              cursor: 'pointer',
-              boxShadow: selected?.id === t.id ? '0 0 0 2px #6366f1' : 'none',
-            }}
-            onClick={() => setSelected(t)}
-          >
-            <div style={{ fontWeight: 600 }}>{t.title}</div>
-            <div style={{ fontSize: 12, color: '#555' }}>
-              Status: {t.status} • Priority: {t.priority}
+      {notice && (
+        <div style={{ padding: '8px 12px', borderRadius: 8, background: '#fff7ed', border: '1px solid #fed7aa', color: '#9a3412' }}>
+          {notice}
+        </div>
+      )}
+
+      {/* GROUPED RESULTS */}
+      <div style={{ display: 'grid', gap: 16 }}>
+        {grouped.map((group) => (
+          <div key={group.displayName}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+              <h4 style={{ margin: 0 }}>{group.displayName}</h4>
+              <span style={{ fontSize: 12, color: '#777' }}>({group.items.length})</span>
             </div>
-            <div style={{ fontSize: 12 }}>
-              Customer: <b>{t.customer_name || '-'}</b>{' '}
-              {t.customer_phone ? `• ${t.customer_phone}` : ''}
-            </div>
-            <div style={{ fontSize: 12 }}>
-              Creator: {t.created_by_username ?? t.created_by ?? '-'}
-            </div>
-            <div style={{ fontSize: 11, color: '#666' }}>
-              {fmtDate(t.created_at)}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: 12,
+              }}
+            >
+              {group.items.map((t, i) => {
+                const isClosed = (t.status || '').toLowerCase() === 'closed';
+                return (
+                  <div
+                    key={t.id ?? `ticket-${group.displayName}-${i}`}
+                    style={{
+                      border: '1px solid #eee',
+                      borderRadius: 12,
+                      padding: 12,
+                      background: '#fff',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => setSelected(t)}
+                  >
+                    <div style={{ fontWeight: 600 }}>{t.title}</div>
+                    <div style={{ fontSize: 12, color: '#555' }}>
+                      Status: {t.status} • Priority: {t.priority}
+                    </div>
+                    <div style={{ fontSize: 12 }}>
+                      Customer: <b>{t.customer_name || '-'}</b>{' '}
+                      {t.customer_phone ? `• ${t.customer_phone}` : ''}
+                    </div>
+                    <div style={{ fontSize: 12 }}>
+                      Creator: {t.created_by_username ?? t.created_by ?? '-'}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#666' }}>
+                      {fmtDate(t.created_at)}
+                    </div>
+                    <div style={{ marginTop: 8 }}>
+                      <button
+                        onClick={() => handleFollowUpClick(t)}
+                        style={isClosed ? btnDisabled : btnPrimary}
+                        disabled={isClosed}
+                        title={isClosed ? 'This ticket is closed; follow-up is not allowed.' : 'Create a follow-up ticket'}
+                      >
+                        Follow Up → Create New Ticket
+                      </button> 
+                      <button
+                      onClick={(e) => handleCloseClick(t, e)}
+                      style={isClosed ? btnDisabled : btnDanger}
+                      disabled={isClosed}
+                      title={isClosed ? 'Already closed' : 'Mark this ticket as closed'}
+                    >
+                      Close Ticket
+                    </button>
+
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}
       </div>
 
-      {selected && (
-        <div
-          style={{
-            border: '1px solid #eee',
-            borderRadius: 12,
-            padding: 16,
-            background: '#fff',
-          }}
-        >
-          <h4 style={{ margin: 0, marginBottom: 6 }}>Ticket Details</h4>
-          <div style={{ fontSize: 12, color: '#555', marginBottom: 8 }}>
-            ID: {selected.id ?? '-'}
-          </div>
-          <div style={{ marginBottom: 6 }}>
-            <b>Customer:</b> {selected.customer_name || '-'}
-            {selected.customer_phone ? ` • ${selected.customer_phone}` : ''}
-          </div>
-          <div style={{ marginBottom: 6 }}>
-            <b>Title:</b> {selected.title}
-          </div>
-          <div style={{ marginBottom: 6 }}>
-            <b>Description:</b> {selected.description}
-          </div>
-          <div style={{ marginBottom: 6 }}>
-            Status: {selected.status} • Priority: {selected.priority}
-          </div>
-          <button onClick={() => setShowFollowUp(true)} style={btnPrimary}>
-            Follow Up → Create New Ticket
-          </button>
-        </div>
-      )}
-
-      {showFollowUp && selected && (
-        <FollowUpTicket baseTicket={selected} onClose={() => setShowFollowUp(false)} />
+      {/* FOLLOW-UP MODAL */}
+      {followUpOpen && selected && (
+        <Modal title="Create Follow-up Ticket" onClose={closeFollowUpModal}>
+          <FollowUpTicket
+            baseTicket={selected}
+            onClose={closeFollowUpModal}
+            onCloseOriginal={closeOriginalTicket}
+            onRefresh={() => refreshTickets({ preserveSelection: true, preserveModal: true })}
+          />
+        </Modal>
       )}
     </div>
   );
 }
 
-function FollowUpTicket({ baseTicket, onClose }) {
-  // Pre-fill with customer name & phone from the selected ticket
+/* ---------- Follow-up Modal Content ---------- */
+function FollowUpTicket({ baseTicket, onClose, onCloseOriginal, onRefresh }) {
   const customerName = baseTicket.customer_name || '';
   const customerPhone = baseTicket.customer_phone || '';
+  const refId = baseTicket.id ?? '-';
+  const isClosed = (baseTicket.status || '').toLowerCase() === 'closed';
 
-  const [title, setTitle] = useState(
-    `Follow up: ${baseTicket.title}${customerName ? ` — ${customerName}` : ''}`
-  );
-  const [description, setDescription] = useState(
-    `Ref Ticket: ${baseTicket.id ?? '-'}\nCustomer: ${customerName || '-'}\nPhone: ${
-      customerPhone || '-'
-    }\n\nDetails: `
-  );
+  // If somehow opened for a closed ticket, block creation.
+  if (isClosed) {
+    return (
+      <div style={{ display: 'grid', gap: 10 }}>
+        <div style={{ fontSize: 14, color: '#b91c1c', fontWeight: 600 }}>
+          This ticket is closed. You cannot create a follow-up.
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button type="button" onClick={onClose} style={btnPrimary}>Close</button>
+        </div>
+      </div>
+    );
+  }
+
+  // LOCKED prefix (read-only, cannot be changed)
+  const lockedPrefix = `Ref Ticket: ${refId}
+Customer: ${customerName || '-'}
+Phone: ${customerPhone || '-'}`;
+
+  // Agents can only add extra details; locked part cannot be edited.
+  const [details, setDetails] = useState('');
+
+  // Subject (base) the agent can adjust; final title is computed to "Follow up NX: ..."
+  const [baseTitle, setBaseTitle] = useState(baseTicket.title || '');
+  const finalTitle = computeFollowUpTitle(baseTitle /*, customerName, customerPhone */);
+
   const [priority, setPriority] = useState(baseTicket.priority || 'normal');
+
   const [msg, setMsg] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedTicket, setSubmittedTicket] = useState(null);
+  const [originalClosed, setOriginalClosed] = useState(null); // null=pending, true=ok, false=failed
 
   async function submit(e) {
     e.preventDefault();
+    if (isSubmitting || submittedTicket) return; // prevent repeat submit
+
+    // Extra safety: re-check status at submit time
+    if ((baseTicket.status || '').toLowerCase() === 'closed') {
+      setMsg('This ticket is closed. You cannot create a follow-up.');
+      return;
+    }
+
+    setIsSubmitting(true);
     setMsg('');
+
     try {
-      // Always include customerId if available; backend will link the ticket to this customer.
+      // Build description with locked prefix + optional extra details
+      const description =
+        details.trim().length > 0
+          ? `${lockedPrefix}\n\n${details.trim()}`
+          : lockedPrefix;
+
       const body = {
-        title,
+        title: finalTitle,
         description,
         priority,
-        // use existing customer from the selected ticket:
         ...(baseTicket.customer_id ? { customerId: baseTicket.customer_id } : {}),
       };
-      const data = await (await import('../../lib/api.js')).api('/api/tickets', {
-        method: 'POST',
-        body,
-      });
-      setMsg(`Success! New ticket ID: ${data.id || '(check list)'}`);
+
+      const data = await api('/api/tickets', { method: 'POST', body });
+      setSubmittedTicket(data);
+
+      // After creating a follow-up, CLOSE the original ticket
+      if (onCloseOriginal) {
+        const res = await onCloseOriginal(baseTicket);
+        setOriginalClosed(!!res?.ok);
+        if (!res?.ok && res?.error) {
+          setMsg(`Follow-up created, but failed to close original: ${res.error}`);
+        }
+      }
+
+      // 👉 Refresh the list so the new ticket appears, but keep the modal open
+      if (onRefresh) await onRefresh();
+
+      setIsSubmitting(false);
     } catch (e) {
+      setIsSubmitting(false);
       setMsg(`Error: ${e.message}`);
     }
   }
 
+  if (submittedTicket) {
+    return (
+      <div style={{ display: 'grid', gap: 8 }}>
+        <div style={{ fontSize: 14, color: '#16a34a', fontWeight: 600 }}>
+          ✅ Follow-up ticket created!
+        </div>
+        <div style={{ fontSize: 14 }}>
+          <b>ID:</b> {submittedTicket.id ?? '(check list)'}
+        </div>
+        <div style={{ fontSize: 14 }}>
+          <b>Title:</b> {submittedTicket.title || '-'}
+        </div>
+        {originalClosed === true && (
+          <div style={{ fontSize: 13, color: '#15803d' }}>
+            Original ticket has been <b>closed</b>.
+          </div>
+        )}
+        {originalClosed === false && (
+          <div style={{ fontSize: 13, color: '#b91c1c' }}>
+            Could not close the original ticket. Please update status manually.
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 8, marginTop: 8, justifyContent: 'flex-end' }}>
+          <button type="button" onClick={onClose} style={btnPrimary}>Close</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ border: '1px solid #eee', borderRadius: 12, padding: 16, background: '#fff' }}>
-      <h4 style={{ marginTop: 0 }}>Create Follow-up Ticket</h4>
-      {/* Read-only customer context */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 8, fontSize: 14 }}>
-        <div><b>Customer:</b> {customerName || '-'}</div>
-        <div><b>Phone:</b> {customerPhone || '-'}</div>
+    <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
+      {/* Read-only context */}
+      <label>Locked Info</label>
+      <textarea
+        style={{ ...inp, minHeight: 88, background: '#f9fafb', color: '#334155' }}
+        value={lockedPrefix}
+        readOnly
+      />
+
+      {/* Editable subject (base) */}
+      <label>Subject</label>
+      <input
+        style={inp}
+        value={baseTitle}
+        onChange={(e) => setBaseTitle(e.target.value)}
+        placeholder="Used title (without 'Follow up ...')"
+      />
+      <div style={{ fontSize: 12, color: '#64748b', marginTop: -4 }}>
+        Final title → <b>{finalTitle}</b>
       </div>
 
-      <form onSubmit={submit} style={{ display: 'grid', gap: 8 }}>
-        <label>Title</label>
-        <input style={inp} value={title} onChange={(e) => setTitle(e.target.value)} />
-        <label>Description</label>
-        <textarea
-          style={{ ...inp, minHeight: 120 }}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-        <label>Priority</label>
-        <select style={inp} value={priority} onChange={(e) => setPriority(e.target.value)}>
-          <option>low</option>
-          <option>normal</option>
-          <option>high</option>
-        </select>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button style={btnPrimary}>Submit</button>
-          <button type="button" onClick={onClose} style={btn}>
-            Close
-          </button>
+      {/* Extra details only */}
+      <label>Additional Details</label>
+      <textarea
+        style={{ ...inp, minHeight: 120 }}
+        value={details}
+        onChange={(e) => setDetails(e.target.value)}
+        placeholder="Add more context here (optional)"
+      />
+
+      <label>Priority</label>
+      <select style={inp} value={priority} onChange={(e) => setPriority(e.target.value)}>
+        <option>low</option>
+        <option>normal</option>
+        <option>high</option>
+      </select>
+
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button style={{ ...btnPrimary, opacity: isSubmitting ? 0.7 : 1 }} disabled={isSubmitting}>
+          {isSubmitting ? 'Submitting…' : 'Submit'}
+        </button>
+        <button type="button" onClick={onClose} style={btn}>Cancel</button>
+      </div>
+
+      {msg && <p style={{ fontSize: 13, color: msg.startsWith('Error') ? '#b91c1c' : '#374151' }}>{msg}</p>}
+    </form>
+  );
+}
+
+/* ---------- Simple Modal ---------- */
+function Modal({ title, children, onClose }) {
+  return (
+    <div style={modalBackdrop} role="dialog" aria-modal="true" aria-labelledby="modal-title" onClick={onClose}>
+      <div style={modalCard} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <h3 id="modal-title" style={{ margin: 0 }}>{title}</h3>
+          <button onClick={onClose} style={btn}>×</button>
         </div>
-        {msg && <p style={{ fontSize: 13 }}>{msg}</p>}
-      </form>
+        <div>{children}</div>
+      </div>
     </div>
   );
 }
 
+/* ---------- Styles ---------- */
 const inp = { border: '1px solid #ddd', borderRadius: 8, padding: '8px 10px' };
 const btn = { padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, background: '#fff', cursor: 'pointer' };
 const btnPrimary = { padding: '8px 12px', borderRadius: 8, background: '#111', color: '#fff', border: 'none', cursor: 'pointer' };
+const btnDisabled = { ...btnPrimary, background: '#9ca3af', cursor: 'not-allowed', margin:'10px' };
+const modalBackdrop = {
+  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 1000
+};
+const modalCard = {
+  background: '#fff', border: '1px solid #eee', borderRadius: 12, padding: 16,
+  width: 'min(560px, 100%)', boxShadow: '0 10px 30px rgba(0,0,0,0.15)'
+};
+const btnDanger = { padding: '8px 12px',margin:'10px', borderRadius: 8, background: '#b91c1c', color: '#fff', border: 'none', cursor: 'pointer' };
+

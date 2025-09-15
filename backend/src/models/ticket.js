@@ -57,8 +57,9 @@ function getAllTickets({ status, priority, q, sortBy = 'created_at', sortDir = '
     if (createdBy)  { where.push('t.created_by = ?');   params.push(createdBy); }
     if (customerId) { where.push('t.customer_id = ?');  params.push(customerId); }
     if (q) {
-      where.push('(t.title LIKE ? OR t.description LIKE ? OR c.name LIKE ? OR c.phone LIKE ?)');
-      params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+      const qNorm = String(q).toLowerCase();
+      where.push('(LOWER(t.title) LIKE ? OR LOWER(t.description) LIKE ? OR LOWER(c.name) LIKE ? OR LOWER(c.email) LIKE ? OR c.phone LIKE ?)');
+      params.push(`%${qNorm}%`, `%${qNorm}%`, `%${qNorm}%`, `%${qNorm}%`, `%${q}%`);
     }
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';

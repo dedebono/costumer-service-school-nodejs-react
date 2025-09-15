@@ -14,21 +14,44 @@ const {
 router.use(verifyToken);
 
 // IMPORTANT: put /search BEFORE /:id so it's not captured by :id
-router.get('/search', requireRole(['CustomerService', 'Supervisor']), async (req, res) => {
-  try {
-    const { name = '', phone = '', limit = '20', offset = '0' } = req.query;
-    if (!name && !phone) return res.json([]); // no filters → empty list
-    const rows = await searchCustomers({
-      name,
-      phone,
-      limit: Math.min(parseInt(limit, 10) || 20, 100),
-      offset: Math.max(parseInt(offset, 10) || 0, 0),
-    });
-    res.json(rows);
-  } catch (e) {
-    res.status(500).json({ error: 'Failed to search customers' });
+router.get(
+  '/search',
+  requireRole(['CustomerService', 'Supervisor']),
+  async (req, res) => {
+    try {
+      let { name = '', phone = '', email = '', limit = '20', offset = '0' } = req.query;
+
+      name  = String(name).trim();
+      phone = String(phone).trim();
+      email = String(email).trim().toLowerCase();
+
+      // no filters → empty list
+      if (!name && !phone && !email) return res.json([]);
+
+      // optional validation (matches your frontend rules)
+      if (phone && !/^\d{12}$/.test(phone)) {
+        return res.status(400).json({ error: 'Phone must be exactly 12 digits.' });
+      }
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ error: 'Invalid email.' });
+      }
+
+      const rows = await searchCustomers({
+        name,
+        phone,
+        email,
+        limit: Math.min(parseInt(limit, 10) || 20, 100),
+        offset: Math.max(parseInt(offset, 10) || 0, 0),
+      });
+
+      res.json(rows);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'Failed to search customers' });
+    }
   }
-});
+);
+
 
 // GET /api/customers
 router.get('/', requireRole(['CustomerService', 'Supervisor']), async (_req, res) => {
@@ -40,16 +63,33 @@ router.get('/', requireRole(['CustomerService', 'Supervisor']), async (_req, res
   }
 });
 
-// POST /api/customers
-router.post('/', requireRole(['CustomerService', 'Supervisor']), async (req, res) => {
+router.post('/', requireRole(['CustomerService','Supervisor']), async (req, res) => {
   try {
-    const { name, email, phone } = req.body;
+    const name  = String(req.body.name || '').trim();
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const phone = String(req.body.phone || '').trim();
+
+    if (!name || !email) return res.status(400).json({ error: 'Name and email are required.' });
+
+    // Optional: pre-check to give a nicer error (avoids relying on DB error message)
+    const existing = await searchCustomers({ email, limit: 1, offset: 0 });
+    if (existing && existing.length) {
+      return res.status(409).json({ error: 'Email already exists', customer: existing[0] });
+    }
+
     const customer = await createCustomer({ name, email, phone });
     res.status(201).json(customer);
+
   } catch (e) {
-    res.status(400).json({ error: e.message });
+    // Map SQLite duplicate to 409
+    if (e && (e.code === 'SQLITE_CONSTRAINT' || String(e.message).includes('UNIQUE constraint failed: customers.email'))) {
+      return res.status(409).json({ error: 'Email already exists' });
+    }
+    console.error(e);
+    res.status(400).json({ error: 'Failed to create customer' });
   }
 });
+
 
 // GET /api/customers/:id
 router.get('/:id', requireRole(['CustomerService', 'Supervisor']), async (req, res) => {

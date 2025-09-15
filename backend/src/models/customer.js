@@ -23,23 +23,36 @@ function createCustomer({ name, email, phone }) {
   });
 }
 
-function searchCustomers({ name, phone, limit = 20, offset = 0 } = {}) {
+// src/models/customer.js
+function searchCustomers({ name, phone, email, limit = 20, offset = 0 } = {}) {
   return new Promise((resolve, reject) => {
-    const where = [];
+    const clauses = [];
     const params = [];
-    if (name)  { where.push('c.name LIKE ?');  params.push(`%${name}%`); }
-    if (phone) { where.push('c.phone LIKE ?'); params.push(`%${phone}%`); }
 
-    if (!where.length) return resolve([]); // require at least one filter
+    // Normalize
+    const nameQ  = (name  || '').trim();
+    const phoneQ = (phone || '').trim();
+    const emailQ = (email || '').trim().toLowerCase();
 
-    const whereSql = 'WHERE ' + where.join(' AND ');
+    // Build OR filters
+    if (nameQ)  { clauses.push('LOWER(c.name) LIKE ?');          params.push(`%${nameQ.toLowerCase()}%`); }
+    if (phoneQ) { clauses.push('c.phone = ?');                    params.push(phoneQ); } // exact
+    if (emailQ) { clauses.push('c.email = ? COLLATE NOCASE');     params.push(emailQ); } // case-insensitive
+
+    if (!clauses.length) return resolve([]); // require at least one filter
+
+    // Clamp paging
+    const lim = Math.min(parseInt(limit, 10) || 20, 100);
+    const off = Math.max(parseInt(offset, 10) || 0, 0);
+
+    const whereSql = 'WHERE ' + clauses.join(' OR '); // <-- OR semantics
     const sql = `
       SELECT c.id, c.name, c.email, c.phone
       FROM customers c
       ${whereSql}
       ORDER BY c.name ASC
       LIMIT ? OFFSET ?`;
-    const listParams = [...params, limit, offset];
+    const listParams = [...params, lim, off];
 
     db.all(sql, listParams, (err, rows) => (err ? reject(err) : resolve(rows)));
   });
