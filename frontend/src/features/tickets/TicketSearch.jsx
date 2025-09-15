@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react';
 import Swal from 'sweetalert2';
 import { api } from '../../lib/api.js';
 import { qs, fmtDate } from '../../lib/utils.js';
+import TicketDetails from './TicketDetails.jsx';
 
 const repeatCountRegex = /^(?:Follow\s*up\s*:?\s*)+/i;
 const numberedPrefixRegex = /^Follow\s*up\s*(\d+)\s*[xX]\s*:\s*/i;
@@ -11,13 +12,11 @@ function computeFollowUpTitle(baseTitleRaw /*, customerName, customerPhone */) {
   let baseTitle = (baseTitleRaw || '').trim();
   let count = 0;
 
-  // Case A: "Follow up 3x:" or "Follow up 3X:"
   const mNum = baseTitle.match(numberedPrefixRegex);
   if (mNum) {
     count = parseInt(mNum[1], 10) || 0;
     baseTitle = baseTitle.replace(numberedPrefixRegex, '').trim();
   } else {
-    // Case B: "Follow up: Follow up: Title"
     const mRep = baseTitle.match(repeatCountRegex);
     if (mRep) {
       const prefix = mRep[0];
@@ -25,144 +24,140 @@ function computeFollowUpTitle(baseTitleRaw /*, customerName, customerPhone */) {
       baseTitle = baseTitle.replace(repeatCountRegex, '').trim();
     }
   }
-
   const next = count + 1;
-  // REQUIRED format: uppercase X, no space before colon
   return `Follow up ${next}X: ${baseTitle}`;
 }
 
 const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val || '');
 
-/* ---------- Main Component ---------- */
 export default function TicketSearch() {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(''); // currently not shown/used, but kept if you re-enable email search
   const [phone, setPhone] = useState('');
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState(null);
 
-  // modal for follow-up
+  // follow-up modal
   const [followUpOpen, setFollowUpOpen] = useState(false);
+
+  // details modal (FIX: state must be inside component)
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  function openDetails(t) {
+    setSelected(t);
+    setDetailsOpen(true);
+  }
+  function closeDetails() {
+    setDetailsOpen(false);
+  }
 
   const [notice, setNotice] = useState('');
   const isValidPhone = (val) => /^\d{12}$/.test(val || '');
 
   function phoneKeyGuard(e) {
-  const k = e.key;
-
-  if (k === 'Enter') return;
-
-  // allow navigation/edit keys
-  const allowed = ['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End'];
-  if (allowed.includes(k)) return;
-
-  if (/^\d$/.test(k)) {
-    if ((e.target.value || '').length >= 12) e.preventDefault();
-    return;
+    const k = e.key;
+    if (k === 'Enter') return;
+    const allowed = ['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End'];
+    if (allowed.includes(k)) return;
+    if (/^\d$/.test(k)) {
+      if ((e.target.value || '').length >= 12) e.preventDefault();
+      return;
+    }
+    e.preventDefault();
   }
-
-  e.preventDefault();
-}
 
   const onPhoneChange = (e) => {
     const digits = (e.target.value || '').replace(/\D/g, '').slice(0, 12);
     setPhone(digits);
   };
 
-async function refreshTickets({ preserveSelection = true, preserveModal = true } = {}) {
-  const nameQ  = (name || '').trim();
-  const emailQ = (email || '').trim().toLowerCase();
-  const phoneQ = (phone || '').trim();
+  async function refreshTickets({ preserveSelection = true, preserveModal = true } = {}) {
+    const nameQ  = (name || '').trim();
+    const emailQ = (email || '').trim().toLowerCase();
+    const phoneQ = (phone || '').trim();
 
-  // phone must be exactly 12 digits if provided
-  if (phoneQ && !isValidPhone(phoneQ)) {
-    await Swal.fire({
-      icon: 'error',
-      title: 'Invalid phone',
-      text: 'Phone must be numbers only and exactly 12 digits.',
-    });
-    return;
-  }
-
-  const q = [nameQ, emailQ, phoneQ].filter(Boolean).join(' ').trim();
-
-  try {
-    const data = await api(`/api/tickets${qs({ q, page: 1, pageSize: 50 })}`);
-    const list = data?.data || [];
-
-    setItems(list);
-    if (!preserveSelection) setSelected(null);
-    if (!preserveModal) setFollowUpOpen(false);
-    setNotice('');
-
-    if (list.length === 0) {
+    if (phoneQ && !isValidPhone(phoneQ)) {
       await Swal.fire({
-        icon: 'warning',
-        title: 'Not found',
-        text: 'No tickets matched your search.',
-        confirmButtonText: 'OK',
+        icon: 'error',
+        title: 'Invalid phone',
+        text: 'Phone must be numbers only and exactly 12 digits.',
       });
+      return;
     }
-  } catch (e) {
-    const msg = e?.message || 'Unknown error';
-    setNotice(`Search failed: ${msg}`);
-    await Swal.fire({
-      icon: 'error',
-      title: 'Search error',
-      text: msg,
+
+    const q = [nameQ, emailQ, phoneQ].filter(Boolean).join(' ').trim();
+
+    try {
+      const data = await api(`/api/tickets${qs({ q, page: 1, pageSize: 50 })}`);
+      const list = data?.data || [];
+
+      setItems(list);
+      if (!preserveSelection) setSelected(null);
+      if (!preserveModal) {
+        setFollowUpOpen(false);
+        setDetailsOpen(false);
+      }
+      setNotice('');
+
+      if (list.length === 0) {
+        await Swal.fire({
+          icon: 'warning',
+          title: 'Not found',
+          text: 'No tickets matched your search.',
+          confirmButtonText: 'OK',
+        });
+      }
+    } catch (e) {
+      const msg = e?.message || 'Unknown error';
+      setNotice(`Search failed: ${msg}`);
+      await Swal.fire({ icon: 'error', title: 'Search error', text: msg });
+    }
+  }
+
+  // prevent double submit per ticket
+  const [closingId, setClosingId] = useState(null);
+
+  async function handleCloseClick(t, e) {
+    e?.stopPropagation?.();
+    if (!t?.id) return;
+
+    const isClosed = (t.status || '').toLowerCase() === 'closed';
+    if (isClosed) {
+      await Swal.fire({ icon: 'info', title: 'Already closed', text: `Ticket ${t.id} is already closed.` });
+      return;
+    }
+
+    const res = await Swal.fire({
+      icon: 'warning',
+      title: 'Close this ticket?',
+      html: `<div style="text-align:left"><b>ID:</b> ${t.id}<br/><b>Title:</b> ${t.title || '-'}</div>`,
+      showCancelButton: true,
+      confirmButtonText: 'Yes, close it',
+      cancelButtonText: 'Cancel',
     });
-  }
-}
+    if (!res.isConfirmed) return;
 
-// prevent double submit per ticket
-const [closingId, setClosingId] = useState(null);
-
-async function handleCloseClick(t, e) {
-  e?.stopPropagation?.();
-  if (!t?.id) return;
-
-  const isClosed = (t.status || '').toLowerCase() === 'closed';
-  if (isClosed) {
-    await Swal.fire({ icon: 'info', title: 'Already closed', text: `Ticket ${t.id} is already closed.` });
-    return;
-  }
-
-  const res = await Swal.fire({
-    icon: 'warning',
-    title: 'Close this ticket?',
-    html: `<div style="text-align:left"><b>ID:</b> ${t.id}<br/><b>Title:</b> ${t.title || '-'}</div>`,
-    showCancelButton: true,
-    confirmButtonText: 'Yes, close it',
-    cancelButtonText: 'Cancel',
-  });
-  if (!res.isConfirmed) return;
-
-  try {
-    setClosingId(t.id);
-    const result = await closeOriginalTicket(t); // uses the in-scope function
-
-    if (result?.ok) {
-      await Swal.fire({ icon: 'success', title: 'Ticket closed', timer: 900, showConfirmButton: false });
-      // optional: hard refresh from server if you want to be 100% in sync
-      // await refreshTickets({ preserveSelection: true, preserveModal: true });
-    } else {
-      await Swal.fire({ icon: 'error', title: 'Failed to close', text: result?.error || 'Unknown error' });
+    try {
+      setClosingId(t.id);
+      const result = await closeOriginalTicket(t);
+      if (result?.ok) {
+        await Swal.fire({ icon: 'success', title: 'Ticket closed', timer: 900, showConfirmButton: false });
+      } else {
+        await Swal.fire({ icon: 'error', title: 'Failed to close', text: result?.error || 'Unknown error' });
+      }
+    } finally {
+      setClosingId(null);
     }
-  } finally {
-    setClosingId(null);
   }
-}
 
-function handleSearchEnter(e) {
-  // ignore IME composition (e.g., Japanese/Chinese input)
-  if (e.nativeEvent?.isComposing) return;
-  if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
-    e.preventDefault();
-    refreshTickets({ preserveSelection: false, preserveModal: false });
+  function handleSearchEnter(e) {
+    if (e.nativeEvent?.isComposing) return;
+    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      e.preventDefault();
+      refreshTickets({ preserveSelection: false, preserveModal: false });
+    }
   }
-}
 
-const grouped = useMemo(() => {
+  const grouped = useMemo(() => {
     const map = new Map();
     for (const t of items) {
       const disp = t.customer_name?.trim() || '(No customer)';
@@ -191,9 +186,6 @@ const grouped = useMemo(() => {
     openFollowUpModal(t);
   }
 
-  /** Close a ticket (optimistic), same endpoint semantics as TicketsTable:
-   *    PATCH /api/tickets/:id/status  body: { status: 'closed' }
-   */
   async function closeOriginalTicket(originalTicket) {
     if (!originalTicket?.id) return { ok: false, error: 'Missing ticket id' };
 
@@ -201,7 +193,7 @@ const grouped = useMemo(() => {
     const prevStatus = originalTicket.status;
     const nextStatus = 'closed';
 
-    // optimistic UI update in our local items and selected state
+    // optimistic UI
     setItems((curr) =>
       curr.map((it) => (it.id === ticketId ? { ...it, status: nextStatus } : it))
     );
@@ -214,7 +206,7 @@ const grouped = useMemo(() => {
       });
       return { ok: true };
     } catch (e) {
-      // rollback on error
+      // rollback
       setItems((curr) =>
         curr.map((it) => (it.id === ticketId ? { ...it, status: prevStatus } : it))
       );
@@ -236,20 +228,20 @@ const grouped = useMemo(() => {
             placeholder="Customer name"
             onKeyDown={handleSearchEnter}
           />
-        </div>  
+        </div>
 
         <div style={{ display:'flex', flexDirection: 'column', gap: 6, flexGrow: 1 }}>
           <label style={{ fontSize: 15, fontWeight:'600' }}>Search by Phone</label>
           <input
             style={{width: '60%', border: '1px solid #ddd', borderRadius: 8, padding: '8px 10px' }}
             value={phone}
-            onChange={onPhoneChange}             // keeps only digits & trims to 12
+            onChange={onPhoneChange}
             placeholder="08xxxxxxxxxx"
             inputMode="numeric"
             maxLength={12}
             onKeyDown={(e) => { phoneKeyGuard.call(null, e); handleSearchEnter(e); }}
           />
-       </div>
+        </div>
       </div>
 
       <div>
@@ -294,7 +286,8 @@ const grouped = useMemo(() => {
                       background: '#fff',
                       cursor: 'pointer',
                     }}
-                    onClick={() => setSelected(t)}
+                    // FIX: clicking the card opens details
+                    onClick={() => openDetails(t)}
                   >
                     <div style={{ fontWeight: 600 }}>{t.title}</div>
                     <div style={{ fontSize: 12, color: '#555' }}>
@@ -312,22 +305,21 @@ const grouped = useMemo(() => {
                     </div>
                     <div style={{ marginTop: 8 }}>
                       <button
-                        onClick={() => handleFollowUpClick(t)}
+                        onClick={(e) => { e.stopPropagation(); handleFollowUpClick(t); }}
                         style={isClosed ? btnDisabled : btnPrimary}
                         disabled={isClosed}
                         title={isClosed ? 'This ticket is closed; follow-up is not allowed.' : 'Create a follow-up ticket'}
                       >
                         Follow Up → Create New Ticket
-                      </button> 
+                      </button>
                       <button
-                      onClick={(e) => handleCloseClick(t, e)}
-                      style={isClosed ? btnDisabled : btnDanger}
-                      disabled={isClosed}
-                      title={isClosed ? 'Already closed' : 'Mark this ticket as closed'}
-                    >
-                      Close Ticket
-                    </button>
-
+                        onClick={(e) => handleCloseClick(t, e)}
+                        style={isClosed ? btnDisabled : btnDanger}
+                        disabled={isClosed || closingId === t.id}
+                        title={isClosed ? 'Already closed' : 'Mark this ticket as closed'}
+                      >
+                        {closingId === t.id ? 'Closing…' : 'Close Ticket'}
+                      </button>
                     </div>
                   </div>
                 );
@@ -336,6 +328,28 @@ const grouped = useMemo(() => {
           </div>
         ))}
       </div>
+
+      {/* TICKET DETAILS MODAL */}
+      {detailsOpen && selected && (
+        <Modal title="Ticket Details" onClose={closeDetails}>
+          <TicketDetails
+            ticketId={selected.id}
+            initialTicket={selected}
+            onClose={closeDetails}
+            onFollowUp={() => {
+              closeDetails();
+              openFollowUpModal(selected);
+            }}
+            onCloseTicket={async (ticket) => {
+              const res = await closeOriginalTicket(ticket);
+              if (res?.ok) {
+                await refreshTickets({ preserveSelection: true, preserveModal: true });
+              }
+              return res;
+            }}
+          />
+        </Modal>
+      )}
 
       {/* FOLLOW-UP MODAL */}
       {followUpOpen && selected && (
@@ -359,7 +373,6 @@ function FollowUpTicket({ baseTicket, onClose, onCloseOriginal, onRefresh }) {
   const refId = baseTicket.id ?? '-';
   const isClosed = (baseTicket.status || '').toLowerCase() === 'closed';
 
-  // If somehow opened for a closed ticket, block creation.
   if (isClosed) {
     return (
       <div style={{ display: 'grid', gap: 10 }}>
@@ -373,30 +386,23 @@ function FollowUpTicket({ baseTicket, onClose, onCloseOriginal, onRefresh }) {
     );
   }
 
-  // LOCKED prefix (read-only, cannot be changed)
   const lockedPrefix = `Ref Ticket: ${refId}
 Customer: ${customerName || '-'}
 Phone: ${customerPhone || '-'}`;
 
-  // Agents can only add extra details; locked part cannot be edited.
   const [details, setDetails] = useState('');
-
-  // Subject (base) the agent can adjust; final title is computed to "Follow up NX: ..."
   const [baseTitle, setBaseTitle] = useState(baseTicket.title || '');
-  const finalTitle = computeFollowUpTitle(baseTitle /*, customerName, customerPhone */);
-
+  const finalTitle = computeFollowUpTitle(baseTitle);
   const [priority, setPriority] = useState(baseTicket.priority || 'normal');
 
   const [msg, setMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedTicket, setSubmittedTicket] = useState(null);
-  const [originalClosed, setOriginalClosed] = useState(null); // null=pending, true=ok, false=failed
+  const [originalClosed, setOriginalClosed] = useState(null);
 
   async function submit(e) {
     e.preventDefault();
-    if (isSubmitting || submittedTicket) return; // prevent repeat submit
-
-    // Extra safety: re-check status at submit time
+    if (isSubmitting || submittedTicket) return;
     if ((baseTicket.status || '').toLowerCase() === 'closed') {
       setMsg('This ticket is closed. You cannot create a follow-up.');
       return;
@@ -406,7 +412,6 @@ Phone: ${customerPhone || '-'}`;
     setMsg('');
 
     try {
-      // Build description with locked prefix + optional extra details
       const description =
         details.trim().length > 0
           ? `${lockedPrefix}\n\n${details.trim()}`
@@ -422,7 +427,6 @@ Phone: ${customerPhone || '-'}`;
       const data = await api('/api/tickets', { method: 'POST', body });
       setSubmittedTicket(data);
 
-      // After creating a follow-up, CLOSE the original ticket
       if (onCloseOriginal) {
         const res = await onCloseOriginal(baseTicket);
         setOriginalClosed(!!res?.ok);
@@ -431,9 +435,7 @@ Phone: ${customerPhone || '-'}`;
         }
       }
 
-      // 👉 Refresh the list so the new ticket appears, but keep the modal open
       if (onRefresh) await onRefresh();
-
       setIsSubmitting(false);
     } catch (e) {
       setIsSubmitting(false);
@@ -472,7 +474,6 @@ Phone: ${customerPhone || '-'}`;
 
   return (
     <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
-      {/* Read-only context */}
       <label>Locked Info</label>
       <textarea
         style={{ ...inp, minHeight: 88, background: '#f9fafb', color: '#334155' }}
@@ -480,7 +481,6 @@ Phone: ${customerPhone || '-'}`;
         readOnly
       />
 
-      {/* Editable subject (base) */}
       <label>Subject</label>
       <input
         style={inp}
@@ -492,7 +492,6 @@ Phone: ${customerPhone || '-'}`;
         Final title → <b>{finalTitle}</b>
       </div>
 
-      {/* Extra details only */}
       <label>Additional Details</label>
       <textarea
         style={{ ...inp, minHeight: 120 }}
@@ -539,7 +538,7 @@ function Modal({ title, children, onClose }) {
 const inp = { border: '1px solid #ddd', borderRadius: 8, padding: '8px 10px' };
 const btn = { padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, background: '#fff', cursor: 'pointer' };
 const btnPrimary = { padding: '8px 12px', borderRadius: 8, background: '#111', color: '#fff', border: 'none', cursor: 'pointer' };
-const btnDisabled = { ...btnPrimary, background: '#9ca3af', cursor: 'not-allowed', margin:'10px' };
+const btnDisabled = { ...btnPrimary, background: '#9ca3af', cursor: 'not-allowed', margin:'5px' };
 const modalBackdrop = {
   position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
   display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 1000
@@ -549,4 +548,3 @@ const modalCard = {
   width: 'min(560px, 100%)', boxShadow: '0 10px 30px rgba(0,0,0,0.15)'
 };
 const btnDanger = { padding: '8px 12px',margin:'10px', borderRadius: 8, background: '#b91c1c', color: '#fff', border: 'none', cursor: 'pointer' };
-

@@ -1,7 +1,7 @@
 import { useAuth } from '../context/AuthContext.jsx';
 import TabBar from '../components/TabBar.jsx';
 import TicketSearch from '../features/tickets/TicketSearch.jsx';
-import FetchUser from '../features/tickets/FetchUser.jsx';
+import FetchUser from '../features/tickets/FetchUsers.jsx';
 import TicketsTable from '../features/tickets/TicketsTable.jsx';
 import TicketCreate from '../features/tickets/TicketCreate.jsx';
 import { useState } from 'react';
