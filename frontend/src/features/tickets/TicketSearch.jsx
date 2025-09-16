@@ -51,7 +51,7 @@ export default function TicketSearch() {
   }
 
   const [notice, setNotice] = useState('');
-  const isValidPhone = (val) => /^\d{12}$/.test(val || '');
+  const isValidPhone = (val) => /^\d{11,12}$/.test(val || '');
 
   function phoneKeyGuard(e) {
     const k = e.key;
@@ -79,7 +79,7 @@ export default function TicketSearch() {
       await Swal.fire({
         icon: 'error',
         title: 'Invalid phone',
-        text: 'Phone must be numbers only and exactly 12 digits.',
+        text: 'Phone must be numbers only and exactly 11-12 digits.',
       });
       return;
     }

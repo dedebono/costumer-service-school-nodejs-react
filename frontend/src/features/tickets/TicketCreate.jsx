@@ -33,9 +33,8 @@ export default function TicketCreate() {
   const [isTicketOpen, setIsTicketOpen] = useState(false);
 
   // —— helpers ——
-  const normalizePhone = (val) => (val || '').replace(/\D/g, '').slice(0, 12);
-  const isValidPhone = (val) => /^\d{12}$/.test(val || '');
-  const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val || '');
+  const normalizePhone = (val) => (val || '').replace(/\D/g, '').slice(0, 12); // keep max at 12
+  const isValidPhone = (val) => /^\d{11,12}$/.test(val || '');  const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val || '');
   const extractError = (e) =>
     e?.response?.data?.error ||
     e?.response?.data?.message ||
@@ -52,7 +51,7 @@ export default function TicketCreate() {
     const normalized = normalizePhone(e.target.value);
     setPhone(normalized);
     if (!normalized) setPhoneError('');
-    else if (!isValidPhone(normalized)) setPhoneError('Phone must be exactly 12 digits.');
+    else if (!isValidPhone(normalized)) setPhoneError('Phone must be 11–12 digits.');    
     else setPhoneError('');
   };
 
@@ -87,7 +86,7 @@ function handleSearchEnter(e) {
     const v = normalizePhone(e.target.value);
     setModalPhone(v);
     if (!v) setModalPhoneError('');
-    else if (!isValidPhone(v)) setModalPhoneError('Phone must be exactly 12 digits.');
+    else if (!isValidPhone(v)) setModalPhoneError('Phone must be 11–12 digits.');
     else setModalPhoneError('');
   }
 
@@ -99,9 +98,9 @@ async function handleSaveCustomer(e) {
     return;
   }
   if (!isValidPhone(modalPhone)) {
-    setModalPhoneError('Phone must be exactly 12 digits.');
-    showError('Invalid Phone', 'Phone must be exactly 12 digits.');
-    return;
+  setModalPhoneError('Phone must be 11–12 digits.');
+  showError('Invalid Phone', 'Phone must be 11–12 digits.');    
+  return;
   }
 
   try {
@@ -161,7 +160,7 @@ async function searchCustomers() {
   setSearchResults([]);
 
   if (phone && !isValidPhone(phone)) {
-    const text = 'Phone must be exactly 12 digits for search.';
+    const text = 'Phone must be 11–12 digits for search.';
     setMsg(`Error: ${text}`);
     showError('Invalid Phone', text);
     return;
@@ -173,7 +172,7 @@ async function searchCustomers() {
     return;
   }
   if (!name && !phone && !email) {
-    const text = 'Enter a name, a 12-digit phone number, or an email to search.';
+    const text = 'Enter a name, an 11–12 digit phone number, or an email to search.';
     setMsg(text);
     showInfo('Nothing to search', text);
     return;
@@ -284,12 +283,12 @@ async function submit(e) {
               <label>Customer Email (optional — used for search too)</label>
               <input
                 style={inp}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={modalEmail}
+                onChange={(e) => setModalEmail(e.target.value)}
                 placeholder="jane@example.com"
                 type="email"
               />
-              <label>Phone (12 digits)</label>
+              <label>Phone (11-12 digits)</label>
               <input
                 style={inp}
                 value={modalPhone}
@@ -383,7 +382,7 @@ async function submit(e) {
             onKeyDown={handleSearchEnter}
           />
 
-          <label>Customer Phone (12 digits)</label>
+          <label>Customer Phone (11-12 digits)</label>
           <input
             style={inp}
             value={phone}
