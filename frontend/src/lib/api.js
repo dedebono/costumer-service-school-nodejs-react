@@ -8,15 +8,20 @@ return localStorage.getItem('token') || '';
 
 export async function api(path, { method = 'GET', body, headers } = {}) {
 const token = getToken();
+
+const isFormData = body instanceof FormData;
+
 const resp = await fetch(`${API_BASE}${path}`, {
 method,
 headers: {
-'Content-Type': 'application/json',
+// Let browser set Content-Type for FormData
+...(isFormData ? {} : { 'Content-Type': 'application/json' }),
 ...(token ? { Authorization: `Bearer ${token}` } : {}),
 ...(headers || {}),
 },
-body: body ? JSON.stringify(body) : undefined,
+body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
 });
+
 if (!resp.ok) {
 let msg = `${resp.status} ${resp.statusText}`;
 try {

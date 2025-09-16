@@ -1,5 +1,10 @@
 // src/routes/customerRoutes.js
 const router = require('express').Router();
+const multer = require('multer');
+const csv = require('csv-parser');
+const fs = require('fs');
+
+const upload = multer({ dest: 'uploads/' });
 const { verifyToken, requireRole } = require('../middleware/auth');
 const {
   createCustomer,
@@ -123,6 +128,55 @@ router.delete('/:id', requireRole('Supervisor'), async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: 'Failed to delete customer' });
   }
+});
+
+router.post('/bulk', requireRole(['CustomerService', 'Supervisor']), upload.single('file'), async (req, res) => {
+  console.log('Bulk upload request received');
+  const results = [];
+  const errors = [];
+
+  if (!req.file) {
+    console.log('No file found in request');
+    return res.status(400).json({ error: 'No file uploaded.' });
+  }
+
+  console.log('File received:', req.file);
+
+  fs.createReadStream(req.file.path)
+    .pipe(csv({
+      mapHeaders: ({ header }) => header.toLowerCase()
+    }))
+    .on('data', (data) => {
+      console.log('CSV data row:', data);
+      results.push(data);
+    })
+    .on('end', async () => {
+      console.log('CSV processing finished. Starting data import.');
+      for (const customer of results) {
+        try {
+          const { name, email, phone } = customer;
+          if (!name || !email) {
+            errors.push({ customer, error: 'Missing required fields' });
+            continue;
+          }
+          console.log('Creating customer:', { name, email, phone });
+          await createCustomer({ name, email, phone });
+        } catch (error) {
+          console.log('Error creating customer:', { customer, error: error.message });
+          errors.push({ customer, error: error.message });
+        }
+      }
+
+      fs.unlinkSync(req.file.path); // Clean up uploaded file
+      console.log('File processing complete. Sending response.');
+
+      res.status(200).json({ 
+        message: 'Bulk customer import completed', 
+        successCount: results.length - errors.length,
+        errorCount: errors.length,
+        errors,
+      });
+    });
 });
 
 module.exports = router;

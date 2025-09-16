@@ -1,4 +1,9 @@
 const router = require('express').Router();
+const multer = require('multer');
+const csv = require('csv-parser');
+const fs = require('fs');
+
+const upload = multer({ dest: 'uploads/' });
 const bcrypt = require('bcrypt');
 const { verifyToken, requireRole } = require('../middleware/auth');
 const {
@@ -74,6 +79,39 @@ router.delete('/:id', requireRole('Supervisor'), async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: 'Failed to delete user' });
   }
+});
+
+router.post('/bulk', requireRole('Supervisor'), upload.single('file'), async (req, res) => {
+  const results = [];
+  const errors = [];
+
+  fs.createReadStream(req.file.path)
+    .pipe(csv())
+    .on('data', (data) => results.push(data))
+    .on('end', async () => {
+      for (const user of results) {
+        try {
+          const { username, email, password, role } = user;
+          if (!username || !email || !password) {
+            errors.push({ user, error: 'Missing required fields' });
+            continue;
+          }
+          const passwordHash = await bcrypt.hash(password, 10);
+          await createUser({ username, email, passwordHash, role: role || 'CustomerService' });
+        } catch (error) {
+          errors.push({ user, error: error.message });
+        }
+      }
+
+      fs.unlinkSync(req.file.path); // Clean up uploaded file
+
+      res.status(200).json({ 
+        message: 'Bulk user import completed', 
+        successCount: results.length - errors.length,
+        errorCount: errors.length,
+        errors,
+      });
+    });
 });
 
 module.exports = router;

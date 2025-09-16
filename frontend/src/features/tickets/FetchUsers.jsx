@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 export default function FetchUser() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [file, setFile] = useState(null);
 
   // Search fields
   const [qName, setQName] = useState('');
@@ -186,10 +187,46 @@ export default function FetchUser() {
     }
   }
 
+  const handleBulkUpload = async () => {
+    console.log('handleBulkUpload triggered');
+    if (!file) {
+        console.log('No file selected');
+        return Swal.fire({ icon: 'error', title: 'No file selected', text: 'Please select a CSV file to upload.' });
+    }
+
+    console.log('File to upload:', file);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setLoading(true);
+    try {
+        console.log('Sending bulk upload request...');
+        const response = await api('/api/customers/bulk', {
+            method: 'POST',
+            body: formData,
+        });
+        console.log('Bulk upload response:', response);
+        Swal.fire({
+            icon: 'success',
+            title: 'Bulk Upload Successful',
+            text: `${response.successCount} customers uploaded successfully.`,
+        });
+        loadAll(); // Reload the customer list
+    } catch (e) {
+        console.error('Bulk upload error:', e);
+        Swal.fire({
+            icon: 'error',
+            title: 'Bulk Upload Failed',
+            text: e.message || 'Unknown error',
+        });
+    } finally {
+        setLoading(false);
+        setFile(null);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <h2>Customers</h2>
-
       {/* Search bar */}
       <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
         <div style={{ display: 'grid', gap: 6 }}>
@@ -231,6 +268,18 @@ export default function FetchUser() {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button onClick={handleSearch} style={btnPrimary}>Search</button>
         <button onClick={clearSearch} style={btn}>Clear & Reload</button>
+      </div>
+
+      {/* Bulk Upload */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: '1rem' }}>
+        <input type="file" accept=".csv" onChange={(e) => {
+          const selectedFile = e.target.files[0];
+          console.log('File selected:', selectedFile);
+          setFile(selectedFile);
+        }} />
+        <button onClick={handleBulkUpload} style={btnPrimary} disabled={!file || loading}>
+          {loading ? 'Uploading...' : 'Upload CSV'}
+        </button>
       </div>
 
       {/* Table */}
