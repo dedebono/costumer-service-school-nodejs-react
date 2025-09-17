@@ -34,7 +34,9 @@ export default function TicketCreate() {
 
   // —— helpers ——
   const normalizePhone = (val) => (val || '').replace(/\D/g, '').slice(0, 12); // keep max at 12
-  const isValidPhone = (val) => /^\d{11,12}$/.test(val || '');  const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val || '');
+  const isValidPhone = (val) => /^\d{11,12}$/.test(val || '');  
+  const isValidEmail = (v) =>
+  /^[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,}$/i.test((v || '').trim());
   const extractError = (e) =>
     e?.response?.data?.error ||
     e?.response?.data?.message ||
@@ -93,14 +95,15 @@ function handleSearchEnter(e) {
 async function handleSaveCustomer(e) {
   e.preventDefault();
 
-  if (!modalName || !modalEmail) {
-    showError('Missing Fields', 'Name and email are required.');
-    return;
-  }
   if (!isValidPhone(modalPhone)) {
   setModalPhoneError('Phone must be 11–12 digits.');
   showError('Invalid Phone', 'Phone must be 11–12 digits.');    
   return;
+  }
+
+  if(!isValidEmail(modalEmail)) {
+    showError('Invalid Email', 'Email format is invalid.');
+    return;
   }
 
   try {

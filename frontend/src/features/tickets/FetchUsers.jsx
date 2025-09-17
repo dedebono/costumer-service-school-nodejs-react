@@ -306,8 +306,9 @@ export default function FetchUser() {
                   <td style={td}>{c.phone || '-'}</td>
                   <td style={td}>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <button onClick={() => openEdit(c)} style={btn}>Edit</button>
-                      <button onClick={() => deleteCustomer(c)} style={btnDanger}>Delete</button>
+                      <button onClick={() => openEdit(c)} style={btnDanger}>Edit</button>
+                      <button onClick={() => deleteCustomer(c)} style={btn}
+                        disabled>Delete</button>
                     </div>
                   </td>
                 </tr>

@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react';
 import Swal from 'sweetalert2';
 import { api } from '../../lib/api.js';
-import { qs, fmtDate } from '../../lib/utils.js';
+import { qs, toLocalTime } from '../../lib/utils.js';
 import TicketDetails from './TicketDetails.jsx';
 
 const repeatCountRegex = /^(?:Follow\s*up\s*:?\s*)+/i;
@@ -301,7 +301,7 @@ export default function TicketSearch() {
                       Creator: {t.created_by_username ?? t.created_by ?? '-'}
                     </div>
                     <div style={{ fontSize: 11, color: '#666' }}>
-                      {fmtDate(t.created_at)}
+                      {toLocalTime(t.created_at)}
                     </div>
                     <div style={{ marginTop: 8 }}>
                       <button
@@ -393,7 +393,7 @@ Phone: ${customerPhone || '-'}`;
   const [details, setDetails] = useState('');
   const [baseTitle, setBaseTitle] = useState(baseTicket.title || '');
   const finalTitle = computeFollowUpTitle(baseTitle);
-  const [priority, setPriority] = useState(baseTicket.priority || 'normal');
+  const [priority, setPriority] = useState(baseTicket.priority || 'medium');
 
   const [msg, setMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -503,8 +503,9 @@ Phone: ${customerPhone || '-'}`;
       <label>Priority</label>
       <select style={inp} value={priority} onChange={(e) => setPriority(e.target.value)}>
         <option>low</option>
-        <option>normal</option>
+        <option>medium</option>
         <option>high</option>
+        <option>urgent</option>
       </select>
 
       <div style={{ display: 'flex', gap: 8 }}>

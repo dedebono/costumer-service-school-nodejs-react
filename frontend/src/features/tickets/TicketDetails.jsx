@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
 import { api } from '../../lib/api.js';
-import { fmtDate } from '../../lib/utils.js';
+import { toLocalTime } from '../../lib/utils.js';
 
 export default function TicketDetails({
   ticketId,
@@ -84,8 +84,8 @@ export default function TicketDetails({
         <div><b>Priority:</b> {ticket.priority || '-'}</div>
         <div><b>Customer:</b> {ticket.customer_name || '-'} {ticket.customer_phone ? `• ${ticket.customer_phone}` : ''}</div>
         <div><b>Creator:</b> {ticket.created_by_username ?? ticket.created_by ?? '-'}</div>
-        <div><b>Created:</b> {fmtDate(ticket.created_at)}</div>
-        <div><b>Updated:</b> {fmtDate(ticket.updated_at)}</div>
+        <div><b>Created:</b> {toLocalTime(ticket.created_at)}</div>
+        <div><b>Updated:</b> {toLocalTime(ticket.updated_at)}</div>
       </div>
 
       <div>

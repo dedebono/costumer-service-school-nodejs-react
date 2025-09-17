@@ -1,9 +1,44 @@
 // src/features/tickets/TicketsTable.jsx
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api.js';
-import { fmtDate, qs } from '../../lib/utils.js';
+import { qs, toLocalTime } from '../../lib/utils.js';
 
 const STATUS_OPTIONS = ['open', 'in_progress', 'resolved', 'closed'];
+
+/** ---- Priority badge helper ---- */
+function PriorityBadge({ value }) {
+  const v = String(value || '').toLowerCase();
+  const normalized = v === 'normal' ? 'medium' : v; // backward-compat
+
+  const stylesByPriority = {
+    low:    { bg: '#dcfce7', text: '#14532d', border: '#86efac' }, // light green
+    medium: { bg: '#bbf7d0', text: '#14532d', border: '#86efac' }, // green
+    high:   { bg: '#ffedd5', text: '#9a3412', border: '#fdba74' }, // orange
+    urgent: { bg: '#fee2e2', text: '#991b1b', border: '#fca5a5' }, // red
+    default:{ bg: '#e5e7eb', text: '#374151', border: '#d1d5db' },
+  };
+
+  const c = stylesByPriority[normalized] || stylesByPriority.default;
+
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        padding: '2px 8px',
+        borderRadius: 9999,
+        fontSize: 12,
+        fontWeight: 600,
+        background: c.bg,
+        color: c.text,
+        border: `1px solid ${c.border}`,
+        textTransform: 'capitalize',
+      }}
+      title={v}
+    >
+      {v || '-'}
+    </span>
+  );
+}
 
 export default function TicketsTable({ supervisor }) {
   const [items, setItems] = useState([]);
@@ -47,10 +82,9 @@ export default function TicketsTable({ supervisor }) {
   }
 
   async function onChangeStatus(ticket, nextStatus) {
-    if (!ticket.id) return; // cannot update unknown id (legacy rows)
+    if (!ticket.id) return;
     const prevStatus = ticket.status;
 
-    // optimistic update
     setItems(curr =>
       curr.map(it => (it.id === ticket.id ? { ...it, status: nextStatus } : it))
     );
@@ -61,9 +95,7 @@ export default function TicketsTable({ supervisor }) {
         method: 'PATCH',
         body: { status: nextStatus },
       });
-      // success: leave optimistic state as-is
     } catch (e) {
-      // rollback on error
       setItems(curr =>
         curr.map(it => (it.id === ticket.id ? { ...it, status: prevStatus } : it))
       );
@@ -77,47 +109,43 @@ export default function TicketsTable({ supervisor }) {
     }
   }
 
-function exportToCSV() {
-  const header = ['ID', 'Title', 'Customer Name', 'Phone', 'Description', 'Priority', 'Status', 'Created By', 'Created At'];
+  function exportToCSV() {
+    const header = ['ID', 'Title', 'Customer Name', 'Phone', 'Description', 'Priority', 'Status', 'Created By', 'Created At'];
 
-  const rows = items.map(item => [
-    escapeCSV(item.id),
-    escapeCSV(item.title),
-    escapeCSV(item.customer_name),
-    escapeCSV(item.customer_phone),
-    escapeCSV(item.description),
-    escapeCSV(item.priority),
-    escapeCSV(item.status),
-    escapeCSV(item.created_by_username ?? item.created_by),
-    escapeCSV(fmtDate(item.created_at)),
-  ]);
+    const rows = items.map(item => [
+      escapeCSV(item.id),
+      escapeCSV(item.title),
+      escapeCSV(item.customer_name),
+      escapeCSV(item.customer_phone),
+      escapeCSV(item.description),
+      escapeCSV(item.priority),
+      escapeCSV(item.status),
+      escapeCSV(item.created_by_username ?? item.created_by),
+      escapeCSV(toLocalTime(item.created_at)),
+    ]);
 
-  const csvContent = [header, ...rows].map(row => row.join(',')).join('\n');
-
-  // Create a Blob and trigger the download
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  if (link.download !== undefined) {  // Feature detection for browsers that support download
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'tickets.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const csvContent = [header, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'tickets.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   }
-}
 
-function escapeCSV(value) {
-  if (value == null) return '';
-  let str = value.toString();
-  // Escape double quotes by doubling them
-  str = str.replace(/"/g, '""');
-  // Wrap the value in double quotes if it contains a comma or newline
-  if (str.includes(',') || str.includes('\n') || str.includes('"')) {
-    str = `"${str}"`;
+  function escapeCSV(value) {
+    if (value == null) return '';
+    let str = value.toString();
+    str = str.replace(/"/g, '""');
+    if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+      str = `"${str}"`;
+    }
+    return str;
   }
-  return str;
-}
 
   const COLS = supervisor ? 10 : 9;
 
@@ -140,9 +168,9 @@ function escapeCSV(value) {
         <select value={priority} onChange={(e) => setPriority(e.target.value)} style={inp}>
           <option value="">All Priority</option>
           <option value="low">low</option>
-          <option value="normal">normal</option>
+          <option value="medium">medium</option>
           <option value="high">high</option>
-          {/* keep as-is to remain compatible with existing data */}
+          <option value="urgent">urgent</option>
         </select>
         <button
           onClick={() => {
@@ -153,12 +181,7 @@ function escapeCSV(value) {
         >
           Apply
         </button>
-        <button
-  onClick={exportToCSV}
-  style={btn}
->
-  Export to CSV
-</button>
+        <button onClick={exportToCSV} style={btn}>Export to CSV</button>
       </div>
 
       <div style={{ border: '1px solid #eee', borderRadius: 8, overflow: 'auto' }}>
@@ -171,7 +194,8 @@ function escapeCSV(value) {
               <th style={th}>Phone</th>
               <th style={th}>Description</th>
               <th style={th}>Priority</th>
-              <th style={th}>Status</th>              <th style={th}>Created By</th>
+              <th style={th}>Status</th>
+              <th style={th}>Created By</th>
               <th style={th}>Created At</th>
               {supervisor && <th style={th}>Actions</th>}
             </tr>
@@ -179,15 +203,11 @@ function escapeCSV(value) {
           <tbody>
             {loading ? (
               <tr>
-                <td style={td} colSpan={COLS}>
-                  Loading…
-                </td>
+                <td style={td} colSpan={COLS}>Loading…</td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td style={td} colSpan={COLS}>
-                  No tickets
-                </td>
+                <td style={td} colSpan={COLS}>No tickets</td>
               </tr>
             ) : (
               items.map((t, i) => (
@@ -196,10 +216,15 @@ function escapeCSV(value) {
                   <td style={td}>{t.title}</td>
                   <td style={td}>{t.customer_name || '-'}</td>
                   <td style={td}>{t.customer_phone || '-'}</td>
-                  <td style={{ ...td, maxWidth: 360, overflow:'auto', whiteSpace: 'normal', wordWrap: 'break-word' }} title={t.description || ''}>
+                  <td
+                    style={{ ...td, maxWidth: 360, overflow: 'auto', whiteSpace: 'normal', wordWrap: 'break-word' }}
+                    title={t.description || ''}
+                  >
                     {t.description}
                   </td>
-                  <td style={td}>{t.priority}</td>
+                  <td style={td}>
+                    <PriorityBadge value={t.priority} />
+                  </td>
                   <td style={td}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <select
@@ -216,7 +241,7 @@ function escapeCSV(value) {
                     </div>
                   </td>
                   <td style={td}>{t.created_by_username ?? t.created_by ?? '-'}</td>
-                  <td style={td}>{fmtDate(t.created_at)}</td>
+                  <td style={td}>{toLocalTime(t.created_at)}</td>
                   {supervisor && (
                     <td style={td}>
                       <button onClick={() => onDelete(t.id)} style={delBtn} disabled={!t.id}>
