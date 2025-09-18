@@ -5,6 +5,17 @@ import { qs, toLocalTime } from '../../lib/utils.js';
 
 const STATUS_OPTIONS = ['open', 'in_progress', 'resolved', 'closed'];
 
+/** ---- Follow-up prefix stripping (normalize title) ---- */
+const numberedPrefixRegex = /^Follow\s*up\s*(\d+)\s*[xX]\s*:\s*/i;
+const repeatCountRegex   = /^(?:Follow\s*up\s*:?\s*)+/i;
+function normalizeTitle(raw) {
+  let t = (raw || '').trim();
+  if (!t) return '';
+  if (numberedPrefixRegex.test(t)) return t.replace(numberedPrefixRegex, '').trim();
+  if (repeatCountRegex.test(t))   return t.replace(repeatCountRegex, '').trim();
+  return t;
+}
+
 /** ---- Priority badge helper ---- */
 function PriorityBadge({ value }) {
   const v = String(value || '').toLowerCase();
@@ -48,15 +59,31 @@ export default function TicketsTable({ supervisor }) {
   const [status, setStatus] = useState('');
   const [priority, setPriority] = useState('');
   const [q, setQ] = useState('');
+
+  // NEW: base title filter state
+  const [baseTitle, setBaseTitle] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState({}); // { [ticketId]: boolean }
   const pages = useMemo(() => Math.ceil(total / pageSize) || 1, [total, pageSize]);
 
+  // Build available base titles from currently loaded items
+  const baseTitleOptions = useMemo(() => {
+    const s = new Set();
+    for (const it of items) {
+      const b = normalizeTitle(it.title);
+      if (b) s.add(b);
+    }
+    return Array.from(s).sort((a, b) => a.localeCompare(b));
+  }, [items]);
+
   async function load() {
     setLoading(true);
     try {
+      // Combine free-text q and selected base title into one search string
+      const qSearch = [q, baseTitle].filter(Boolean).join(' ').trim();
       const data = await api(
-        `/api/tickets${qs({ status, priority, q, page, pageSize, sortBy: 'created_at', sortDir: 'DESC' })}`
+        `/api/tickets${qs({ status, priority, q: qSearch, page, pageSize, sortBy: 'created_at', sortDir: 'DESC' })}`
       );
       setItems(data.data || []);
       setTotal(data.pagination?.total || 0);
@@ -151,13 +178,27 @@ export default function TicketsTable({ supervisor }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search by name / phone / title"
           style={inp}
         />
+
+        {/* NEW: Title (base) dropdown built from current items, ignoring 'Follow up Xx:' */}
+        <select
+          value={baseTitle}
+          onChange={(e) => { setBaseTitle(e.target.value); setPage(1); }}
+          style={inp}
+          title="Filter by base title (ignores 'Follow up Xx:' prefixes)"
+        >
+          <option value="">All Titles</option>
+          {baseTitleOptions.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+
         <select value={status} onChange={(e) => setStatus(e.target.value)} style={inp}>
           <option value="">All Status</option>
           <option value="open">open</option>
@@ -172,6 +213,7 @@ export default function TicketsTable({ supervisor }) {
           <option value="high">high</option>
           <option value="urgent">urgent</option>
         </select>
+
         <button
           onClick={() => {
             setPage(1);

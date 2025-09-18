@@ -6,15 +6,15 @@ import Swal from 'sweetalert2';
 
 export default function TicketCreate() {
   const navigate = useNavigate();
-  const [title, setTitle] = useState('');
+  const [titleChoice, setTitleChoice] = useState('');
+  const [customTitle, setCustomTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium'); // low | medium | high | urgent
-  const [status, setStatus] = useState('open');       // open | in_progress | resolved | closed
-
-  // search fields
+  const [status, setStatus] = useState('open');  
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+const canSubmitTitle = !!titleChoice && (titleChoice !== 'Lain-lain' || customTitle.trim().length > 0);
 
   const [searchResults, setSearchResults] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -222,9 +222,18 @@ async function searchCustomers() {
     setIsTicketOpen(false);
   }
 
+// UPDATE your submit() to compute final title
 async function submit(e) {
   e.preventDefault();
   setMsg('');
+
+  const finalTitle =
+    titleChoice === 'Lain-lain' ? customTitle.trim() : titleChoice.trim();
+
+  if (!finalTitle) {
+    showError('Missing Title', 'Please select a title (or type one for Lain-lain).');
+    return;
+  }
 
   if (!selectedCustomer?.id) {
     showError('Missing Customer', 'Please select a customer before creating a ticket.');
@@ -232,7 +241,13 @@ async function submit(e) {
   }
 
   try {
-    const body = { title, description, priority, status, customerId: selectedCustomer.id };
+    const body = {
+      title: finalTitle,
+      description,
+      priority,
+      status,
+      customerId: selectedCustomer.id,
+    };
     const data = await api('/api/tickets', { method: 'POST', body });
 
     if (!data?.id) {
@@ -240,27 +255,17 @@ async function submit(e) {
       return;
     }
 
-    // close modal
     setIsTicketOpen(false);
+    await Swal.fire({ icon: 'success', title: 'Ticket Created 🎉', timer: 900, showConfirmButton: false, position: 'top' });
 
-    // optional quick toast
-    await Swal.fire({
-      icon: 'success',
-      title: 'Ticket Created 🎉',
-      timer: 900,
-      showConfirmButton: false,
-      position: 'top',
-    });
-
-    // go to detail page
     navigate(`/tickets/${data.id}`, { state: { justCreated: true } });
 
     // reset fields
-    setTitle('');
+    setTitleChoice('');
+    setCustomTitle('');
     setDescription('');
     setPriority('medium');
     setStatus('open');
-
   } catch (e) {
     const err = extractError(e);
     setMsg(`Error creating ticket: ${err}`);
@@ -268,7 +273,20 @@ async function submit(e) {
   }
 }
 
-  return (
+const TITLE_OPTIONS = [
+  'Form Pendaftaran (pembelian/pengembalian)',
+  'Jadwal Ekskul, Club, Kelas di tiadakan dll',
+  'Pengembalian Raport / Ijazah / Legalisir',
+  'Seragam (Pembelian, Pemberian Awal, Custom)',
+  'Picker Card',
+  'Ms.Teams',
+  'Observasi',
+  'Parents Interview',
+  'Instansi',
+  'Lain-lain',
+];
+
+return (
     <>
       {/* Regular Modal for New Customer */}
       {isCreateOpen && (
@@ -324,9 +342,36 @@ async function submit(e) {
                     : '-'}
                 </div>
               </div>
-
               <label>Title</label>
-              <input style={inp} value={title} onChange={(e) => setTitle(e.target.value)} required />
+              <select
+                style={inp}
+                value={titleChoice}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setTitleChoice(v);
+                  if (v !== 'Lain-lain') setCustomTitle(''); // clear custom field if not needed
+                }}
+                required
+              >
+                <option value="" disabled>— Select a title —</option>
+                {TITLE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+
+{/* Show custom title field only when "Lain-lain" is chosen */}
+{titleChoice === 'Lain-lain' && (
+  <>
+    <label>Custom Title</label>
+    <input
+      style={inp}
+      value={customTitle}
+      onChange={(e) => setCustomTitle(e.target.value)}
+      placeholder="Type your custom title…"
+      required
+    />
+  </>
+)}
               <label>Description</label>
               <textarea
                 style={{ ...inp, minHeight: 120 }}
@@ -357,13 +402,13 @@ async function submit(e) {
 
               <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
                 <button type="button" onClick={closeTicketModal} style={btn}>Cancel</button>
-                <button
-                  type="submit"
-                  style={btnPrimary}
-                  disabled={!title || !description || !selectedCustomer}
-                >
-                  Create Ticket
-                </button>
+              <button
+                type="submit"
+                style={btnPrimary}
+                disabled={!canSubmitTitle || !description || !selectedCustomer}
+              >
+                Create Ticket
+              </button>
               </div>
             </div>
           </form>

@@ -474,25 +474,25 @@ Phone: ${customerPhone || '-'}`;
 
   return (
     <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
-      <label>Locked Info</label>
       <textarea
-        style={{ ...inp, minHeight: 88, background: '#f9fafb', color: '#334155' }}
+        style={{ ...inp, minHeight: 88, background: '#4a4a4aff', color: '#ffffffff' }}
         value={lockedPrefix}
         readOnly
       />
 
       <label>Subject</label>
       <input
-        style={inp}
+        style={{ ...inp,background: '#4a4a4aff', color: '#ffffffff', fontWeight: '600' }}        
         value={baseTitle}
         onChange={(e) => setBaseTitle(e.target.value)}
         placeholder="Used title (without 'Follow up ...')"
+        readOnly
       />
       <div style={{ fontSize: 12, color: '#64748b', marginTop: -4 }}>
         Final title → <b>{finalTitle}</b>
       </div>
 
-      <label>Additional Details</label>
+      <label>Follow-up Details</label>
       <textarea
         style={{ ...inp, minHeight: 120 }}
         value={details}
