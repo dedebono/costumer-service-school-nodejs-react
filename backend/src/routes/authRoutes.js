@@ -1,8 +1,12 @@
 const router = require('express').Router();
 const bcrypt = require('bcrypt');
 const { createUser, authenticateUser } = require('../models/user');
-const { generateToken } = require('../middleware/auth');
+const { generateToken, verifyToken } = require('../middleware/auth');
 
+// This endpoint will be used to verify the token on the frontend
+router.get('/me', verifyToken, (req, res) => {
+  res.status(200).json({ user: req.user });
+});
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {

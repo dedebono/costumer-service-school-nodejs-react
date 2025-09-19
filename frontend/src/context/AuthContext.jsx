@@ -12,17 +12,35 @@ const [user, setUsr] = useState(() => getUser());
 const [loading, setLoading] = useState(true);
 
 
-useEffect(() => {
-if (token && user) {
-setToken(token);
-setUser(user);
-}
-setLoading(false);
-}, [token, user]);
+  useEffect(() => {
+    async function verifyUserToken() {
+      const currentToken = getToken();
+      if (currentToken) {
+        try {
+          // Set token for the upcoming API call
+          setToken(currentToken);
+          const { user: freshUser } = await api('/api/auth/me');
+          setUsr(freshUser);
+          setUser(freshUser); // also save to localStorage
+        } catch (error) {
+          // Token is invalid or expired, clear everything
+          clearToken();
+          clearUser();
+          setUsr(null);
+          setTok('');
+        }
+      }
+      setLoading(false);
+    }
+
+    verifyUserToken();
+  }, []); // Empty dependency array ensures this runs only once on mount
 
 
 const login = async (email, password) => {
 const data = await api('/api/auth/login', { method: 'POST', body: { email, password } });
+setToken(data.token);
+setUser(data.user);
 setTok(data.token);
 setUsr(data.user);
 };

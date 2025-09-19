@@ -1,9 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 
-
 export default function Login() {
-const { login } = useAuth();
+  const { login, user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      const destination = user.role === 'Supervisor' ? '/supervisor' : '/cs';
+      navigate(destination, { replace: true });
+    }
+  }, [user, navigate]);
 const [email, setEmail] = useState('admin@example.com');
 const [password, setPassword] = useState('Admin#12345');
 const [err, setErr] = useState('');
