@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT UNIQUE NOT NULL,
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
-    role TEXT CHECK(role IN ('CustomerService', 'Supervisor')) NOT NULL,
+    role TEXT CHECK(role IN ('CustomerService', 'Supervisor', 'ADMIN')) NOT NULL,
     is_active BOOLEAN DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -79,3 +79,84 @@ CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
 CREATE INDEX IF NOT EXISTS idx_tickets_priority ON tickets(priority);
 CREATE INDEX IF NOT EXISTS idx_tickets_customer_id ON tickets(customer_id);
 CREATE INDEX IF NOT EXISTS idx_queue_position ON queue(position);
+
+-- Admission System Tables
+
+-- pipelines: satu jalur PSB per tahun ajaran
+CREATE TABLE IF NOT EXISTS pipelines (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  name          TEXT NOT NULL,
+  year          INTEGER NOT NULL,
+  created_at    TEXT DEFAULT (datetime('now')),
+  updated_at    TEXT DEFAULT (datetime('now'))
+);
+
+-- steps: daftar langkah per pipeline (urut pakai "ord")
+CREATE TABLE IF NOT EXISTS steps (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  pipeline_id   INTEGER NOT NULL,
+  title         TEXT NOT NULL,
+  slug          TEXT NOT NULL,
+  ord           INTEGER NOT NULL,            -- urutan kolom di kanban
+  is_final      INTEGER NOT NULL DEFAULT 0,  -- 0/1
+  FOREIGN KEY (pipeline_id) REFERENCES pipelines(id) ON DELETE CASCADE,
+  UNIQUE(pipeline_id, slug),
+  UNIQUE(pipeline_id, ord)                   -- jaga satu ord per pipeline
+);
+
+-- step_requirements: dokumen wajib per step (key bebas: 'formulir','buktiPembelian', dll)
+CREATE TABLE IF NOT EXISTS step_requirements (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  step_id       INTEGER NOT NULL,
+  doc_key       TEXT NOT NULL,
+  FOREIGN KEY (step_id) REFERENCES steps(id) ON DELETE CASCADE,
+  UNIQUE(step_id, doc_key)
+);
+
+-- applicants: kandidat
+CREATE TABLE IF NOT EXISTS applicants (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  pipeline_id   INTEGER NOT NULL,
+  current_step_id INTEGER NOT NULL,
+  name          TEXT NOT NULL,
+  nisn          TEXT,
+  birthdate     TEXT,
+  parent_phone  TEXT,
+  email         TEXT,
+  address       TEXT,
+  created_at    TEXT DEFAULT (datetime('now')),
+  updated_at    TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (pipeline_id) REFERENCES pipelines(id) ON DELETE CASCADE,
+  FOREIGN KEY (current_step_id) REFERENCES steps(id)
+);
+
+-- applicant_documents: dokumen yang sudah diunggah kandidat
+CREATE TABLE IF NOT EXISTS applicant_documents (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  applicant_id  INTEGER NOT NULL,
+  doc_key       TEXT NOT NULL,       -- harus sama dengan yang diminta di step_requirements
+  filename      TEXT,
+  url           TEXT,
+  mime          TEXT,
+  uploaded_at   TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (applicant_id) REFERENCES applicants(id) ON DELETE CASCADE,
+  UNIQUE(applicant_id, doc_key)
+);
+
+-- applicant_history: jejak perpindahan step
+CREATE TABLE IF NOT EXISTS applicant_history (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  applicant_id  INTEGER NOT NULL,
+  from_step_id  INTEGER,
+  to_step_id    INTEGER NOT NULL,
+  by_admin_id   INTEGER NOT NULL,
+  note          TEXT,
+  at            TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (applicant_id) REFERENCES applicants(id) ON DELETE CASCADE
+);
+
+-- index yang sering dipakai
+CREATE INDEX IF NOT EXISTS idx_steps_pipeline ON steps(pipeline_id);
+CREATE INDEX IF NOT EXISTS idx_applicants_pipeline ON applicants(pipeline_id);
+CREATE INDEX IF NOT EXISTS idx_appdocs_applicant ON applicant_documents(applicant_id);
+CREATE INDEX IF NOT EXISTS idx_history_applicant ON applicant_history(applicant_id);

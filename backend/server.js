@@ -8,6 +8,7 @@ const ticketRoutes = require('./src/routes/ticketRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 const customerRoutes = require('./src/routes/customerRoutes');
 const passwordResetRoutes = require('./src/routes/passwordResetRoutes');
+const admissionRoutes = require('./src/routes/admissionRoutes');
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -26,6 +27,7 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/password-resets', passwordResetRoutes);
+app.use('/api/admission', admissionRoutes);
 
 
 // Health check

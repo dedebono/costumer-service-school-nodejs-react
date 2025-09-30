@@ -12,7 +12,7 @@
     "express": "^4",
     "jsonwebtoken": "^9",
     "multer": "^2.0.2",
-    "sqlite3": "^5",
+    "sqlite3": "^5.1.6",
     "swagger-ui-express": "^5"
   },
   "devDependencies": {
