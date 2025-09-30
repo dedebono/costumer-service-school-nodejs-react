@@ -1,36 +1,36 @@
 import { useDroppable } from '@dnd-kit/core';
-import { useDraggable } from '@dnd-kit/core';
+import DraggableApplicant from './DraggableApplicant.jsx';
 
-function DraggableApplicant({ applicant }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useDraggable({ id: applicant.id });
-
-  const style = {
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    transition,
-  };
-
-  return (
-    <li ref={setNodeRef} style={style} {...listeners} {...attributes}>
-      <div style={{ padding: 4, marginBottom: 4, background: '#fff', border: '1px solid #ddd', cursor: 'grab' }}>
-        <div>{applicant.name} ({applicant.nisn})</div>
-        <div>{applicant.parent_phone}</div>
-        <div>{applicant.email}</div>
-      </div>
-    </li>
-  );
+// small stable hash to hue (0..359)
+function hueFromId(id) {
+  let h = 0; const s = String(id);
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+  return h;
 }
 
-export default function StepColumn({ step, items }) {
-  const { setNodeRef } = useDroppable({ id: step.id });
+export default function StepColumn({ step, items, onApplicantClick }) {
+  const { setNodeRef, isOver } = useDroppable({ id: step.id });
+  const hue = hueFromId(step.id);
 
   return (
-    <div ref={setNodeRef} style={{ minWidth: 200, padding: 8, border: '1px solid #ccc', background: '#fafafa' }}>
-      <h3>{step.title}</h3>
-      <ul style={{ listStyle: 'none', padding: 0 }}>
+    <section
+      ref={setNodeRef}
+      className={`step ${isOver ? 'is-over' : ''} ${step.is_final ? 'is-final' : ''}`}
+      style={{ '--h': hue }}
+    >
+      <header className="step__header">
+        <h3 className="step__title">{step.title}</h3>
+        <span className="step__count">{items.length}</span>
+      </header>
+      <ul className="step__list">
         {items.map(item => (
-          <DraggableApplicant key={item.id} applicant={item} />
+          <DraggableApplicant
+            key={item.id}
+            applicant={item}
+            onClick={() => onApplicantClick?.(item)}
+          />
         ))}
       </ul>
-    </div>
+    </section>
   );
 }

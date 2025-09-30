@@ -38,7 +38,7 @@ export default function Supervisor() {
       <Sidebar tab={tab} setTab={setTab} groupedTabs={groupedTabs} />
       <main className="main-content">
         <Header user={user} onLogout={logout} />
-        <div className="grid grid--4">
+        <div className="grid">
           <div className="surface p-4">
             {tab === 'tickets' && <TicketsTable supervisor />}
             {tab === 'createUser' && <CreateUserForm />}

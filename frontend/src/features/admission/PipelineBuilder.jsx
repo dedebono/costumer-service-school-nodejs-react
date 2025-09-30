@@ -1,21 +1,54 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { api } from '../../lib/api.js';
-import { DndContext, closestCenter } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import {
+  DndContext,
+  closestCenter,
+  DragOverlay
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove
+} from '@dnd-kit/sortable';
 import SortableItem from './SortableItem.jsx';
+
+// Simple reusable modal
+function Modal({ open, title, onClose, children, footer }) {
+  if (!open) return null;
+  return (
+    <div className="modal-overlay">
+      <div className="modal">
+        <header className="modal-header">
+          <h3>{title}</h3>
+          <button className="btn-close" onClick={onClose}>✖</button>
+        </header>
+        <div className="modal-body">{children}</div>
+        {footer && <footer className="modal-footer">{footer}</footer>}
+      </div>
+    </div>
+  );
+}
 
 export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
   const [steps, setSteps] = useState([]);
   const [newStepName, setNewStepName] = useState('');
   const [newStepSlug, setNewStepSlug] = useState('');
   const [isFinal, setIsFinal] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
+
+  const [activeId, setActiveId] = useState(null);
+  const activeStep = useMemo(
+    () => steps.find((s) => s.id === activeId) || null,
+    [activeId, steps]
+  );
+
+  const [selectedStep, setSelectedStep] = useState(null);
 
   useEffect(() => {
     const load = async () => {
       try {
         const p = await api(`/api/admission/pipelines/${pipelineId}`);
-        setSteps(p.steps || []);
+        setSteps((p.steps || []).sort((a, b) => (a.ord ?? 0) - (b.ord ?? 0)));
       } catch (e) {
         console.error('Failed to load pipeline:', e);
       }
@@ -23,21 +56,31 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
     load();
   }, [pipelineId]);
 
-  const onDragEnd = async (e) => {
-    const { active, over } = e;
+  const onDragStart = ({ active }) => setActiveId(active.id);
+  const onDragCancel = () => setActiveId(null);
+
+  const onDragEnd = async ({ active, over }) => {
+    setActiveId(null);
     if (!over || active.id === over.id) return;
-    const oldIndex = steps.findIndex(s => s.id === active.id);
-    const newIndex = steps.findIndex(s => s.id === over.id);
-    const newSteps = arrayMove(steps, oldIndex, newIndex).map((s, i) => ({ ...s, ord: i + 1 }));
-    setSteps(newSteps);
-    // Simpan ke server
+
+    const oldIndex = steps.findIndex((s) => s.id === active.id);
+    const newIndex = steps.findIndex((s) => s.id === over.id);
+    const reordered = arrayMove(steps, oldIndex, newIndex).map((s, i) => ({
+      ...s,
+      ord: i + 1,
+    }));
+
+    const prev = steps;
+    setSteps(reordered);
+
     try {
       await api(`/api/admission/${pipelineId}/steps`, {
         method: 'PUT',
-        body: { steps: newSteps }
+        body: { steps: reordered },
       });
-    } catch (e) {
-      console.error('Failed to update steps:', e);
+    } catch (err) {
+      console.error('Failed to update steps:', err);
+      setSteps(prev); // rollback on error
     }
   };
 
@@ -47,11 +90,13 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
       return;
     }
     try {
-      const newStep = await api(`/api/admission/${pipelineId}/steps`, {
+      const created = await api(`/api/admission/${pipelineId}/steps`, {
         method: 'POST',
-        body: { name: newStepName, slug: newStepSlug, is_final: isFinal }
+        body: { name: newStepName, slug: newStepSlug, is_final: isFinal },
       });
-      setSteps([...steps, newStep]);
+      setSteps((cur) =>
+        [...cur, created].sort((a, b) => (a.ord ?? 0) - (b.ord ?? 0))
+      );
       setNewStepName('');
       setNewStepSlug('');
       setIsFinal(false);
@@ -65,45 +110,103 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
       {!hideAddStep && (
         <>
           <h3>Add New Step</h3>
-          <input
-            type="text"
-            placeholder="Step Name"
-            value={newStepName}
-            onChange={e => setNewStepName(e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="Step Slug"
-            value={newStepSlug}
-            onChange={e => setNewStepSlug(e.target.value)}
-          />
-          <label>
+          <div className="flex gap-2 mb-2">
             <input
-              type="checkbox"
-              checked={isFinal}
-              onChange={e => setIsFinal(e.target.checked)}
+              className="input"
+              type="text"
+              placeholder="Step Name"
+              value={newStepName}
+              onChange={(e) => setNewStepName(e.target.value)}
             />
-            Is Final Step
-          </label>
-          <button onClick={handleAddStep}>Add Step</button>
+            <input
+              className="input"
+              type="text"
+              placeholder="Step Slug"
+              value={newStepSlug}
+              onChange={(e) => setNewStepSlug(e.target.value)}
+            />
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={isFinal}
+                onChange={(e) => setIsFinal(e.target.checked)}
+              />
+              Final
+            </label>
+            <button className="btn btn--primary" onClick={handleAddStep}>
+              Add Step
+            </button>
+          </div>
         </>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <h3>Existing Steps (Drag to Reorder)</h3>
-        <button onClick={() => setIsCollapsed(!isCollapsed)} style={{ fontSize: '1.2rem', background: 'none', border: 'none', cursor: 'pointer' }}>
-          {isCollapsed ? '⬆️' : '⬇️'}
+      <div className="flex items-center gap-2 mt-4">
+        <h3>Existing Steps</h3>
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="btn btn--subtle btn--sm"
+        >
+          {isCollapsed ? 'Show' : 'Hide'}
         </button>
       </div>
+
       {!isCollapsed && (
-        <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-          <SortableContext items={steps.map(s => s.id)} strategy={verticalListSortingStrategy}>
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-              {steps.map(s => <SortableItem key={s.id} id={s.id} step={s} />)}
+        <DndContext
+          collisionDetection={closestCenter}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onDragCancel={onDragCancel}
+        >
+          <SortableContext
+            items={steps.map((s) => s.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <ul className="steps-list">
+              {steps.map((s) => (
+                <SortableItem
+                  key={s.id}
+                  id={s.id}
+                  step={s}
+                  onStepClick={setSelectedStep}
+                />
+              ))}
             </ul>
           </SortableContext>
+
+          <DragOverlay dropAnimation={null}>
+            {activeStep ? (
+              <div className="liststeps drag-overlay">
+                {activeStep.title} - {activeStep.slug}{' '}
+                {activeStep.is_final ? '(Final)' : ''}
+              </div>
+            ) : null}
+          </DragOverlay>
         </DndContext>
       )}
+
+      {/* 🔥 Step detail modal */}
+      <Modal
+        open={!!selectedStep}
+        title="Step Details"
+        onClose={() => setSelectedStep(null)}
+        footer={
+          <button
+            className="btn btn--primary"
+            onClick={() => setSelectedStep(null)}
+          >
+            Close
+          </button>
+        }
+      >
+        {selectedStep && (
+          <div>
+            <p><strong>Title:</strong> {selectedStep.title}</p>
+            <p><strong>Slug:</strong> {selectedStep.slug}</p>
+            <p><strong>Order:</strong> {selectedStep.ord}</p>
+            <p><strong>Is Final:</strong> {selectedStep.is_final ? 'Yes' : 'No'}</p>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

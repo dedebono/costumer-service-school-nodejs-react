@@ -427,12 +427,160 @@ textarea:focus-visible{
   color: #ffffff;
 }
 
+/* ===== Kanban / Column styling ===== */
+
+.kanban{
+  display: grid;
+  gap: var(--space-4, 1rem);
+  grid-template-columns: repeat(4, minmax(260px, 1fr));
+}
+@media (max-width: 1200px){ .kanban{ grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px){  .kanban{ grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px){  .kanban{ grid-template-columns: 1fr; } }
+
+/* Step (column) with dynamic hue based on --h (set inline) */
+.step{
+  --c1: hsl(var(--h) 62% 92% / 1);
+  --c2: hsl(var(--h) 62% 86% / 1);
+  --edge: hsl(var(--h) 50% 55% / .35);
+
+  display: flex; flex-direction: column;
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, var(--c1) 0%, var(--c2) 100%);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.08));
+  min-height: 220px;
+  overflow: visible;
+  transition: border-color 200ms var(--ease-out, ease), box-shadow 220ms var(--ease-out, ease), transform 160ms var(--ease-out, ease);
+}
+
+/* Final column variant uses your accent palette */
+.step.is-final{
+  --c1: color-mix(in oklab, #f7b917 26%, #fefefe);
+  --c2: color-mix(in oklab, #f7b917 12%, #cbe2f0);
+  --edge: color-mix(in oklab, #264da1 60%, transparent);
+}
+
+/* Column header */
+.step__header{
+  position: sticky; top: 0; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  padding: .65rem .8rem;
+  background:
+    linear-gradient(180deg, color-mix(in oklab, #ffffff 65%, var(--c1)) 0%, color-mix(in oklab, #ffffff 35%, var(--c2)) 100%);
+  border-bottom: 1px solid var(--edge);
+}
+.step__title{
+  margin: 0; font-size: var(--fs-500, 1.1rem); font-weight: 800; color: #143258;
+}
+.step.is-final .step__title{ color: #143258; }
+
+.step__count{
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 2ch; height: 1.6rem; padding: 0 .5rem;
+  border-radius: 999px; font-weight: 700; font-size: .85rem;
+  color: #143258; background: color-mix(in oklab, #cbe2f0 60%, #fefefe);
+  border: 1px solid color-mix(in oklab, #264da1 40%, transparent);
+}
+
+/* Column list area */
+.step__list{
+  list-style: none; margin: 0; padding: .6rem;
+  display: grid; gap: .6rem;
+  overflow: visible;
+}
+
+/* Droppable hover highlight */
+.step.is-over{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0,0,0,.12);
+  border-color: hsl(var(--h) 70% 45% / .8);
+}
+
+.drag-overlay{
+  z-index: 10000;
+  box-shadow: 0 16px 40px rgba(0,0,0,.25);
+  transform: scale(1.03);
+  cursor: grabbing;
+}
+
+.steps-list > li { position: relative; }
+
+/* ===== Applicant card (draggable) ===== */
+.card{
+  --hc: var(--h-card, 210);
+  --cA: hsl(var(--hc) 72% 96% / 1);
+  --cB: hsl(var(--hc) 62% 90% / 1);
+  --edge: hsl(var(--hc) 50% 50% / .35);
+
+  background:
+    linear-gradient(180deg, var(--cA) 0%, var(--cB) 100%),
+    radial-gradient(120% 60% at 100% 0%, rgba(255,255,255,.25), transparent 60%);
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  padding: .6rem .7rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,.06);
+  cursor: grab;
+  transition: transform 160ms cubic-bezier(.16,1,.3,1), box-shadow 220ms ease, border-color 220ms ease, filter 220ms ease;
+}
+
+.card:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(0,0,0,.12);
+  border-color: hsl(var(--hc) 70% 45% / .6);
+  filter: saturate(1.05);
+}
+
+.card:active{ cursor: grabbing; }
+
+/* simple content styling */
+.card__title{ font-weight: 800; display:flex; align-items:center; gap:.5rem; }
+.card__meta{ font-size: .9rem; opacity: .85; }
+
+/* reuse global badge or define quick one */
+.badge{
+  display:inline-block; font-weight:700; padding:.18rem .45rem; border-radius:999px;
+  font-size:.72rem; border:1px solid currentColor; color:#143258;
+  background: color-mix(in oklab, #cbe2f0 60%, #fefefe);
+}
+
+/* Mobile fit */
+@media (max-width: 640px){
+  .step__list{ padding: .5rem; }
+}
+
+
+.liststeps{
+  display: flex;
+  flex-direction: row;
+  border-style: solid;
+  border: 1px;
+  font-weight: 500;
+  border-radius: 10px;
+  margin: 10px 10px;
+  padding: 10px;
+  width: 500px;
+  background-color:var(--clr-accent);
+}
+
+.liststeps li{
+    font-weight: 900;
+}
+
+/*step style*/
+.stepmove{
+  background-color: #264da1;
+}
+
 /* =========================
    Modal enhancements
    (extends existing .modal styles)
    ========================= */
 
 /* Backdrop: tambah blur & tint halus */
+
+
 .modal__backdrop{
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
@@ -545,3 +693,6 @@ textarea:focus-visible{
 /* Multi-modal (stacking) */
 .modal[data-open][data-level="1"]{ z-index: calc(var(--z-modal) + 10); }
 .modal[data-open][data-level="2"]{ z-index: calc(var(--z-modal) + 20); }
+
+.card:active{ transform: translateY(0); box-shadow: 0 8px 18px rgba(0,0,0,.12); }
+
