@@ -49,9 +49,21 @@ function getAllPipelines() {
   });
 }
 
+function deletePipeline(id) {
+  return new Promise((resolve, reject) => {
+    const sql = `DELETE FROM pipelines WHERE id = ?`;
+    db.run(sql, [id], function (err) {
+      if (err) reject(err);
+      else if (this.changes === 0) reject(new Error('Pipeline not found'));
+      else resolve({ changes: this.changes });
+    });
+  });
+}
+
 module.exports = {
   getPipelineById,
   getPipelineWithSteps,
   createPipeline,
   getAllPipelines,
+  deletePipeline,
 };

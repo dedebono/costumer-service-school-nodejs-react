@@ -143,7 +143,7 @@ export default function ApplicantsBoard({ pipeline }) {
       {/* Applicant details modal */}
       <Modal
         open={!!selectedApplicant}
-        title="Applicant Details"
+        title="Data Siswa"
         onClose={() => setSelectedApplicant(null)}
         footer={
           <button className="btn btn--primary" onClick={() => setSelectedApplicant(null)}>
@@ -153,12 +153,12 @@ export default function ApplicantsBoard({ pipeline }) {
       >
         {selectedApplicant && (
           <div className="grid" style={{ gap: '0.5rem' }}>
-            <div><strong>Name:</strong> {selectedApplicant.name}</div>
+            <div><strong>Nama Lengkap:</strong> {selectedApplicant.name}</div>
             {selectedApplicant.nisn && <div><strong>NISN:</strong> {selectedApplicant.nisn}</div>}
-            {selectedApplicant.birthdate && <div><strong>Birthdate:</strong> {selectedApplicant.birthdate}</div>}
-            {selectedApplicant.parent_phone && <div><strong>Parent Phone:</strong> {selectedApplicant.parent_phone}</div>}
+            {selectedApplicant.birthdate && <div><strong>Tanggal Lahir:</strong> {selectedApplicant.birthdate}</div>}
+            {selectedApplicant.parent_phone && <div><strong>Nomor telepon:</strong> {selectedApplicant.parent_phone}</div>}
             {selectedApplicant.email && <div><strong>Email:</strong> {selectedApplicant.email}</div>}
-            {selectedApplicant.address && <div><strong>Address:</strong> {selectedApplicant.address}</div>}
+            {selectedApplicant.address && <div><strong>Alamat:</strong> {selectedApplicant.address}</div>}
           </div>
         )}
       </Modal>

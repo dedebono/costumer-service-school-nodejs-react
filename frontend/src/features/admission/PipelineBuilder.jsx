@@ -112,14 +112,14 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
           <h3>Add New Step</h3>
           <div className="flex gap-2 mb-2">
             <input
-              className="input"
+              className="input-modal"
               type="text"
               placeholder="Step Name"
               value={newStepName}
               onChange={(e) => setNewStepName(e.target.value)}
             />
             <input
-              className="input"
+              className="input-modal"
               type="text"
               placeholder="Step Slug"
               value={newStepSlug}
@@ -141,12 +141,12 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
       )}
 
       <div className="flex items-center gap-2 mt-4">
-        <h3>Existing Steps</h3>
+        <h3>Alur PMB</h3>
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="btn btn--subtle btn--sm"
         >
-          {isCollapsed ? 'Show' : 'Hide'}
+          {isCollapsed ? 'Lihat' : 'Sembunyi'}
         </button>
       </div>
 
@@ -207,6 +207,14 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
           </div>
         )}
       </Modal>
+
+      <div className="mt-4">
+        <button className="btn btn--primary" 
+        disabled
+        onClick={() => alert('All changes have been auto-saved.')}>
+          Simpan
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { verifyToken, requireRole } = require('../middleware/auth');
-const { getPipelineById, getPipelineWithSteps, createPipeline, getAllPipelines } = require('../models/pipeline');
-const { getStepsByPipelineId, updateStep, insertStep } = require('../models/step');
+const { getPipelineById, getPipelineWithSteps, createPipeline, getAllPipelines, deletePipeline } = require('../models/pipeline');
+const { getStepsByPipelineId, updateStep, insertStep, deleteStep } = require('../models/step');
 const {
   getApplicantById,
   getApplicantsByPipeline,
@@ -57,6 +57,46 @@ router.put('/:id/steps', async (req, res) => {
         await insertStep({ ...s, pipeline_id: pipelineId });
       }
     }
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ message: e.message });
+  }
+});
+
+// PUT /api/admission/:id/steps/:stepId
+router.put('/:id/steps/:stepId', async (req, res) => {
+  const pipelineId = Number(req.params.id);
+  const stepId = Number(req.params.stepId);
+  const { title, slug, is_final } = req.body;
+
+  if (!title || !slug) return res.status(400).json({ message: 'title and slug required' });
+
+  try {
+    const pipeline = await getPipelineById(pipelineId);
+    if (!pipeline) return res.status(404).json({ message: 'Pipeline not found' });
+
+    // Get current step to preserve ord
+    const currentSteps = await getStepsByPipelineId(pipelineId);
+    const currentStep = currentSteps.find(s => s.id === stepId);
+    if (!currentStep) return res.status(404).json({ message: 'Step not found' });
+
+    await updateStep({ id: stepId, title, slug, is_final, ord: currentStep.ord, pipeline_id: pipelineId });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ message: e.message });
+  }
+});
+
+// DELETE /api/admission/:id/steps/:stepId
+router.delete('/:id/steps/:stepId', async (req, res) => {
+  const pipelineId = Number(req.params.id);
+  const stepId = Number(req.params.stepId);
+
+  try {
+    const pipeline = await getPipelineById(pipelineId);
+    if (!pipeline) return res.status(404).json({ message: 'Pipeline not found' });
+
+    await deleteStep(stepId, pipelineId);
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ message: e.message });
@@ -140,6 +180,18 @@ router.post('/pipelines', async (req, res) => {
   try {
     const pipeline = await createPipeline({ name, year });
     res.status(201).json(pipeline);
+  } catch (e) {
+    res.status(400).json({ message: e.message });
+  }
+});
+
+// DELETE /api/admission/pipelines/:id
+router.delete('/pipelines/:id', async (req, res) => {
+  const pipelineId = Number(req.params.id);
+
+  try {
+    await deletePipeline(pipelineId);
+    res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ message: e.message });
   }

@@ -12,6 +12,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/models': {
+        target: 'http://192.168.1.21:3001',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 })

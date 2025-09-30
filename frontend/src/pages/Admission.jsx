@@ -69,16 +69,16 @@ export default function Admission({ hideAddStep = false, hideCreatePipeline = fa
   };
 
   return (
-    <div>
-      <h2>Admission Management</h2>
-
-      <div className="flex gap-4 items-center mb-4">
+    <div className="container">
+      <h2>Penerimaan Siswa Baru</h2>
+  
+      <div>
         <select
-          className="select"
+          className="select-pmb"
           value={selectedPipeline?.id || ''}
           onChange={(e) => setSelectedPipeline(pipelines.find(p => p.id == e.target.value))}
         >
-          <option value="">Select Pipeline</option>
+          <option value="">Pilih Alur PMB</option>
           {pipelines.map(p => (
             <option key={p.id} value={p.id}>{p.name} ({p.year})</option>
           ))}
@@ -107,36 +107,36 @@ export default function Admission({ hideAddStep = false, hideCreatePipeline = fa
         <>
           <div className="mb-4">
             <button className="btn btn--primary" onClick={() => setShowCreateApplicant(true)}>
-              Create New Applicant
+              Pendaftaran Siswa
             </button>
           </div>
 
           {/* ⬇️ Modal Create Applicant */}
           <Modal
             open={showCreateApplicant}
-            title="Create New Applicant"
+            title="Data Siswa"
             onClose={() => setShowCreateApplicant(false)}
             footer={
               <div className="flex gap-2">
                 {/* tombol submit di footer akan trigger form via form attribute */}
                 <button type="submit" form="create-applicant-form" className="btn btn--primary">
-                  Create Applicant
+                  Simpan
                 </button>
                 <button type="button" className="btn btn--outline" onClick={() => setShowCreateApplicant(false)}>
-                  Cancel
+                  Batal
                 </button>
               </div>
             }
           >
             <form id="create-applicant-form" onSubmit={createApplicant}>
-              <input className="input mb-2" name="name" placeholder="Full Name" required autoFocus />
+              <input className="input mb-2" name="name" placeholder="Nama Lengkap Siswa" required autoFocus />
               <input className="input mb-2" name="nisn" placeholder="NISN" />
               <div className="grid grid--2">
-                <input className="input" name="birthdate" type="date" />
-                <input className="input" name="parent_phone" placeholder="Parent Phone" />
+                <input className="input" name="birthdate" type="date" placeholder="Tanggal Lahir" />
+                <input className="input" name="parent_phone" placeholder="Nomor Telepon orang tua" />
               </div>
               <input className="input my-2" name="email" type="email" placeholder="Email" />
-              <textarea className="textarea mb-2" name="address" placeholder="Address"></textarea>
+              <textarea className="textarea mb-2" name="address" placeholder="Alamat"></textarea>
             </form>
           </Modal>
 

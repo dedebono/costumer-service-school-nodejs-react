@@ -106,9 +106,23 @@ textarea:focus-visible{
 
 /* ---------- Layout helpers ---------- */
 .container{
-  width: var(--container-w);
+  max-width: 1610px;
+  width: 100%;
+  overflow: scroll;
   margin-inline: auto;
   padding-inline: var(--space-4);
+}
+
+h2{
+  margin-bottom: 1rem;
+}
+
+.select-pmb{
+  padding: 8px;
+  min-width: 400px;
+  border-radius: 8px;
+  border-width: 1px;
+  margin-bottom: 10px;
 }
 
 .page{
@@ -190,20 +204,120 @@ textarea:focus-visible{
 .btn--sm{ padding: .4rem .7rem; font-size: var(--fs-300); }
 .btn--lg{ padding: .8rem 1.1rem; font-size: var(--fs-500); }
 
+.btn-icon{
+  padding: .2rem .4rem;
+  font-size: var(--fs-400);
+  min-width: auto;
+  aspect-ratio: 1;
+}
+
 .btn[disabled],
 .btn:disabled{ opacity: .6; pointer-events: none; }
 
+/* input modal*/
+.input-modal{
+  padding: 8px;
+  min-width: 400px;
+  border-radius: 8px;
+  border-width: 1px;
+}
+
+.option-selector{
+  padding: 8px;
+  min-width: 400px;
+  border-radius: 8px;
+  border-width: 1px;
+}
+
 /* ---------- Modal (accessible, minimal JS) ---------- */
-/* Usage:
-  <div class="modal" data-open>  <-- add [data-open] to show
-    <div class="modal__backdrop"></div>
-    <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="m-title">
-      <header class="modal__header"><h3 id="m-title">Title</h3><button class="btn btn--ghost modal__close" aria-label="Close">✕</button></header>
-      <div class="modal__body">...</div>
-      <footer class="modal__footer">...</footer>
-    </div>
-  </div>
-*/
+/* Existing styles provided by you: */
+
+.modals-overlay{
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  background: color-mix(in oklab, #000 45%, transparent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: fixed; 
+  inset: 0; 
+  z-index: 99999;
+  overflow: auto;
+  border-radius: 18px;
+  margin: 1rem 1rem;
+}
+.modals{
+  font-family:system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  /* Make the modal wide enough to comfortably hold 3 columns */
+  width: 90%; 
+  max-width: 1000px; /* Set a max width for large screens */
+  background-color: white; /* Add background color for the modal box */
+  border-radius: 18px; /* Apply border radius to the modal */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.modals-header{
+  font-size: large;
+  background-color:var(--clr-accent);
+  padding: 1rem;
+  border-radius: 18px 18px 0 0;
+}
+.modals-body{
+margin: 10px;
+}
+.modals-footer{
+  padding: 1rem; /* Add padding to the footer */
+  display: flex;
+  justify-content: flex-end; /* Align buttons to the right */
+  gap: 0.5rem;
+}
+
+/* --- New Styles for 3-Column Layout --- */
+
+.steps-grid {
+  /* Use CSS Grid for the 3-column layout */
+  display: grid;
+  /* Create 3 columns of equal size. The minmax ensures they shrink slightly if needed. */
+  grid-template-columns: repeat(3, minmax(280px, 1fr)); 
+  gap: 20px; /* Space between the step items */
+  padding: 10px;
+}
+
+.step-item {
+  /* Ensure the item takes up its space in the grid */
+  border: 1px solid #ccc; /* Optional: to visualize the boundaries */
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.step-item h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  /* Ensure the 'Step X' title is visible */
+}
+
+.step-item .flex {
+  /* Update the inner flex to align items to the start and take up full width */
+  display: flex;
+  flex-direction: column; /* Stack the Title, Slug, and Final inputs vertically within the step item */
+  gap: 8px;
+}
+
+.step-item .input {
+  /* Make inputs take up full width of the column */
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* Optional: Adjust the checkbox label for better presentation */
+.step-item label {
+  align-self: flex-start; /* Keeps the checkbox to the left */
+}
+
+/* --- Ensure fit in display --- */
+/* The addition of `width: 90%; max-width: 1000px;` to `.modals` and the grid layout should make it fit responsively while maintaining the three columns. */
+
 .modal{
   position: fixed; inset: 0; z-index: var(--z-modal);
   display: grid; place-items: center;
@@ -361,7 +475,7 @@ textarea:focus-visible{
 
 /* ---------- Sidebar ---------- */
 .sidebar{
-  width: 250px;
+  width:150px;
   background:var(--clr-primary); /* Dark blue */
   border-right: 1px solid var(--clr-border);
   transition: width var(--dur-2) var(--ease-out);
@@ -695,4 +809,13 @@ textarea:focus-visible{
 .modal[data-open][data-level="2"]{ z-index: calc(var(--z-modal) + 20); }
 
 .card:active{ transform: translateY(0); box-shadow: 0 8px 18px rgba(0,0,0,.12); }
+
+/* Step actions */
+.step-actions{
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  gap: 2px;
+}
 

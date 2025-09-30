@@ -9,22 +9,22 @@ import Sidebar from '../components/Sidebar.jsx';
 
 const groupedTabs = [
   {
-    title: 'Tickets',
+    title: 'TIKET',
     items: [
-      { value: 'tickets', label: 'Fetch All Tickets' },
-      { value: 'search', label: 'Search & Filters' },
+      { value: 'tickets', label: 'Semua Tiket' },
+      { value: 'search', label: 'Cari Tiket' },
     ],
   },
   {
-    title: 'Users',
+    title: 'PENGGUNA',
     items: [
-      { value: 'createUser', label: 'Create Customer Service account' },
+      { value: 'createUser', label: 'Kelola Akun' },
     ],
   },
   {
-    title: 'Admission',
+    title: 'PMB',
     items: [
-      { value: 'pipelineBuilder', label: 'Pipeline Builder' },
+      { value: 'pipelineBuilder', label: 'Pembuatan Alur PMB' },
     ],
   },
 ];
@@ -54,6 +54,12 @@ export default function Supervisor() {
 function PipelineBuilderForSupervisor() {
   const [pipelines, setPipelines] = useState([]);
   const [selectedPipelineId, setSelectedPipelineId] = useState(null);
+  const [newPipelineName, setNewPipelineName] = useState('');
+  const [newPipelineYear, setNewPipelineYear] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editSteps, setEditSteps] = useState([]);
+  const [selectedSteps, setSelectedSteps] = useState(new Set());
 
   useEffect(() => {
     async function fetchPipelines() {
@@ -70,18 +76,208 @@ function PipelineBuilderForSupervisor() {
     fetchPipelines();
   }, []);
 
+  const createNewPipeline = async () => {
+    if (!newPipelineName || !newPipelineYear) {
+      alert('Name and year are required');
+      return;
+    }
+    try {
+      const newPipeline = await api('/api/admission/pipelines', {
+        method: 'POST',
+        body: { name: newPipelineName, year: newPipelineYear }
+      });
+      setPipelines(prev => [...prev, newPipeline]);
+      setSelectedPipelineId(newPipeline.id);
+      setShowCreateForm(false);
+      setNewPipelineName('');
+      setNewPipelineYear('');
+    } catch (e) {
+      alert('Failed to create pipeline: ' + e.message);
+    }
+  };
+
+  const deletePipeline = async () => {
+    if (!selectedPipelineId || selectedPipelineId === 'new') return;
+    if (confirm('Are you sure you want to delete this pipeline? This will also delete all its steps.')) {
+      try {
+        await api(`/api/admission/pipelines/${selectedPipelineId}`, {
+          method: 'DELETE',
+        });
+        setPipelines(prev => prev.filter(p => p.id !== selectedPipelineId));
+        setSelectedPipelineId(pipelines.length > 1 ? pipelines.find(p => p.id !== selectedPipelineId)?.id || 'new' : 'new');
+      } catch (e) {
+        alert('Failed to delete pipeline: ' + e.message);
+      }
+    }
+  };
+
+  const openEditModal = async () => {
+    if (!selectedPipelineId || selectedPipelineId === 'new') {
+        alert('Please select an existing pipeline to edit.');
+        return;
+    }
+    try {
+      const pipeline = await api(`/api/admission/pipelines/${selectedPipelineId}`);
+      // Ensure we clone the steps array for editing
+      setEditSteps(pipeline.steps ? [...pipeline.steps] : []);
+      setShowEditModal(true);
+    } catch (e) {
+      alert('Failed to load pipeline: ' + e.message);
+    }
+  };
+
+  const saveEditSteps = async () => {
+    try {
+      // Logic to save all steps. This needs to be robust for both new and existing steps.
+      // Assuming existing steps are updated with PUT. If adding new steps is needed, POST logic would be required.
+      // Based on your original code, it only handles PUT (updates).
+      for (const step of editSteps) {
+        if (!step.title || !step.slug) {
+          alert('Title and slug are required for all steps');
+          return;
+        }
+        await api(`/api/admission/${selectedPipelineId}/steps/${step.id}`, {
+          method: 'PUT',
+          body: { title: step.title, slug: step.slug, is_final: step.is_final },
+        });
+      }
+      setShowEditModal(false);
+      // Reload the pipeline in PipelineBuilder
+      // For a better UX, only update the relevant component state instead of a full reload
+      // window.location.reload(); 
+    } catch (e) {
+      alert('Failed to save steps: ' + e.message);
+    }
+  };
+
   return (
     <div>
-      <h2>Select Pipeline to Manage Steps</h2>
-      <select value={selectedPipelineId || ''} onChange={e => setSelectedPipelineId(e.target.value)}>
-        {pipelines.map(p => (
-          <option key={p.id} value={p.id}>
-            {p.name} ({p.year})
-          </option>
-        ))}
-      </select>
-      {selectedPipelineId && 
-      <PipelineBuilder pipelineId={selectedPipelineId} />}
+      <h2>Pilih Alur PMB / Buat Baru</h2>
+      <div className="flex gap-2 items-center mb-4">
+        <select className='option-selector'
+        value={selectedPipelineId || ''} onChange={e => { setSelectedPipelineId(e.target.value); setShowCreateForm(e.target.value === "new"); }}>
+          <option value="new">Alur PMB baru</option>
+          {pipelines.map(p => (
+            <option key={p.id} value={p.id}>
+              {p.name} ({p.year})
+            </option>
+          ))}
+        </select>
+        {selectedPipelineId && selectedPipelineId !== 'new' && (
+          <>
+            <button className="btn btn--primary" onClick={openEditModal}>
+              Edit Alur
+            </button>
+            <button className="btn btn--danger" onClick={deletePipeline}>
+              Hapus Alur
+            </button>
+          </>
+        )}
+      </div>
+      {showCreateForm ? (
+        <div>
+          <h3>Buat Alur PMB Baru</h3>
+          <div className="flex gap-2 mb-2">
+            <input
+              className="input-modal"
+              type="text"
+              placeholder="Nama Alur"
+              value={newPipelineName}
+              onChange={(e) => setNewPipelineName(e.target.value)}
+            />
+            <input
+              className="input-modal"
+              type="text"
+              placeholder="tahun"
+              value={newPipelineYear}
+              onChange={(e) => setNewPipelineYear(e.target.value)}
+            />
+            <button className="btn btn--primary" onClick={createNewPipeline}>
+              Buat Alur
+            </button>
+          </div>
+        </div>
+      ) : (
+        selectedPipelineId && selectedPipelineId !== 'new' && <PipelineBuilder pipelineId={selectedPipelineId} />
+      )}
+
+      {/* Edit Steps Modal - CORRECTED FOR POP-UP */}
+      {showEditModal && (
+        <div className="modals-overlay">
+          <div className="modals">
+            <header className="modals-header">
+              <h3>
+                Edit alur
+                <button
+                  className="btn-close"
+                  onClick={() => setShowEditModal(false)}
+                >
+                  ✖
+                </button>
+              </h3>
+            </header>
+
+            <div className="modals-body">
+              {/* Add New Step Section (Optional, but useful) */}
+              {/* ... (Your existing 'Add New Step' logic would go here if you had it) */}
+
+              {/* Steps Grid for 3-Column Layout */}
+              <div className="steps-grid">
+                {editSteps.map((step, index) => (
+                  <div key={step.id} className="step-item">
+                    <h4>Step {index + 1}</h4>
+                    <div className="flex flex-col gap-2 mb-2">
+                      <input
+                        className="input"
+                        type="text"
+                        placeholder="Title"
+                        value={step.title}
+                        onChange={(e) => {
+                          const newSteps = [...editSteps];
+                          newSteps[index].title = e.target.value;
+                          setEditSteps(newSteps);
+                        }}
+                      />
+                      <input
+                        className="input"
+                        type="text"
+                        placeholder="Slug"
+                        value={step.slug}
+                        onChange={(e) => {
+                          const newSteps = [...editSteps];
+                          newSteps[index].slug = e.target.value;
+                          setEditSteps(newSteps);
+                        }}
+                      />
+                      <label className="flex items-center gap-1">
+                        <input
+                          type="checkbox"
+                          checked={step.is_final}
+                          onChange={(e) => {
+                            const newSteps = [...editSteps];
+                            newSteps[index].is_final = e.target.checked;
+                            setEditSteps(newSteps);
+                          }}
+                        />
+                        Final
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <footer className="modals-footer">
+              <button className="btn btn--primary" onClick={saveEditSteps}>
+                Save Changes
+              </button>
+              <button className="btn btn--subtle" onClick={() => setShowEditModal(false)}>
+                Cancel
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -89,7 +285,7 @@ function PipelineBuilderForSupervisor() {
 function Header({ user, onLogout }) {
   return (
     <div className="flex justify-between items-center mb-4">
-      <h1 className="mt-0">Customer Service Portal</h1>
+      <h1 className="mt-0">EDUCATION COUNSULTAN ADMIN</h1>
       <div className="flex gap-2 items-center">
         <span className="badge">{user.username} • {user.role}</span>
         <button onClick={onLogout} className="btn btn--primary">Logout</button>

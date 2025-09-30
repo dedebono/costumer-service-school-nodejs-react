@@ -1,16 +1,11 @@
-# TODO: Add Admission Backend Route and Frontend
+# TODO: Modify CreateUserForm.jsx for User Management
 
-## Steps to Complete
-
-- [x] Update backend/schema.sql to include admission tables (pipelines, steps, step_requirements, applicants, applicant_documents, applicant_history) and modify users table to allow 'ADMIN' role.
-- [x] Create backend/src/models/pipeline.js for pipeline-related database operations.
-- [x] Create backend/src/models/step.js for step-related database operations.
-- [x] Create backend/src/models/applicant.js for applicant-related database operations.
-- [x] Create backend/src/routes/admissionRoutes.js with routes for pipelines (PUT /:id/steps) and applicants (POST /:id/move), using auth middleware.
-- [x] Update backend/server.js to include app.use('/api/admission', admissionRoutes);
-- [x] Add additional backend routes for fetching pipelines and applicants, and creating them.
-- [x] Create frontend/src/pages/Admission.jsx for admission management.
-- [x] Create frontend components: PipelineBuilder, ApplicantsBoard, SortableItem, StepColumn for drag-and-drop functionality.
-- [x] Update frontend/src/pages/CustomerService.jsx to include Admission tab.
-- [x] Run database migration or recreate database.sqlite to apply schema changes.
-- [x] Test the new admission routes and frontend.
+- [x] Add necessary imports: useEffect, Modal, Swal
+- [x] Add state variables: users, loading, editOpen, editUser, changePasswordOpen, changePasswordUser
+- [x] Implement fetchUsers function and useEffect to load users on mount
+- [x] Modify submit function to refresh users after create
+- [x] Add user list table below create form with columns: Username, Email, Role, Actions
+- [x] Implement edit modal: open, form, save, close
+- [x] Implement change password modal: open, form, save, close
+- [x] Implement delete with Swal confirmation
+- [ ] Test all functionalities: create, list, edit, change password, delete

@@ -8,19 +8,24 @@ import { useState } from 'react';
 import Sidebar from '../components/Sidebar.jsx';
 
 const groupedTabs = [
-  {
-    title: 'Tickets',
+    {
+    title: 'PMB',
     items: [
-      { value: 'search', label: 'Search Old Ticket' },
-      { value: 'create', label: 'Create New Ticket' },
-      { value: 'tickets', label: 'Fetch All Tickets' },
+      { value: 'admission', label: 'Pendaftaran' }
     ],
   },
   {
-    title: 'Users',
+    title: 'Tiket',
     items: [
-      { value: 'users', label: 'Customers' },
-      { value: 'admission', label: 'Admission' },
+      { value: 'search', label: 'Cari' },
+      { value: 'create', label: 'Buat' },
+      { value: 'tickets', label: 'Semua' },
+    ],
+  },
+  {
+    title: 'Pengguna',
+    items: [
+      { value: 'users', label: 'Konsumen' },
     ],
   },
 ];

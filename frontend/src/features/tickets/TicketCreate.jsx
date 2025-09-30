@@ -274,7 +274,6 @@ async function submit(e) {
 }
 
 const TITLE_OPTIONS = [
-  'Form Pendaftaran (pembelian/pengembalian)',
   'Jadwal Ekskul, Club, Kelas di tiadakan dll',
   'Pengembalian Raport / Ijazah / Legalisir',
   'Seragam (Pembelian, Pemberian Awal, Custom)',
@@ -380,15 +379,7 @@ return (
                 required
               />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label>Priority</label>
-                  <select style={inp} value={priority} onChange={(e) => setPriority(e.target.value)}>
-                    <option>low</option>
-                    <option>medium</option>
-                    <option>high</option>
-                    <option>urgent</option>
-                  </select>
-                </div>
+
                 <div>
                   <label>Status</label>
                   <select style={inp} value={status} onChange={(e) => setStatus(e.target.value)}>
