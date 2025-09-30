@@ -9,6 +9,7 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
   const [newStepName, setNewStepName] = useState('');
   const [newStepSlug, setNewStepSlug] = useState('');
   const [isFinal, setIsFinal] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -88,14 +89,21 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
         </>
       )}
 
-      <h3>Existing Steps (Drag to Reorder)</h3>
-      <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-        <SortableContext items={steps.map(s => s.id)} strategy={verticalListSortingStrategy}>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            {steps.map(s => <SortableItem key={s.id} id={s.id} step={s} />)}
-          </ul>
-        </SortableContext>
-      </DndContext>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <h3>Existing Steps (Drag to Reorder)</h3>
+        <button onClick={() => setIsCollapsed(!isCollapsed)} style={{ fontSize: '1.2rem', background: 'none', border: 'none', cursor: 'pointer' }}>
+          {isCollapsed ? '⬆️' : '⬇️'}
+        </button>
+      </div>
+      {!isCollapsed && (
+        <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <SortableContext items={steps.map(s => s.id)} strategy={verticalListSortingStrategy}>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              {steps.map(s => <SortableItem key={s.id} id={s.id} step={s} />)}
+            </ul>
+          </SortableContext>
+        </DndContext>
+      )}
     </div>
   );
 }

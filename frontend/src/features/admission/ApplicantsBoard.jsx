@@ -57,7 +57,7 @@ export default function ApplicantsBoard({ pipeline }) {
 
   return (
     <DndContext onDragEnd={onDragEnd} collisionDetection={rectIntersection}>
-      <div style={{ display: 'flex', gap: 16, overflowX: 'auto' }}>
+      <div style={{ display: 'flex' , flexDirection:'row', gap: 16, overflowX: 'auto', width: '100%', paddingTop: 16, paddingBottom: 16, boxSizing: 'border-box' }}>
         {columns.map(col => (
           <StepColumn key={col.step.id} step={col.step} items={col.items} />
         ))}
