@@ -137,8 +137,8 @@ router.post('/:id/move', async (req, res) => {
       }
     }
 
-    // Check required dynamic details
-    const dynamicCheck = await checkRequiredDynamicDetailsFilled(applicantId, toStepId);
+    // Check required dynamic details for the current step
+    const dynamicCheck = await checkRequiredDynamicDetailsFilled(applicantId, applicant.current_step_id);
     if (dynamicCheck !== true) {
       const err = new Error('Dynamic details wajib belum lengkap');
       err.missing = dynamicCheck;
@@ -239,11 +239,11 @@ router.delete('/pipelines/:id', async (req, res) => {
   // POST /api/admission/applicants/:id/dynamic-details
   router.post('/applicants/:id/dynamic-details', async (req, res) => {
     const applicantId = Number(req.params.id);
-    const { details } = req.body; // [{step_detail_id, value}, ...]
+    const { details } = req.body; // [{detail_key, value}, ...]
 
     try {
       for (const d of details) {
-        await setApplicantDynamicDetail(applicantId, d.step_detail_id, d.value);
+        await setApplicantDynamicDetail(applicantId, d.detail_key, d.value);
       }
       res.json({ ok: true });
     } catch (e) {

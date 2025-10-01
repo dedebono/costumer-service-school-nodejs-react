@@ -88,7 +88,7 @@ export default function ApplicantsBoard({ pipeline }) {
       });
       // Save dynamic details
       const dynamicDetailsToSave = stepDynamicDetails.map(detail => ({
-        step_detail_id: detail.id,
+        detail_key: detail.key,
         value: applicantDynamicDetails[detail.key] || null
       }));
       await api(`/api/admission/applicants/${selectedApplicant.id}/dynamic-details`, {
