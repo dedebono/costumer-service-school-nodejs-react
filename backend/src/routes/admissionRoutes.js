@@ -2,15 +2,20 @@ const router = require('express').Router();
 const { verifyToken, requireRole } = require('../middleware/auth');
 const { getPipelineById, getPipelineWithSteps, createPipeline, getAllPipelines, deletePipeline } = require('../models/pipeline');
 const { getStepsByPipelineId, updateStep, insertStep, deleteStep } = require('../models/step');
+const { getDetailsByStepId, insertDetail, updateDetail, deleteDetail } = require('../models/stepDynamicDetails');
 const {
   getApplicantById,
   getApplicantsByPipeline,
   createApplicant,
   updateApplicantStep,
+  updateApplicantNotes,
   insertApplicantHistory,
   getStepRequirements,
   checkDocument,
   getStepById,
+  getApplicantDynamicDetails,
+  setApplicantDynamicDetail,
+  checkRequiredDynamicDetailsFilled,
 } = require('../models/applicant');
 
 router.use(verifyToken);
@@ -103,6 +108,7 @@ router.delete('/:id/steps/:stepId', async (req, res) => {
   }
 });
 
+
 // POST /api/admission/:id/move
 router.post('/:id/move', async (req, res) => {
   const applicantId = Number(req.params.id);
@@ -116,6 +122,7 @@ router.post('/:id/move', async (req, res) => {
     const step = await getStepById(toStepId, applicant.pipeline_id);
     if (!step) throw new Error('Invalid step');
 
+    // Check required documents
     const reqs = await getStepRequirements(toStepId);
     if (reqs.length) {
       const missing = [];
@@ -128,6 +135,14 @@ router.post('/:id/move', async (req, res) => {
         err.missing = missing;
         throw err;
       }
+    }
+
+    // Check required dynamic details
+    const dynamicCheck = await checkRequiredDynamicDetailsFilled(applicantId, toStepId);
+    if (dynamicCheck !== true) {
+      const err = new Error('Dynamic details wajib belum lengkap');
+      err.missing = dynamicCheck;
+      throw err;
     }
 
     await updateApplicantStep(applicantId, toStepId);
@@ -197,16 +212,113 @@ router.delete('/pipelines/:id', async (req, res) => {
   }
 });
 
-// POST /api/admission/applicants
-router.post('/applicants', async (req, res) => {
-  const { pipeline_id, name, nisn, birthdate, parent_phone, email, address } = req.body;
-  if (!pipeline_id || !name) return res.status(400).json({ message: 'pipeline_id and name required' });
-  try {
-    const applicant = await createApplicant({ pipeline_id, name, nisn, birthdate, parent_phone, email, address });
-    res.status(201).json(applicant);
-  } catch (e) {
-    res.status(400).json({ message: e.message });
-  }
-});
+  // POST /api/admission/applicants
+  router.post('/applicants', async (req, res) => {
+    const { pipeline_id, name, nisn, birthdate, parent_phone, email, address } = req.body;
+    if (!pipeline_id || !name) return res.status(400).json({ message: 'pipeline_id and name required' });
+    try {
+      const applicant = await createApplicant({ pipeline_id, name, nisn, birthdate, parent_phone, email, address });
+      res.status(201).json(applicant);
+    } catch (e) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  // GET /api/admission/applicants/:id/dynamic-details
+  router.get('/applicants/:id/dynamic-details', async (req, res) => {
+    const applicantId = Number(req.params.id);
+
+    try {
+      const details = await getApplicantDynamicDetails(applicantId);
+      res.json(details);
+    } catch (e) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  // POST /api/admission/applicants/:id/dynamic-details
+  router.post('/applicants/:id/dynamic-details', async (req, res) => {
+    const applicantId = Number(req.params.id);
+    const { details } = req.body; // [{step_detail_id, value}, ...]
+
+    try {
+      for (const d of details) {
+        await setApplicantDynamicDetail(applicantId, d.step_detail_id, d.value);
+      }
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  // PUT /api/admission/applicants/:id
+  router.put('/applicants/:id', async (req, res) => {
+    const applicantId = Number(req.params.id);
+    const { notes } = req.body;
+    if (typeof notes !== 'string') return res.status(400).json({ message: 'notes must be a string' });
+
+    try {
+      const applicant = await getApplicantById(applicantId);
+      if (!applicant) return res.status(404).json({ message: 'Applicant not found' });
+
+      await updateApplicantNotes(applicantId, notes);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  // GET /api/admission/:pipelineId/steps/:stepId/details
+  router.get('/:pipelineId/steps/:stepId/details', async (req, res) => {
+    const stepId = Number(req.params.stepId);
+    try {
+      const details = await getDetailsByStepId(stepId);
+      res.json(details);
+    } catch (e) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  // POST /api/admission/:pipelineId/steps/:stepId/details
+  router.post('/:pipelineId/steps/:stepId/details', async (req, res) => {
+    const stepId = Number(req.params.stepId);
+    const { key, type, required, label, options } = req.body;
+    if (!key || !type || !label) return res.status(400).json({ message: 'key, type, and label required' });
+
+    try {
+      const result = await insertDetail({ step_id: stepId, key, type, required, label, options });
+      res.status(201).json({ id: result.lastID });
+    } catch (e) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  // PUT /api/admission/:pipelineId/steps/:stepId/details/:detailId
+  router.put('/:pipelineId/steps/:stepId/details/:detailId', async (req, res) => {
+    const stepId = Number(req.params.stepId);
+    const detailId = Number(req.params.detailId);
+    const { key, type, required, label, options } = req.body;
+    if (!key || !type || !label) return res.status(400).json({ message: 'key, type, and label required' });
+
+    try {
+      await updateDetail({ id: detailId, step_id: stepId, key, type, required, label, options });
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  // DELETE /api/admission/:pipelineId/steps/:stepId/details/:detailId
+  router.delete('/:pipelineId/steps/:stepId/details/:detailId', async (req, res) => {
+    const stepId = Number(req.params.stepId);
+    const detailId = Number(req.params.detailId);
+
+    try {
+      await deleteDetail(detailId, stepId);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(400).json({ message: e.message });
+    }
+  });
 
 module.exports = router;

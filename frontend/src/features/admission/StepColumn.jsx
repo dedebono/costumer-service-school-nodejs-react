@@ -1,4 +1,3 @@
-import { useDroppable } from '@dnd-kit/core';
 import DraggableApplicant from './DraggableApplicant.jsx';
 
 // small stable hash to hue (0..359)
@@ -9,13 +8,11 @@ function hueFromId(id) {
 }
 
 export default function StepColumn({ step, items, onApplicantClick }) {
-  const { setNodeRef, isOver } = useDroppable({ id: step.id });
   const hue = hueFromId(step.id);
 
   return (
     <section
-      ref={setNodeRef}
-      className={`step ${isOver ? 'is-over' : ''} ${step.is_final ? 'is-final' : ''}`}
+      className={`step ${step.is_final ? 'is-final' : ''}`}
       style={{ '--h': hue }}
     >
       <header className="step__header">

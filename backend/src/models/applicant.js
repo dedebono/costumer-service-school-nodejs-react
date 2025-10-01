@@ -3,7 +3,7 @@ const { db } = require('./db');
 function getApplicantById(id) {
   return new Promise((resolve, reject) => {
     const sql = `
-      SELECT id, pipeline_id, current_step_id, name, nisn, birthdate, parent_phone, email, address, created_at, updated_at
+      SELECT id, pipeline_id, current_step_id, name, nisn, birthdate, parent_phone, email, address, notes, created_at, updated_at
       FROM applicants
       WHERE id = ?`;
     db.get(sql, [id], (err, row) => {
@@ -16,7 +16,7 @@ function getApplicantById(id) {
 function getApplicantsByPipeline(pipelineId) {
   return new Promise((resolve, reject) => {
     const sql = `
-      SELECT id, pipeline_id, current_step_id, name, nisn, birthdate, parent_phone, email, address, created_at, updated_at
+      SELECT id, pipeline_id, current_step_id, name, nisn, birthdate, parent_phone, email, address, notes, created_at, updated_at
       FROM applicants
       WHERE pipeline_id = ?`;
     db.all(sql, [pipelineId], (err, rows) => {
@@ -40,7 +40,7 @@ function createApplicant({ pipeline_id, name, nisn, birthdate, parent_phone, ema
       db.run(sql, [pipeline_id, current_step_id, name, nisn, birthdate, parent_phone, email, address], function (err) {
         if (err) return reject(err);
         const selectSql = `
-          SELECT id, pipeline_id, current_step_id, name, nisn, birthdate, parent_phone, email, address, created_at, updated_at
+          SELECT id, pipeline_id, current_step_id, name, nisn, birthdate, parent_phone, email, address, notes, created_at, updated_at
           FROM applicants WHERE id = ?`;
         db.get(selectSql, [this.lastID], (err2, row) => {
           if (err2) reject(err2);
@@ -104,13 +104,78 @@ function getStepById(stepId, pipelineId) {
   });
 }
 
+function updateApplicantNotes(applicantId, notes) {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      UPDATE applicants SET notes = ?, updated_at = datetime('now') WHERE id = ?`;
+    db.run(sql, [notes, applicantId], function (err) {
+      if (err) reject(err);
+      else resolve(true);
+    });
+  });
+}
+
+function getApplicantDynamicDetails(applicantId) {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT id, applicant_id, detail_key, value FROM applicant_dynamic_details WHERE applicant_id = ?`;
+    db.all(sql, [applicantId], (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+}
+
+function setApplicantDynamicDetail(applicantId, detailKey, value) {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      INSERT OR REPLACE INTO applicant_dynamic_details (applicant_id, detail_key, value)
+      VALUES (?, ?, ?)`;
+    db.run(sql, [applicantId, detailKey, value], function (err) {
+      if (err) reject(err);
+      else resolve({ lastID: this.lastID });
+    });
+  });
+}
+
+function checkRequiredDynamicDetailsFilled(applicantId, stepId) {
+  return new Promise((resolve, reject) => {
+    // Get required dynamic details for the step
+    const sql = `
+      SELECT key FROM step_dynamic_details
+      WHERE step_id = ? AND required = 1`;
+    db.all(sql, [stepId], (err, requiredDetails) => {
+      if (err) return reject(err);
+      if (requiredDetails.length === 0) return resolve(true); // no required details
+
+      // Check if applicant has all required details filled
+      const keys = requiredDetails.map(d => d.key);
+      const placeholders = keys.map(() => '?').join(',');
+      const checkSql = `
+        SELECT detail_key FROM applicant_dynamic_details
+        WHERE applicant_id = ? AND detail_key IN (${placeholders}) AND value IS NOT NULL AND value != ''`;
+      db.all(checkSql, [applicantId, ...keys], (err2, filledDetails) => {
+        if (err2) reject(err2);
+        else {
+          const filledKeys = filledDetails.map(d => d.detail_key);
+          const missing = keys.filter(k => !filledKeys.includes(k));
+          resolve(missing.length === 0 ? true : missing);
+        }
+      });
+    });
+  });
+}
+
 module.exports = {
   getApplicantById,
   getApplicantsByPipeline,
   createApplicant,
   updateApplicantStep,
+  updateApplicantNotes,
   insertApplicantHistory,
   getStepRequirements,
   checkDocument,
   getStepById,
+  getApplicantDynamicDetails,
+  setApplicantDynamicDetail,
+  checkRequiredDynamicDetailsFilled,
 };

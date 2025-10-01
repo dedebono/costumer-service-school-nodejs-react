@@ -9,9 +9,9 @@ import Sidebar from '../components/Sidebar.jsx';
 
 const groupedTabs = [
     {
-    title: 'PMB',
+    title: 'CRM',
     items: [
-      { value: 'admission', label: 'Pendaftaran' }
+      { value: 'admission', label: 'PMB' }
     ],
   },
   {

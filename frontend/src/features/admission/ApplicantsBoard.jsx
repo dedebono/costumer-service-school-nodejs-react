@@ -1,16 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api.js';
-import {
-  DndContext,
-  rectIntersection,
-  DragOverlay,
-  useSensor,
-  useSensors,
-  PointerSensor,
-  KeyboardSensor
-} from '@dnd-kit/core';
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import StepColumn from './StepColumn.jsx';
+import DraggableApplicant from './DraggableApplicant.jsx';
 
 /* Simple inline Modal; replace with your shared Modal if you have one */
 function Modal({ open, title, onClose, children, footer }) {
@@ -35,110 +25,141 @@ export default function ApplicantsBoard({ pipeline }) {
     (pipeline.steps || []).sort((a, b) => a.ord - b.ord).map(s => ({ step: s, items: [] }))
   );
 
-  // Drag overlay state
-  const [activeId, setActiveId] = useState(null);
-  const activeItem =
-    activeId &&
-    columns.flatMap(c => c.items).find(a => a.id === activeId);
+  const [selectedStepId, setSelectedStepId] = useState(() => columns[0]?.step.id || null);
 
   // Click-to-open modal state
   const [selectedApplicant, setSelectedApplicant] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [stepDynamicDetails, setStepDynamicDetails] = useState([]);
+  const [applicantDynamicDetails, setApplicantDynamicDetails] = useState({});
 
-  // Sensors: small distance to distinguish click vs drag
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
+  const reloadApplicantCard = async () => {
+    try {
+      const list = await api(`/api/admission/applicants?pipelineId=${pipeline.id}`);
+      setColumns(cols => cols.map(c => ({
+        ...c, items: list.filter(a => a.current_step_id === c.step.id)
+      })));
+    } catch (e) {
+      console.error('Failed to load applicants:', e);
+    }
+  };
 
   useEffect(() => {
     setColumns((pipeline.steps || []).sort((a, b) => a.ord - b.ord).map(s => ({ step: s, items: [] })));
   }, [pipeline.steps]);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const list = await api(`/api/admission/applicants?pipelineId=${pipeline.id}`);
-        setColumns(cols => cols.map(c => ({
-          ...c, items: list.filter(a => a.current_step_id === c.step.id)
-        })));
-      } catch (e) {
-        console.error('Failed to load applicants:', e);
-      }
-    };
-    if (pipeline.steps && pipeline.steps.length > 0) load();
+    if (pipeline.steps && pipeline.steps.length > 0) reloadApplicantCard();
   }, [pipeline.id, pipeline.steps]);
 
-  const onDragStart = ({ active }) => setActiveId(active.id);
 
-  const onDragEnd = async ({ active, over }) => {
-    setActiveId(null);
-    if (!over) return;
-    const applicantId = active.id;
-    const toStepId = over.id;
 
-    setColumns(cols => {
-      const fromIdx = cols.findIndex(c => c.items.some(i => i.id === applicantId));
-      const toIdx = cols.findIndex(c => c.step.id === toStepId);
-      if (fromIdx === -1 || toIdx === -1) return cols;
-      const item = cols[fromIdx].items.find(i => i.id === applicantId);
-      return cols.map((c, i) => ({
-        ...c,
-        items: i === fromIdx ? c.items.filter(i => i.id !== applicantId)
-             : i === toIdx   ? [item, ...c.items]
-             : c.items
-      }));
-    });
-
+  // Click handler to open modal with details
+  const handleApplicantClick = async (applicant) => {
+    setSelectedApplicant(applicant);
+    setNotes(applicant.notes || '');
+    setIsEditing(false);
+    // Fetch step dynamic details
     try {
-      await api(`/api/admission/${applicantId}/move`, {
-        method: 'POST',
-        body: { toStepId }
+      const stepDetails = await api(`/api/admission/${pipeline.id}/steps/${applicant.current_step_id}/details`);
+      setStepDynamicDetails(stepDetails);
+      // Fetch applicant dynamic details
+      const appDetails = await api(`/api/admission/applicants/${applicant.id}/dynamic-details`);
+      // Map appDetails by detail_key
+      const detailsMap = {};
+      appDetails.forEach(d => {
+        detailsMap[d.detail_key] = d.value;
       });
+      setApplicantDynamicDetails(detailsMap);
     } catch (e) {
-      alert(`Failed to move: ${e.message}`);
+      console.error('Failed to load dynamic details:', e);
+      setStepDynamicDetails([]);
+      setApplicantDynamicDetails({});
     }
   };
 
-  const onDragCancel = () => setActiveId(null);
+  const handleSaveNotes = async () => {
+    try {
+      // Save notes without validation of required fields (allow partial or null)
+      await api(`/api/admission/applicants/${selectedApplicant.id}`, {
+        method: 'PUT',
+        body: { notes }
+      });
+      // Save dynamic details
+      const dynamicDetailsToSave = stepDynamicDetails.map(detail => ({
+        step_detail_id: detail.id,
+        value: applicantDynamicDetails[detail.key] || null
+      }));
+      await api(`/api/admission/applicants/${selectedApplicant.id}/dynamic-details`, {
+        method: 'POST',
+        body: { details: dynamicDetailsToSave }
+      });
+      // Update the applicant in columns
+      setColumns(cols => cols.map(c => ({
+        ...c,
+        items: c.items.map(item => item.id === selectedApplicant.id ? { ...item, notes } : item)
+      })));
+      setIsEditing(false);
 
-  // Click handler to open modal with details
-  const handleApplicantClick = (applicant) => {
-    setSelectedApplicant(applicant);
+      // Auto move to next step if all required dynamic details are filled
+      const allRequiredFilled = stepDynamicDetails.every(detail => {
+        if (!detail.required) return true;
+        const val = applicantDynamicDetails[detail.key];
+        return val !== undefined && val !== null && val !== '';
+      });
+
+      if (allRequiredFilled) {
+        // Find current step index
+        const currentStepIndex = pipeline.steps.findIndex(s => s.id === selectedApplicant.current_step_id);
+        if (currentStepIndex !== -1 && currentStepIndex < pipeline.steps.length - 1) {
+          const nextStep = pipeline.steps[currentStepIndex + 1];
+          try {
+            await api(`/api/admission/${selectedApplicant.id}/move`, {
+              method: 'POST',
+              body: { toStepId: nextStep.id }
+            });
+            // Refresh applicants list to reflect move
+            reloadApplicantCard();
+            setSelectedApplicant(null);
+          } catch (e) {
+            alert(`Failed to auto-move to next step: ${e.message}`);
+          }
+        }
+      }
+    } catch (e) {
+      alert(`Failed to save: ${e.message}`);
+    }
   };
+
+  const selectedColumn = columns.find(c => c.step.id === selectedStepId);
 
   return (
     <>
-      <DndContext
-        sensors={sensors}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-        onDragCancel={onDragCancel}
-        collisionDetection={rectIntersection}
-      >
-        <div style={{ display: 'flex', flexDirection:'row', gap: 16, overflowX: 'auto', width: '100%', paddingTop: 16, paddingBottom: 16, boxSizing: 'border-box' }}>
-          {columns.map(col => (
-            <StepColumn
-              key={col.step.id}
-              step={col.step}
-              items={col.items}
-              onApplicantClick={handleApplicantClick}
-            />
-          ))}
-        </div>
-
-        {/* Dragged card overlay */}
-        <DragOverlay dropAnimation={null}>
-          {activeItem ? (
-            <li className="card is-dragging-overlay">
-              <div className="card__title">
-                {activeItem.name} {activeItem.nisn && <span className="badge">{activeItem.nisn}</span>}
-              </div>
-              <div className="card__meta">{activeItem.parent_phone}</div>
-              <div className="card__meta">{activeItem.email}</div>
-            </li>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+    <div className='reload-applicant'>
+      <button onClick={reloadApplicantCard} className='btn btn--secondary' >🔄️</button>
+      </div>
+      <nav className="tabs">
+        {columns.map(col => (
+          <button
+            key={col.step.id}
+            className={`btn btn--subtle ${selectedStepId === col.step.id ? 'btn--primary' : ''}`}
+            onClick={() => setSelectedStepId(col.step.id)}
+            style={{ marginRight: '0.5rem' }}
+          >
+            {col.step.title} <span className="badge">{col.items.length}</span>
+          </button>
+        ))}
+      </nav>
+      <ul className="applicant-list" style={{ marginTop: '1rem' }}>
+        {selectedColumn?.items.map(item => (
+          <DraggableApplicant
+            key={item.id}
+            applicant={item}
+            onClick={() => handleApplicantClick(item)}
+          />
+        ))}
+      </ul>
 
       {/* Applicant details modal */}
       <Modal
@@ -146,9 +167,21 @@ export default function ApplicantsBoard({ pipeline }) {
         title="Data Siswa"
         onClose={() => setSelectedApplicant(null)}
         footer={
-          <button className="btn btn--primary" onClick={() => setSelectedApplicant(null)}>
-            Close
-          </button>
+          <>
+            <button className="btn btn--secondary" onClick={() => setIsEditing(!isEditing)}>
+              {isEditing ? 'Cancel' : 'Edit Notes'}
+            </button>
+            {isEditing && (
+              <button className="btn btn--primary" onClick={handleSaveNotes}>
+                Save Notes
+              </button>
+            )}
+            {!isEditing && (
+              <button className="btn btn--primary" onClick={() => setSelectedApplicant(null)}>
+                Close
+              </button>
+            )}
+          </>
         }
       >
         {selectedApplicant && (
@@ -159,6 +192,89 @@ export default function ApplicantsBoard({ pipeline }) {
             {selectedApplicant.parent_phone && <div><strong>Nomor telepon:</strong> {selectedApplicant.parent_phone}</div>}
             {selectedApplicant.email && <div><strong>Email:</strong> {selectedApplicant.email}</div>}
             {selectedApplicant.address && <div><strong>Alamat:</strong> {selectedApplicant.address}</div>}
+            <div>
+              <strong>Notes:</strong>
+              {isEditing ? (
+                <textarea
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  rows={5}
+                  style={{ width: '100%' }}
+                />
+              ) : (
+                <p style={{ whiteSpace: 'pre-wrap', border: '1px solid #ccc', padding: '0.5rem', minHeight: '5rem' }}>
+                  {notes || <em>No notes available</em>}
+                </p>
+              )}
+            </div>
+            {stepDynamicDetails.length > 0 && (
+              <div>
+                <strong>Detail</strong>
+                <div style={{ marginTop: '0.5rem' }}>
+                  {stepDynamicDetails.map(detail => (
+                    <div key={detail.id} style={{ marginBottom: '0.5rem' }}>
+                      <label>
+                        <strong>{detail.label}{detail.required ? ' *' : ''}:</strong>
+                        {isEditing ? (
+                          detail.type === 'checkbox' ? (
+                            <input
+                              type="checkbox"
+                              checked={applicantDynamicDetails[detail.key] === 'true' || applicantDynamicDetails[detail.key] === true}
+                              onChange={e => setApplicantDynamicDetails(prev => ({ ...prev, [detail.key]: e.target.checked.toString() }))}
+                            />
+                          ) : detail.type === 'date' ? (
+                            <input
+                              type="date"
+                              value={applicantDynamicDetails[detail.key] || ''}
+                              onChange={e => setApplicantDynamicDetails(prev => ({ ...prev, [detail.key]: e.target.value }))}
+                              style={{ width: '100%' }}
+                            />
+                          ) : detail.type === 'number' ? (
+                            <input
+                              type="number"
+                              value={applicantDynamicDetails[detail.key] || ''}
+                              onChange={e => setApplicantDynamicDetails(prev => ({ ...prev, [detail.key]: e.target.value }))}
+                              style={{ width: '100%' }}
+                            />
+                          ) : detail.type === 'select' ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                              {detail.options && detail.options.split(',').map((option, idx) => (
+                                <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <input
+                                    type="radio"
+                                    name={`dynamic-${detail.key}`}
+                                    value={option.trim()}
+                                    checked={applicantDynamicDetails[detail.key] === option.trim()}
+                                    onChange={e => {
+                                      const newValue = e.target.value;
+                                      if (applicantDynamicDetails[detail.key] === newValue) {
+                                        setApplicantDynamicDetails(prev => ({ ...prev, [detail.key]: null }));
+                                      } else {
+                                        setApplicantDynamicDetails(prev => ({ ...prev, [detail.key]: newValue }));
+                                      }
+                                    }}
+                                  />
+                                  {option.trim()}
+                                </label>
+                              ))}
+                            </div>
+                          ) : (
+                            <input
+                              type="text"
+                              value={applicantDynamicDetails[detail.key] || ''}
+                              onChange={e => setApplicantDynamicDetails(prev => ({ ...prev, [detail.key]: e.target.value }))}
+                              style={{ width: '100%' }}
+                            />
+                          )
+                        ) : (
+                          <span> {applicantDynamicDetails[detail.key] || <em>Not set</em>}</span>
+                        )}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Modal>

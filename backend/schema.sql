@@ -124,6 +124,7 @@ CREATE TABLE IF NOT EXISTS applicants (
   parent_phone  TEXT,
   email         TEXT,
   address       TEXT,
+  notes         TEXT,
   created_at    TEXT DEFAULT (datetime('now')),
   updated_at    TEXT DEFAULT (datetime('now')),
   FOREIGN KEY (pipeline_id) REFERENCES pipelines(id) ON DELETE CASCADE,
@@ -155,8 +156,33 @@ CREATE TABLE IF NOT EXISTS applicant_history (
   FOREIGN KEY (applicant_id) REFERENCES applicants(id) ON DELETE CASCADE
 );
 
+-- step_dynamic_details: dynamic details per step (can be added/removed freely)
+CREATE TABLE IF NOT EXISTS step_dynamic_details (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  step_id       INTEGER NOT NULL,
+  key           TEXT NOT NULL,
+  type          TEXT NOT NULL,  -- e.g., 'text', 'checkbox', 'select'
+  required      INTEGER NOT NULL DEFAULT 0,  -- 0 optional, 1 required
+  label         TEXT NOT NULL,
+  options       TEXT,  -- comma-separated options for 'select' type
+  FOREIGN KEY (step_id) REFERENCES steps(id) ON DELETE CASCADE,
+  UNIQUE(step_id, key)
+);
+
+-- applicant_dynamic_details: applicant responses to dynamic details
+CREATE TABLE IF NOT EXISTS applicant_dynamic_details (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  applicant_id  INTEGER NOT NULL,
+  detail_key    TEXT NOT NULL,  -- should match step_dynamic_details.key for the step
+  value         TEXT,  -- for text, or 'true'/'false' for checkbox
+  FOREIGN KEY (applicant_id) REFERENCES applicants(id) ON DELETE CASCADE,
+  UNIQUE(applicant_id, detail_key)
+);
+
 -- index yang sering dipakai
 CREATE INDEX IF NOT EXISTS idx_steps_pipeline ON steps(pipeline_id);
 CREATE INDEX IF NOT EXISTS idx_applicants_pipeline ON applicants(pipeline_id);
 CREATE INDEX IF NOT EXISTS idx_appdocs_applicant ON applicant_documents(applicant_id);
 CREATE INDEX IF NOT EXISTS idx_history_applicant ON applicant_history(applicant_id);
+CREATE INDEX IF NOT EXISTS idx_step_dynamic_details_step ON step_dynamic_details(step_id);
+CREATE INDEX IF NOT EXISTS idx_applicant_dynamic_details_applicant ON applicant_dynamic_details(applicant_id);

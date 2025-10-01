@@ -56,9 +56,10 @@ function PipelineBuilderForSupervisor() {
   const [selectedPipelineId, setSelectedPipelineId] = useState(null);
   const [newPipelineName, setNewPipelineName] = useState('');
   const [newPipelineYear, setNewPipelineYear] = useState('');
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editSteps, setEditSteps] = useState([]);
+  const [editDynamicDetails, setEditDynamicDetails] = useState({});
   const [selectedSteps, setSelectedSteps] = useState(new Set());
 
   useEffect(() => {
@@ -120,6 +121,16 @@ function PipelineBuilderForSupervisor() {
       const pipeline = await api(`/api/admission/pipelines/${selectedPipelineId}`);
       // Ensure we clone the steps array for editing
       setEditSteps(pipeline.steps ? [...pipeline.steps] : []);
+      // Fetch dynamic details for each step
+      const detailsPromises = pipeline.steps.map(step =>
+        api(`/api/admission/${selectedPipelineId}/steps/${step.id}/details`).catch(() => [])
+      );
+      const detailsResults = await Promise.all(detailsPromises);
+      const newDetails = {};
+      pipeline.steps.forEach((step, index) => {
+        newDetails[step.id] = detailsResults[index];
+      });
+      setEditDynamicDetails(newDetails);
       setShowEditModal(true);
     } catch (e) {
       alert('Failed to load pipeline: ' + e.message);
@@ -128,9 +139,7 @@ function PipelineBuilderForSupervisor() {
 
   const saveEditSteps = async () => {
     try {
-      // Logic to save all steps. This needs to be robust for both new and existing steps.
-      // Assuming existing steps are updated with PUT. If adding new steps is needed, POST logic would be required.
-      // Based on your original code, it only handles PUT (updates).
+      // Save steps
       for (const step of editSteps) {
         if (!step.title || !step.slug) {
           alert('Title and slug are required for all steps');
@@ -141,12 +150,35 @@ function PipelineBuilderForSupervisor() {
           body: { title: step.title, slug: step.slug, is_final: step.is_final },
         });
       }
+
+      // Save dynamic details for each step
+      for (const step of editSteps) {
+        const details = editDynamicDetails[step.id] || [];
+        for (const detail of details) {
+          if (!detail.key || !detail.type || !detail.label) {
+            alert(`Key, type, and label are required for all dynamic details in step ${step.title}`);
+            return;
+          }
+          if (detail.id) {
+            // Update existing
+            await api(`/api/admission/${selectedPipelineId}/steps/${step.id}/details/${detail.id}`, {
+              method: 'PUT',
+              body: { key: detail.key, type: detail.type, required: detail.required, label: detail.label, options: detail.options },
+            });
+          } else {
+            // Create new
+            await api(`/api/admission/${selectedPipelineId}/steps/${step.id}/details`, {
+              method: 'POST',
+              body: { key: detail.key, type: detail.type, required: detail.required, label: detail.label, options: detail.options },
+            });
+          }
+        }
+      }
+
       setShowEditModal(false);
-      // Reload the pipeline in PipelineBuilder
-      // For a better UX, only update the relevant component state instead of a full reload
-      // window.location.reload(); 
+      // Optionally reload or update state
     } catch (e) {
-      alert('Failed to save steps: ' + e.message);
+      alert('Failed to save changes: ' + e.message);
     }
   };
 
@@ -261,6 +293,109 @@ function PipelineBuilderForSupervisor() {
                         />
                         Final
                       </label>
+                    </div>
+                    {/* Dynamic Details Section */}
+                    <div className="dynamic-details-section">
+                      <h5>Step Dynamic Details</h5>
+                      {(editDynamicDetails[step.id] || []).map((detail, dIndex) => (
+                        <div key={detail.id} className="dynamic-detail-item flex items-center gap-2 mb-1">
+                          <input
+                            type="text"
+                            placeholder="Label"
+                            value={detail.label}
+                            onChange={(e) => {
+                              const newDetails = { ...editDynamicDetails };
+                              newDetails[step.id][dIndex].label = e.target.value;
+                              setEditDynamicDetails(newDetails);
+                            }}
+                            className="input"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Key"
+                            value={detail.key}
+                            onChange={(e) => {
+                              const newDetails = { ...editDynamicDetails };
+                              newDetails[step.id][dIndex].key = e.target.value;
+                              setEditDynamicDetails(newDetails);
+                            }}
+                            className="input"
+                          />
+                          <select
+                            value={detail.type}
+                            onChange={(e) => {
+                              const newDetails = { ...editDynamicDetails };
+                              newDetails[step.id][dIndex].type = e.target.value;
+                              setEditDynamicDetails(newDetails);
+                            }}
+                            className="input"
+                          >
+                            <option value="text">Text</option>
+                            <option value="number">Number</option>
+                            <option value="date">Date</option>
+                            <option value="checkbox">Checkbox</option>
+                            <option value="select">Optional Choose</option>
+                          </select>
+                          {detail.type === 'select' && (
+                            <input
+                              type="text"
+                              placeholder="Options (comma separated, e.g. cash, debit)"
+                              value={detail.options || ''}
+                              onChange={(e) => {
+                                const newDetails = { ...editDynamicDetails };
+                                newDetails[step.id][dIndex].options = e.target.value;
+                                setEditDynamicDetails(newDetails);
+                              }}
+                              className="input"
+                            />
+                          )}
+                          <label className="flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={detail.required}
+                              onChange={(e) => {
+                                const newDetails = { ...editDynamicDetails };
+                                newDetails[step.id][dIndex].required = e.target.checked;
+                                setEditDynamicDetails(newDetails);
+                              }}
+                            />
+                            Required
+                          </label>
+                          <button
+                            className="btn btn--danger btn-sm"
+                            onClick={async () => {
+                              if (detail.id) {
+                                // Delete from backend
+                                try {
+                                  await api(`/api/admission/${selectedPipelineId}/steps/${step.id}/details/${detail.id}`, {
+                                    method: 'DELETE',
+                                  });
+                                } catch (e) {
+                                  alert('Failed to delete dynamic detail: ' + e.message);
+                                  return;
+                                }
+                              }
+                              // Remove from local state
+                              const newDetails = { ...editDynamicDetails };
+                              newDetails[step.id].splice(dIndex, 1);
+                              setEditDynamicDetails(newDetails);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        className="btn btn--primary btn-sm"
+                        onClick={() => {
+                          const newDetails = { ...editDynamicDetails };
+                          if (!newDetails[step.id]) newDetails[step.id] = [];
+                          newDetails[step.id].push({ id: null, key: '', type: 'text', required: false, label: '' });
+                          setEditDynamicDetails(newDetails);
+                        }}
+                      >
+                        Add Dynamic Detail
+                      </button>
                     </div>
                   </div>
                 ))}
