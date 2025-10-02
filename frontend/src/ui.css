@@ -740,13 +740,6 @@ margin: 10px;
   background: var(--clr-surface-3, #fff1);
 }
 
-.tabs{
-  display:flex;
-  list-style:none;
-  margin-top: 1rem;
-  gap:0.5rem;
-}
-
 @media (max-width: 1200px){ .applicant-list{ grid-template-columns: repeat(4, 1fr); } }
 @media (max-width: 1000px){ .applicant-list{ grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 700px){  .applicant-list{ grid-template-columns: repeat(2, 1fr); } }

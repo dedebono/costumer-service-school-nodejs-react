@@ -283,17 +283,19 @@ export default function ApplicantsBoard({ pipeline }) {
           style={{ display: 'none' }}
         />
       </div>
-      <div className="tabs">
+      <div style={{ display: 'flex', gap: '0.4rem', padding:'.2rem',}} >
         {columns.map(col => (
           <button
             key={col.step.id}
-            className={`btn btn--subtle ${selectedStepId ==! col.step.id ? 'btn--primary' : ''}`}
+            className={`btn ${selectedStepId === col.step.id ? 'btn--primary' : 'btn--subtle'}`}
+            style={{ backgroundColor: selectedStepId === col.step.id ? '#007bff' : '#c6c6c6ff', 
+            color: selectedStepId === col.step.id ? '#fff' : '#000' , fontSize:'1rem' , padding:'0.6rem' }}
             onClick={() => {
               setSelectedStepId(col.step.id);
               setSearchResult(null);
             }}
           >
-            {col.step.title} <span className="badge">{col.items.length}</span>
+            {col.step.title} <span style={{color:'black', border:'1px solid white',backgroundColor:'#f7b917', borderRadius:'18px', padding:'0.2rem 0.6rem'}}>{col.items.length}</span>
           </button>
         ))}
       </div>
@@ -413,7 +415,11 @@ export default function ApplicantsBoard({ pipeline }) {
                             />
                           )
                         ) : (
-                          <span> {applicantDynamicDetails[detail.key] || <em>Not set</em>}</span>
+                          <span>
+                            {detail.type === 'checkbox'
+                              ? (applicantDynamicDetails[detail.key] === 'true' ? '✅' : '❌')
+                              : (applicantDynamicDetails[detail.key] || <em>Not set</em>)}
+                          </span>
                         )}
                       </label>
                     </div>
