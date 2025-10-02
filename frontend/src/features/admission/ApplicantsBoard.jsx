@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api.js';
 import DraggableApplicant from './DraggableApplicant.jsx';
 
@@ -28,6 +28,8 @@ export default function ApplicantsBoard({ pipeline }) {
   const [selectedStepId, setSelectedStepId] = useState(() => columns[0]?.step.id || null);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResult, setSearchResult] = useState(null);
+
+  const fileInputRef = useRef(null);
 
   // Click-to-open modal state
   const [selectedApplicant, setSelectedApplicant] = useState(null);
@@ -152,6 +154,112 @@ export default function ApplicantsBoard({ pipeline }) {
     }
   };
 
+  const handleExportCSV = () => {
+    columns.forEach(col => {
+      const csvData = [];
+      // Header
+      csvData.push(['ID', 'Name', 'NISN', 'Birthdate', 'Parent Phone', 'Email', 'Address', 'Notes']);
+      // Rows
+      col.items.forEach(applicant => {
+        csvData.push([
+          applicant.id,
+          applicant.name,
+          applicant.nisn || '',
+          applicant.birthdate || '',
+          applicant.parent_phone || '',
+          applicant.email || '',
+          applicant.address || '',
+          applicant.notes || ''
+        ]);
+      });
+      // Convert to CSV string
+      const csvString = csvData.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+      // Create blob and download
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${col.step.title}.csv`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  };
+
+  const handleImportCSVClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = null; // reset file input
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleImportCSV = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+    if (lines.length < 2) {
+      alert('CSV file is empty or invalid');
+      return;
+    }
+
+    // Parse header
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    const requiredHeaders = ['Name', 'NISN', 'Birthdate', 'Parent Phone', 'Email', 'Address', 'Notes'];
+    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+    if (missingHeaders.length > 0) {
+      alert(`Missing required columns: ${missingHeaders.join(', ')}`);
+      return;
+    }
+
+    // Map header index
+    const headerIndex = {};
+    headers.forEach((h, i) => {
+      headerIndex[h] = i;
+    });
+
+    // Parse rows and create applicants
+    const newApplicants = [];
+    for (let i = 1; i < lines.length; i++) {
+      const row = lines[i].split(',').map(cell => cell.trim().replace(/^"|"$/g, ''));
+      if (row.length !== headers.length) continue; // skip invalid row
+
+      const applicantData = {
+        name: row[headerIndex['Name']] || '',
+        nisn: row[headerIndex['NISN']] || '',
+        birthdate: row[headerIndex['Birthdate']] || '',
+        parent_phone: row[headerIndex['Parent Phone']] || '',
+        email: row[headerIndex['Email']] || '',
+        address: row[headerIndex['Address']] || '',
+        notes: row[headerIndex['Notes']] || '',
+        pipeline_id: pipeline.id,
+        current_step_id: selectedStepId
+      };
+
+      newApplicants.push(applicantData);
+    }
+
+    if (newApplicants.length === 0) {
+      alert('No valid applicants found in CSV');
+      return;
+    }
+
+    try {
+      // Bulk create applicants sequentially
+      for (const applicant of newApplicants) {
+        await api('/api/admission/applicants', {
+          method: 'POST',
+          body: applicant
+        });
+      }
+      alert(`Successfully imported ${newApplicants.length} applicants.`);
+      reloadApplicantCard();
+    } catch (e) {
+      alert(`Failed to import applicants: ${e.message}`);
+    }
+  };
+
   const selectedColumn = columns.find(c => c.step.id === selectedStepId);
 
   return (
@@ -165,6 +273,15 @@ export default function ApplicantsBoard({ pipeline }) {
           style={{ marginRight: '0.5rem', padding: '0.5rem', width: '200px', margin: '1rem 1rem 0 0', borderRadius: '4px', border: '1px solid #ccc' }}
         />
         <button className="btn btn--primary" onClick={handleSearch}>Search</button>
+        <button className="btn btn--primary" onClick={handleExportCSV} style={{ marginLeft: '0.5rem' }}>Export to CSV</button>
+        <button className="btn btn--primary" onClick={handleImportCSVClick} style={{ marginLeft: '0.5rem' }}>Import from CSV</button>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleImportCSV}
+          accept=".csv"
+          style={{ display: 'none' }}
+        />
       </div>
       <div className="tabs">
         {columns.map(col => (
@@ -228,7 +345,7 @@ export default function ApplicantsBoard({ pipeline }) {
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
                   rows={5}
-                  style={{ width: '100%',height:'50%', padding: '0.5rem', fontFamily: 'inherit' }}
+                  style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
                 />
               ) : (
                 <p style={{ whiteSpace: 'pre-wrap', border: '1px solid #ccc', padding: '0.5rem', minHeight: '5rem' }}>
@@ -239,7 +356,7 @@ export default function ApplicantsBoard({ pipeline }) {
             {stepDynamicDetails.length > 0 && (
               <div>
                 <strong>Detail</strong>
-                <div style={{ marginTop: '0.5rem' }}>
+                <div style={{ marginTop: '0.5rem' , display:'grid', gap:'0.2rem'}}>
                   {stepDynamicDetails.map(detail => (
                     <div key={detail.id} style={{ marginBottom: '0.5rem' }}>
                       <label>

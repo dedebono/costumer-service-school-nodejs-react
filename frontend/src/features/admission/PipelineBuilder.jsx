@@ -175,7 +175,7 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
 
           <DragOverlay dropAnimation={null}>
             {activeStep ? (
-              <div className="liststeps drag-overlay">
+              <div className="liststeps">
                 {activeStep.title} - {activeStep.slug}{' '}
                 {activeStep.is_final ? '(Final)' : ''}
               </div>
