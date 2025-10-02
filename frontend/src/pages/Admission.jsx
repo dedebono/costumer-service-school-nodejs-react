@@ -69,7 +69,7 @@ export default function Admission({ hideAddStep = false, hideCreatePipeline = fa
   };
 
   return (
-    <div className="container">
+    <div className="container-PMB">
       <h2>Penerimaan Siswa Baru</h2>
   
       <div>

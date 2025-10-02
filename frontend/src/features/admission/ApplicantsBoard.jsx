@@ -136,21 +136,17 @@ export default function ApplicantsBoard({ pipeline }) {
 
   return (
     <>
-    <div className='reload-applicant'>
-      <button onClick={reloadApplicantCard} className='btn btn--secondary' >🔄️</button>
-      </div>
-      <nav className="tabs">
+      <div className="tabs">
         {columns.map(col => (
           <button
             key={col.step.id}
-            className={`btn btn--subtle ${selectedStepId === col.step.id ? 'btn--primary' : ''}`}
+            className={`btn btn--subtle ${selectedStepId ==! col.step.id ? 'btn--primary' : ''}`}
             onClick={() => setSelectedStepId(col.step.id)}
-            style={{ marginRight: '0.5rem' }}
           >
             {col.step.title} <span className="badge">{col.items.length}</span>
           </button>
         ))}
-      </nav>
+      </div>
       <ul className="applicant-list" style={{ marginTop: '1rem' }}>
         {selectedColumn?.items.map(item => (
           <DraggableApplicant
@@ -169,11 +165,11 @@ export default function ApplicantsBoard({ pipeline }) {
         footer={
           <>
             <button className="btn btn--secondary" onClick={() => setIsEditing(!isEditing)}>
-              {isEditing ? 'Cancel' : 'Edit Notes'}
+              {isEditing ? 'Cancel' : 'Edit'}
             </button>
             {isEditing && (
               <button className="btn btn--primary" onClick={handleSaveNotes}>
-                Save Notes
+                Save
               </button>
             )}
             {!isEditing && (
@@ -185,7 +181,7 @@ export default function ApplicantsBoard({ pipeline }) {
         }
       >
         {selectedApplicant && (
-          <div className="grid" style={{ gap: '0.5rem' }}>
+          <div style={{display:'grid', gap:'0.5rem'}} >
             <div><strong>Nama Lengkap:</strong> {selectedApplicant.name}</div>
             {selectedApplicant.nisn && <div><strong>NISN:</strong> {selectedApplicant.nisn}</div>}
             {selectedApplicant.birthdate && <div><strong>Tanggal Lahir:</strong> {selectedApplicant.birthdate}</div>}
@@ -199,7 +195,7 @@ export default function ApplicantsBoard({ pipeline }) {
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
                   rows={5}
-                  style={{ width: '100%' }}
+                  style={{ width: '100%',height:'50%', padding: '0.5rem', fontFamily: 'inherit' }}
                 />
               ) : (
                 <p style={{ whiteSpace: 'pre-wrap', border: '1px solid #ccc', padding: '0.5rem', minHeight: '5rem' }}>

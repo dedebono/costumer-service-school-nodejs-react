@@ -113,6 +113,13 @@ textarea:focus-visible{
   padding-inline: var(--space-4);
 }
 
+.container-PMB{
+  width: 100%;
+  overflow: scroll;
+  margin-inline: auto;
+  padding: 2rem;
+}
+
 h2{
   margin-bottom: 1rem;
 }
@@ -429,6 +436,17 @@ margin: 10px;
   border: 1px solid var(--clr-border);
 }
 
+.badge-name{
+  display: inline-block;
+  font-weight: 600;
+  padding: .6rem;
+  border-radius: 8px;
+  background: var(--clr-surface-2);
+  color: var(--clr-text);
+  border: 1px solid var(--clr-border);
+}
+
+
 .tag-primary{ background: color-mix(in oklab, var(--clr-primary) 18%, white 82%); color: var(--clr-primary); }
 .tag-accent{ background: color-mix(in oklab, var(--clr-accent) 25%, white 75%); color: #6c4a00; }
 
@@ -629,14 +647,15 @@ margin: 10px;
 
 /* ===== Applicant card (draggable) ===== */
 .card{
+  margin: 0 0 0 0;
   --hc: var(--h-card, 210);
   --cA: hsl(var(--hc) 72% 96% / 1);
   --cB: hsl(var(--hc) 62% 90% / 1);
   --edge: hsl(var(--hc) 50% 50% / .35);
 
   background:
-    linear-gradient(180deg, var(--cA) 0%, var(--cB) 100%),
-    radial-gradient(120% 60% at 100% 0%, rgba(255,255,255,.25), transparent 60%);
+  linear-gradient(180deg, var(--cA) 0%, var(--cB) 100%),
+  radial-gradient(120% 60% at 100% 0%, rgba(255,255,255,.25), transparent 60%);
   border: 1px solid var(--edge);
   border-radius: 12px;
   padding: .6rem .7rem;
@@ -649,7 +668,9 @@ margin: 10px;
   transform: translateY(-1px);
   box-shadow: 0 10px 20px rgba(0,0,0,.12);
   border-color: hsl(var(--hc) 70% 45% / .6);
+  background-color: var(--clr-accent);
   filter: saturate(1.05);
+  color:var(--clr-primary-700);
 }
 
 .card:active{ cursor: grabbing; }
@@ -669,7 +690,6 @@ margin: 10px;
 @media (max-width: 640px){
   .step__list{ padding: .5rem; }
 }
-
 
 .liststeps{
   display: flex;
@@ -691,6 +711,38 @@ margin: 10px;
 /*step style*/
 .stepmove{
   background-color: #264da1;
+}
+
+/*--aplicant card--*/
+.applicant-list{
+  border: 0px solid currentColor;
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 0 0 -10px;  
+  min-width: 700px;
+  list-style: none;
+  background-color:var(--clr-bg);
+
+  /* layout */
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr)); 
+  grid-auto-flow: row;
+  gap: .6rem;   
+}
+
+.applicant-list > li{
+  padding: .75rem;
+  border-radius: .5rem;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.08));
+  background: var(--clr-surface-3, #fff1);
+}
+
+.tabs{
+  display:flex;
+  list-style:none;
+  margin-top: 1rem;
+  gap:0.5rem;
 }
 
 /* =========================

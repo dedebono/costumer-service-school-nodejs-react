@@ -40,7 +40,7 @@ export default function CustomerService() {
       <main className="main-content">
         <Header user={user} onLogout={logout} />
         <div className="grid grid--1">
-          <div className="surface p-4">
+          <div className="surface">
             {tab === 'search' && <TicketSearch />}
             {tab === 'create' && <TicketCreate />}
             {tab === 'tickets' && <TicketsTable CustomerService />}
@@ -58,7 +58,7 @@ function Header({ user, onLogout }) {
     <div className="flex justify-between items-center mb-4">
       <h1 className="mt-0">Customer Service Portal</h1>
       <div className="flex gap-2 items-center">
-        <span className="badge">{user.username} • {user.role}</span>
+        <span className="badge-name">{user.username} • {user.role}</span>
         <button onClick={onLogout} className="btn btn--primary">Logout</button>
       </div>
     </div>
