@@ -745,6 +745,11 @@ margin: 10px;
   gap:0.5rem;
 }
 
+@media (max-width: 1200px){ .applicant-list{ grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 1000px){ .applicant-list{ grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 700px){  .applicant-list{ grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px){  .applicant-list{ grid-template-columns: 1fr; } }
+
 /* =========================
    Modal enhancements
    (extends existing .modal styles)

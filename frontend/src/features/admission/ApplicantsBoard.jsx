@@ -26,6 +26,8 @@ export default function ApplicantsBoard({ pipeline }) {
   );
 
   const [selectedStepId, setSelectedStepId] = useState(() => columns[0]?.step.id || null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResult, setSearchResult] = useState(null);
 
   // Click-to-open modal state
   const [selectedApplicant, setSelectedApplicant] = useState(null);
@@ -132,23 +134,54 @@ export default function ApplicantsBoard({ pipeline }) {
     }
   };
 
+  const handleSearch = () => {
+    if (!searchTerm.trim()) return;
+    const allApplicants = columns.flatMap(col => col.items);
+    const found = allApplicants.filter(app =>
+      app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (app.parent_phone && app.parent_phone.includes(searchTerm))
+    );
+    if (found.length > 0) {
+      const targetStepId = found[0].current_step_id;
+      setSelectedStepId(targetStepId);
+      setSearchResult(found.filter(f => f.current_step_id === targetStepId));
+      setSearchTerm('');
+    } else {
+      alert('Applicant not found');
+      setSearchResult(null);
+    }
+  };
+
   const selectedColumn = columns.find(c => c.step.id === selectedStepId);
 
   return (
     <>
+      <div style={{ marginBottom: '1rem' }}>
+        <input
+          type="text"
+          placeholder="Search by name or phone number"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          style={{ marginRight: '0.5rem', padding: '0.5rem', width: '200px', margin: '1rem 1rem 0 0', borderRadius: '4px', border: '1px solid #ccc' }}
+        />
+        <button className="btn btn--primary" onClick={handleSearch}>Search</button>
+      </div>
       <div className="tabs">
         {columns.map(col => (
           <button
             key={col.step.id}
             className={`btn btn--subtle ${selectedStepId ==! col.step.id ? 'btn--primary' : ''}`}
-            onClick={() => setSelectedStepId(col.step.id)}
+            onClick={() => {
+              setSelectedStepId(col.step.id);
+              setSearchResult(null);
+            }}
           >
             {col.step.title} <span className="badge">{col.items.length}</span>
           </button>
         ))}
       </div>
       <ul className="applicant-list" style={{ marginTop: '1rem' }}>
-        {selectedColumn?.items.map(item => (
+        {(searchResult && searchResult.length > 0 ? searchResult : selectedColumn?.items || []).map(item => (
           <DraggableApplicant
             key={item.id}
             applicant={item}
