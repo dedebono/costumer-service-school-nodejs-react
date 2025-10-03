@@ -159,6 +159,24 @@ export const api = {
     },
   },
 
+  // Admission API endpoints
+  admission: {
+    // Get all pipelines
+    getPipelines: async () => {
+      return apiHelper('/admission/pipelines');
+    },
+
+    // Get pipeline by ID
+    getPipeline: async (id) => {
+      return apiHelper(`/admission/pipelines/${id}`);
+    },
+
+    // Auto-create applicant from queue data
+    autoCreateApplicant: async (applicantData) => {
+      return apiHelper('/admission/auto-create-applicant', { method: 'POST', body: applicantData });
+    },
+  },
+
   // Admin API endpoints
   admin: {
     // Settings

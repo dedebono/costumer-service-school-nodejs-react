@@ -63,6 +63,13 @@ export default function AdminSetup() {
           <label for="service-sla" style="display: block; margin-bottom: 8px; font-weight: bold;">SLA Warning (minutes)</label>
           <input id="service-sla" type="number" min="1" value="30" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
 
+          <label for="service-connection" style="display: block; margin-bottom: 8px; font-weight: bold;">Connection Type</label>
+          <select id="service-connection" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+            <option value="none" selected>None</option>
+            <option value="admission">Admission</option>
+            <option value="ticket">Ticket</option>
+          </select>
+
           <label style="display: flex; align-items: center;">
             <input type="checkbox" id="service-active" checked style="margin-right: 8px;">
             Active
@@ -77,6 +84,7 @@ export default function AdminSetup() {
         const name = document.getElementById('service-name').value.trim()
         const codePrefix = document.getElementById('service-code').value.trim().toUpperCase()
         const slaWarnMinutes = parseInt(document.getElementById('service-sla').value) || 30
+        const connectionType = document.getElementById('service-connection').value
         const isActive = document.getElementById('service-active').checked
 
         if (!name) {
@@ -92,7 +100,7 @@ export default function AdminSetup() {
           return false
         }
 
-        return { name, codePrefix, isActive, slaWarnMinutes }
+        return { name, codePrefix, isActive, slaWarnMinutes, connectionType }
       }
     })
 
@@ -130,6 +138,13 @@ export default function AdminSetup() {
           <label for="service-sla" style="display: block; margin-bottom: 8px; font-weight: bold;">SLA Warning (minutes)</label>
           <input id="service-sla" type="number" min="1" value="${service.sla_warn_minutes || 30}" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
 
+          <label for="service-connection" style="display: block; margin-bottom: 8px; font-weight: bold;">Connection Type</label>
+          <select id="service-connection" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+            <option value="none" ${service.connection_type === 'none' ? 'selected' : ''}>None</option>
+            <option value="admission" ${service.connection_type === 'admission' ? 'selected' : ''}>Admission</option>
+            <option value="ticket" ${service.connection_type === 'ticket' ? 'selected' : ''}>Ticket</option>
+          </select>
+
           <label style="display: flex; align-items: center;">
             <input type="checkbox" id="service-active" ${service.is_active ? 'checked' : ''} style="margin-right: 8px;">
             Active
@@ -144,6 +159,7 @@ export default function AdminSetup() {
         const name = document.getElementById('service-name').value.trim()
         const codePrefix = document.getElementById('service-code').value.trim().toUpperCase()
         const slaWarnMinutes = parseInt(document.getElementById('service-sla').value) || 30
+        const connectionType = document.getElementById('service-connection').value
         const isActive = document.getElementById('service-active').checked
 
         if (!name) {
@@ -159,7 +175,7 @@ export default function AdminSetup() {
           return false
         }
 
-        return { name, codePrefix, isActive, slaWarnMinutes }
+        return { name, codePrefix, isActive, slaWarnMinutes, connectionType }
       }
     })
 
@@ -398,257 +414,274 @@ export default function AdminSetup() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <h1 className="text-2xl font-bold text-gray-900">Admin Setup</h1>
+    <div className="page">
+      <div className="w-full">
+        <header className="surface" style={{ borderRadius: 0, borderBottom: '1px solid var(--clr-border)' }}>
+          <div className="container">
+            <div className="flex items-center justify-between" style={{ padding: 'var(--space-4) 0' }}>
+              <h1 style={{ fontSize: 'var(--fs-700)', fontWeight: '700', margin: 0 }}>Admin Setup</h1>
+            </div>
           </div>
-        </div>
-      </div>
+        </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {(error || success) && (
-          <div className={`mb-6 px-4 py-3 rounded-lg ${
-            error ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-green-50 border border-green-200 text-green-700'
-          }`}>
-            {error || success}
+        <main className="container" style={{ paddingTop: 'var(--space-6)', paddingBottom: 'var(--space-6)' }}>
+          {(error || success) && (
+            <div className="surface" style={{ 
+              background: error ? 'color-mix(in oklab, red 10%, var(--clr-bg))' : 'color-mix(in oklab, green 10%, var(--clr-bg))', 
+              border: error ? '1px solid color-mix(in oklab, red 30%, transparent)' : '1px solid color-mix(in oklab, green 30%, transparent)',
+              color: error ? 'color-mix(in oklab, red 80%, black)' : 'color-mix(in oklab, green 80%, black)',
+              padding: 'var(--space-4)',
+              marginBottom: 'var(--space-6)'
+            }}>
+              {error || success}
+            </div>
+          )}
+
+          {/* Tabs */}
+          <div style={{ marginBottom: 'var(--space-6)' }}>
+            <div style={{ borderBottom: '1px solid var(--clr-border)' }}>
+              <nav className="flex gap-8" style={{ marginBottom: '-1px' }}>
+                {tabs.map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className="btn btn--ghost"
+                    style={{
+                      padding: 'var(--space-2) var(--space-1)',
+                      borderBottom: activeTab === tab.id ? '2px solid var(--clr-primary)' : '2px solid transparent',
+                      borderRadius: 0,
+                      fontWeight: '600',
+                      fontSize: 'var(--fs-300)',
+                      color: activeTab === tab.id ? 'var(--clr-primary)' : 'var(--clr-text)',
+                      background: 'transparent'
+                    }}
+                  >
+                    {tab.label}
+                    {tab.count !== undefined && (
+                      <span className="badge" style={{ marginLeft: 'var(--space-2)' }}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+            </div>
           </div>
-        )}
 
-        {/* Tabs */}
-        <div className="mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              {tabs.map(tab => (
+          {/* Services Tab */}
+          {activeTab === 'services' && (
+            <div>
+              <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-6)' }}>
+                <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', margin: 0 }}>Services</h2>
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  onClick={handleCreateService}
+                  className="btn btn--primary"
                 >
-                  {tab.label}
-                  {tab.count !== undefined && (
-                    <span className="ml-2 py-0.5 px-2 rounded-full text-xs bg-gray-100 text-gray-600">
-                      {tab.count}
-                    </span>
-                  )}
+                  Add Service
                 </button>
-              ))}
-            </nav>
-          </div>
-        </div>
+              </div>
 
-        {/* Services Tab */}
-        {activeTab === 'services' && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">Services</h2>
-              <button
-                onClick={handleCreateService}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-              >
-                Add Service
-              </button>
-            </div>
-
-            <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Code Prefix
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      SLA Warning
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {services.map(service => (
-                    <tr key={service.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {service.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {service.code_prefix}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {service.sla_warn_minutes} minutes
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          service.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {service.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleEditService(service)}
-                          className="text-blue-600 hover:text-blue-900 mr-4"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteService(service.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      </td>
+              <div className="surface" style={{ overflow: 'hidden' }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Code Prefix</th>
+                      <th>SLA Warning</th>
+                      <th>Connection Type</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {services.map(service => (
+                      <tr key={service.id}>
+                        <td style={{ fontWeight: '600' }}>
+                          {service.name}
+                        </td>
+                        <td>
+                          {service.code_prefix}
+                        </td>
+                        <td>
+                          {service.sla_warn_minutes} minutes
+                        </td>
+                        <td>
+                          {service.connection_type === 'none' ? 'None' : 
+                           service.connection_type === 'admission' ? 'Admission' : 
+                           service.connection_type === 'ticket' ? 'Ticket' : 'None'}
+                        </td>
+                        <td>
+                          <span className={service.is_active ? 'badge tag-primary' : 'badge'}>
+                            {service.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button
+                            onClick={() => handleEditService(service)}
+                            className="btn btn--ghost btn--sm"
+                            style={{ marginRight: 'var(--space-2)' }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteService(service.id)}
+                            className="btn btn--outline btn--sm"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Counters Tab */}
-        {activeTab === 'counters' && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">Counters</h2>
-              <button
-                onClick={handleCreateCounter}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-              >
-                Add Counter
-              </button>
-            </div>
+          {/* Counters Tab */}
+          {activeTab === 'counters' && (
+            <div>
+              <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-6)' }}>
+                <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', margin: 0 }}>Counters</h2>
+                <button
+                  onClick={handleCreateCounter}
+                  className="btn btn--primary"
+                >
+                  Add Counter
+                </button>
+              </div>
 
-            <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Allowed Services
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {counters.map(counter => (
-                    <tr key={counter.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {counter.name}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {counter.allowed_service_ids?.length || 0} services
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          counter.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {counter.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleEditCounter(counter)}
-                          className="text-blue-600 hover:text-blue-900 mr-4"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteCounter(counter.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      </td>
+              <div className="surface" style={{ overflow: 'hidden' }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Allowed Services</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {counters.map(counter => (
+                      <tr key={counter.id}>
+                        <td style={{ fontWeight: '600' }}>
+                          {counter.name}
+                        </td>
+                        <td>
+                          {counter.allowed_service_ids?.length || 0} services
+                        </td>
+                        <td>
+                          <span className={counter.is_active ? 'badge tag-primary' : 'badge'}>
+                            {counter.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button
+                            onClick={() => handleEditCounter(counter)}
+                            className="btn btn--ghost btn--sm"
+                            style={{ marginRight: 'var(--space-2)' }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCounter(counter.id)}
+                            className="btn btn--outline btn--sm"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Settings Tab */}
-        {activeTab === 'settings' && (
-          <div>
-            <h2 className="text-xl font-semibold mb-6">System Settings</h2>
+          {/* Settings Tab */}
+          {activeTab === 'settings' && (
+            <div>
+              <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', marginBottom: 'var(--space-6)' }}>
+                System Settings
+              </h2>
 
-            <div className="bg-white shadow-sm rounded-lg p-6">
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Business Hours Start (HH:MM)
-                  </label>
-                  <input
-                    type="time"
-                    value={settings.business_hours_start || '09:00'}
-                    onChange={(e) => handleSettingChange('business_hours_start', e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
+              <div className="surface p-6">
+                <div style={{ display: 'grid', gap: 'var(--space-6)' }}>
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      fontSize: 'var(--fs-300)', 
+                      fontWeight: '600', 
+                      marginBottom: 'var(--space-2)' 
+                    }}>
+                      Business Hours Start (HH:MM)
+                    </label>
+                    <input
+                      type="time"
+                      value={settings.business_hours_start || '09:00'}
+                      onChange={(e) => handleSettingChange('business_hours_start', e.target.value)}
+                      className="input"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Business Hours End (HH:MM)
-                  </label>
-                  <input
-                    type="time"
-                    value={settings.business_hours_end || '17:00'}
-                    onChange={(e) => handleSettingChange('business_hours_end', e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      fontSize: 'var(--fs-300)', 
+                      fontWeight: '600', 
+                      marginBottom: 'var(--space-2)' 
+                    }}>
+                      Business Hours End (HH:MM)
+                    </label>
+                    <input
+                      type="time"
+                      value={settings.business_hours_end || '17:00'}
+                      onChange={(e) => handleSettingChange('business_hours_end', e.target.value)}
+                      className="input"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Default SLA Warning (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    value={settings.default_sla_warn_minutes || 30}
-                    onChange={(e) => handleSettingChange('default_sla_warn_minutes', parseInt(e.target.value))}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    min="1"
-                  />
-                </div>
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      fontSize: 'var(--fs-300)', 
+                      fontWeight: '600', 
+                      marginBottom: 'var(--space-2)' 
+                    }}>
+                      Default SLA Warning (minutes)
+                    </label>
+                    <input
+                      type="number"
+                      value={settings.default_sla_warn_minutes || 30}
+                      onChange={(e) => handleSettingChange('default_sla_warn_minutes', parseInt(e.target.value))}
+                      className="input"
+                      min="1"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Queue Display Refresh Interval (seconds)
-                  </label>
-                  <input
-                    type="number"
-                    value={settings.queue_refresh_interval || 30}
-                    onChange={(e) => handleSettingChange('queue_refresh_interval', parseInt(e.target.value))}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    min="5"
-                  />
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      fontSize: 'var(--fs-300)', 
+                      fontWeight: '600', 
+                      marginBottom: 'var(--space-2)' 
+                    }}>
+                      Queue Display Refresh Interval (seconds)
+                    </label>
+                    <input
+                      type="number"
+                      value={settings.queue_refresh_interval || 30}
+                      onChange={(e) => handleSettingChange('queue_refresh_interval', parseInt(e.target.value))}
+                      className="input"
+                      min="5"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </main>
       </div>
-
-
     </div>
   )
 }

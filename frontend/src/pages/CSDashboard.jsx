@@ -1,18 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { toLocalTime } from '../lib/utils'
 import io from 'socket.io-client'
+import Swal from 'sweetalert2'
 
 const STATUS_COLORS = {
-  WAITING: 'bg-yellow-100 text-yellow-800',
-  CALLED: 'bg-blue-100 text-blue-800',
-  IN_SERVICE: 'bg-green-100 text-green-800',
-  DONE: 'bg-gray-100 text-gray-800',
-  NO_SHOW: 'bg-red-100 text-red-800',
-  CANCELED: 'bg-gray-100 text-gray-800'
+  WAITING: 'tag-accent',
+  CALLED: 'tag-primary',
+  IN_SERVICE: 'badge',
+  DONE: 'badge',
+  NO_SHOW: 'badge',
+  CANCELED: 'badge'
 }
 
 export default function CSDashboard() {
+  const navigate = useNavigate()
   const [services, setServices] = useState([])
   const [selectedService, setSelectedService] = useState(null)
   const [queue, setQueue] = useState([])
@@ -20,6 +23,7 @@ export default function CSDashboard() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [supportNotes, setSupportNotes] = useState('')
+  const [pipelines, setPipelines] = useState([])
   const socketRef = useRef(null)
 
   useEffect(() => {
@@ -110,6 +114,102 @@ export default function CSDashboard() {
   }
 
   const handleStartService = async (ticketId) => {
+    if (!selectedService || !activeTicket) return
+
+    const connectionType = selectedService.connection_type || 'none'
+
+    if (connectionType === 'ticket') {
+      // Store queue data in sessionStorage and navigate to ticket create tab
+      const customerData = {
+        name: activeTicket.customer_name || '',
+        phone: activeTicket.customer_phone || '',
+        email: activeTicket.customer_email || ''
+      }
+      
+      // Store data in sessionStorage for TicketCreate to pick up
+      sessionStorage.setItem('queueTicketData', JSON.stringify({
+        prefillData: customerData,
+        autoSearch: true,
+        fromQueue: true,
+        queueTicketId: ticketId
+      }))
+      
+      // Navigate to the create tab in CustomerService
+      window.location.hash = '#create'
+      window.location.reload()
+      return
+    }
+
+    if (connectionType === 'admission') {
+      // Load pipelines and show selection modal
+      try {
+        const pipelinesData = await api.admission.getPipelines()
+        setPipelines(pipelinesData)
+        
+        if (pipelinesData.length === 0) {
+          setError('No admission pipelines available')
+          return
+        }
+
+        // Show pipeline selection modal
+        const { value: selectedPipelineId } = await Swal.fire({
+          title: 'Select Pipeline',
+          html: `
+            <div style="text-align: left;">
+              <label for="pipeline-select" style="display: block; margin-bottom: 8px; font-weight: bold;">Choose Pipeline:</label>
+              <select id="pipeline-select" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                ${pipelinesData.map(pipeline => 
+                  `<option value="${pipeline.id}">${pipeline.name}</option>`
+                ).join('')}
+              </select>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: 'Create Applicant',
+          cancelButtonText: 'Cancel',
+          preConfirm: () => {
+            const pipelineId = document.getElementById('pipeline-select').value
+            return parseInt(pipelineId)
+          }
+        })
+
+        if (selectedPipelineId) {
+          // Auto-create applicant using queue data
+          setLoading(true)
+          try {
+            const applicantData = {
+              pipelineId: selectedPipelineId,
+              customerName: activeTicket.customer_name || 'Queue Customer',
+              customerPhone: activeTicket.customer_phone || '',
+              customerEmail: activeTicket.customer_email || ''
+            }
+
+            await api.admission.autoCreateApplicant(applicantData)
+            
+            // Mark queue ticket as resolved
+            await api.queue.resolveTicket(ticketId, `Converted to admission applicant in pipeline`)
+            
+            Swal.fire({
+              icon: 'success',
+              title: 'Applicant Created',
+              text: 'Queue customer has been converted to admission applicant successfully.'
+            })
+            
+            await loadQueue()
+          } catch (err) {
+            setError(err.message || 'Failed to create applicant')
+          } finally {
+            setLoading(false)
+          }
+        }
+      } catch (err) {
+        setError('Failed to load pipelines')
+        console.error(err)
+      }
+      return
+    }
+
+    // Default behavior for 'none' connection type
     setLoading(true)
     try {
       await api.queue.startService(ticketId)
@@ -176,70 +276,91 @@ export default function CSDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <h1 className="text-2xl font-bold text-gray-900">Customer Service Dashboard</h1>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={loadQueue}
-                className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
-              >
-                Reload Queue
-              </button>
-              <select
-                value={selectedService?.id || ''}
-                onChange={(e) => {
-                  const service = services.find(s => s.id === parseInt(e.target.value))
-                  setSelectedService(service)
-                }}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {services.map(service => (
-                  <option key={service.id} value={service.id}>
-                    {service.name} ({service.code_prefix})
-                  </option>
-                ))}
-              </select>
+    <div className="page">
+      <div className="w-full">
+        <header className="surface" style={{ borderRadius: 0, borderBottom: '1px solid var(--clr-border)' }}>
+          <div className="container">
+            <div className="flex items-center justify-between" style={{ padding: 'var(--space-4) 0' }}>
+              <h1 style={{ fontSize: 'var(--fs-700)', fontWeight: '700', margin: 0 }}>Antrian</h1>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={loadQueue}
+                  className="btn btn--primary btn--sm"
+                >
+                  Reload Queue
+                </button>
+                <select
+                  value={selectedService?.id || ''}
+                  onChange={(e) => {
+                    const service = services.find(s => s.id === parseInt(e.target.value))
+                    setSelectedService(service)
+                  }}
+                  className="select"
+                >
+                  {services.map(service => (
+                    <option key={service.id} value={service.id}>
+                      {service.name} ({service.code_prefix})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
-            <button
-              onClick={() => setError('')}
-              className="float-right ml-4 text-red-400 hover:text-red-600"
-            >
-              ×
-            </button>
-          </div>
-        )}
+        <main className="container" style={{ paddingTop: 'var(--space-6)', paddingBottom: 'var(--space-6)' }}>
+          {error && (
+            <div className="surface" style={{ 
+              background: 'color-mix(in oklab, red 10%, var(--clr-bg))', 
+              border: '1px solid color-mix(in oklab, red 30%, transparent)',
+              color: 'color-mix(in oklab, red 80%, black)',
+              padding: 'var(--space-4)',
+              marginBottom: 'var(--space-6)',
+              position: 'relative'
+            }}>
+              {error}
+              <button
+                onClick={() => setError('')}
+                className="btn-icon"
+                style={{ 
+                  position: 'absolute', 
+                  top: 'var(--space-2)', 
+                  right: 'var(--space-2)',
+                  background: 'none',
+                  border: 'none',
+                  fontSize: 'var(--fs-500)',
+                  cursor: 'pointer'
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Active Ticket Panel */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Active Ticket</h2>
+          <div className="grid grid--2" style={{ gap: 'var(--space-6)' }}>
+            {/* Active Ticket Panel */}
+            <div className="surface p-6">
+              <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', marginBottom: 'var(--space-4)' }}>Active Ticket</h2>
 
               {activeTicket ? (
-                <div className="space-y-4">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-blue-600 mb-2">
+                <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ 
+                      fontSize: 'var(--fs-700)', 
+                      fontWeight: '700', 
+                      color: 'var(--clr-primary)', 
+                      marginBottom: 'var(--space-2)' 
+                    }}>
                       {activeTicket.number}
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div style={{ fontSize: 'var(--fs-300)', opacity: '0.8' }}>
                       {activeTicket.customer_name || 'Anonymous'}
                     </div>
                   </div>
 
-                  <div className="space-y-2 text-sm">
+                  <div style={{ display: 'grid', gap: 'var(--space-2)', fontSize: 'var(--fs-300)' }}>
                     <div><strong>Status:</strong>
-                      <span className={`ml-2 px-2 py-1 rounded-full text-xs ${STATUS_COLORS[activeTicket.status]}`}>
+                      <span className={`${STATUS_COLORS[activeTicket.status]}`} style={{ marginLeft: 'var(--space-2)' }}>
                         {activeTicket.status.replace('_', ' ')}
                       </span>
                     </div>
@@ -250,48 +371,50 @@ export default function CSDashboard() {
                     )}
                   </div>
 
-                  <div className="space-y-2">
+                  <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
                     {activeTicket.status === 'CALLED' && (
                       <button
                         onClick={() => handleStartService(activeTicket.id)}
                         disabled={loading}
-                        className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                        className="btn btn--accent w-full"
                       >
                         Start Service
                       </button>
                     )}
 
                     {activeTicket.status === 'IN_SERVICE' && (
-                      <div className="space-y-2">
+                      <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
                         <textarea
                           value={supportNotes}
                           onChange={(e) => setSupportNotes(e.target.value)}
                           placeholder="Enter resolution notes..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="textarea"
                           rows={3}
                         />
                         <button
                           onClick={() => handleResolveTicket(activeTicket.id)}
                           disabled={loading || !supportNotes.trim()}
-                          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                          className="btn btn--primary w-full"
                         >
                           Resolve Ticket
                         </button>
                       </div>
                     )}
 
-                    <div className="flex space-x-2">
+                    <div className="flex gap-2">
                       <button
                         onClick={() => handleRequeueTicket(activeTicket.id)}
                         disabled={loading}
-                        className="flex-1 bg-yellow-600 text-white py-2 px-3 rounded-lg hover:bg-yellow-700 disabled:opacity-50 text-sm"
+                        className="btn btn--outline btn--sm"
+                        style={{ flex: 1 }}
                       >
                         Requeue
                       </button>
                       <button
                         onClick={() => handleMarkNoShow(activeTicket.id)}
                         disabled={loading}
-                        className="flex-1 bg-red-600 text-white py-2 px-3 rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm"
+                        className="btn btn--outline btn--sm"
+                        style={{ flex: 1 }}
                       >
                         No Show
                       </button>
@@ -299,96 +422,188 @@ export default function CSDashboard() {
                   </div>
                 </div>
               ) : (
-                <div className="text-center text-gray-500 py-8">
+                <div style={{ textAlign: 'center', padding: 'var(--space-8)', opacity: '0.6' }}>
                   No active ticket
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Queue List */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Queue ({queue.length} tickets)</h2>
+            {/* Queue List */}
+            <div className="surface p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', margin: 0 }}>
+                  Queue ({queue.length} tickets)
+                </h2>
                 <button
                   onClick={loadQueue}
-                  className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 text-sm"
+                  className="btn btn--primary btn--sm"
                 >
                   Reload
                 </button>
               </div>
 
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {queue.map((ticket, index) => (
-                  <div
-                    key={ticket.id}
-                    className={`p-4 border rounded-lg ${
-                      ticket.status === 'WAITING' ? 'border-yellow-200 bg-yellow-50' :
-                      ticket.status === 'CALLED' ? 'border-blue-200 bg-blue-50' :
-                      ticket.status === 'IN_SERVICE' ? 'border-green-200 bg-green-50' :
-                      'border-gray-200 bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="text-lg font-bold text-gray-900">
-                          {ticket.number}
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900">
-                            {ticket.customer_name || 'Anonymous'}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {toLocalTime(ticket.created_at)}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
-                        <span className={`px-2 py-1 rounded-full text-xs ${STATUS_COLORS[ticket.status]}`}>
-                          {ticket.status.replace('_', ' ')}
-                        </span>
-
-                        {ticket.status === 'WAITING' && (
-                          <button
-                            onClick={() => handleClaimTicket(ticket.id)}
-                            disabled={loading}
-                            className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+              <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
+                {/* Active Queue (WAITING and CALLED) */}
+                {(() => {
+                  const activeTickets = queue.filter(ticket => 
+                    ticket.status === 'WAITING' || ticket.status === 'CALLED'
+                  )
+                  return activeTickets.length > 0 && (
+                    <div>
+                      <h3 style={{ 
+                        fontSize: 'var(--fs-500)', 
+                        fontWeight: '600', 
+                        marginBottom: 'var(--space-3)',
+                        color: 'var(--clr-primary)'
+                      }}>
+                        Active Queue ({activeTickets.length})
+                      </h3>
+                      <div style={{ 
+                        display: 'grid', 
+                        gap: 'var(--space-3)', 
+                        maxHeight: '300px', 
+                        overflowY: 'auto' 
+                      }}>
+                        {activeTickets.map((ticket) => (
+                          <div
+                            key={ticket.id}
+                            className="surface"
+                            style={{ 
+                              padding: 'var(--space-4)',
+                              border: ticket.status === 'WAITING' ? '2px solid var(--clr-accent)' :
+                                     '2px solid var(--clr-primary)'
+                            }}
                           >
-                            Claim
-                          </button>
-                        )}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div style={{ 
+                                  fontSize: 'var(--fs-500)', 
+                                  fontWeight: '700' 
+                                }}>
+                                  {ticket.number}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: '600' }}>
+                                    {ticket.customer_name || 'Anonymous'}
+                                  </div>
+                                  <div style={{ fontSize: 'var(--fs-300)', opacity: '0.7' }}>
+                                    {toLocalTime(ticket.created_at)}
+                                  </div>
+                                </div>
+                              </div>
 
-                        {(ticket.status === 'CALLED' || ticket.status === 'IN_SERVICE') && (
-                          <button
-                            onClick={() => handleCancelTicket(ticket.id)}
-                            disabled={loading}
-                            className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm"
-                          >
-                            Cancel
-                          </button>
-                        )}
+                              <div className="flex items-center gap-3">
+                                <span className={`${STATUS_COLORS[ticket.status]}`}>
+                                  {ticket.status.replace('_', ' ')}
+                                </span>
+
+                                {ticket.status === 'WAITING' && (
+                                  <button
+                                    onClick={() => handleClaimTicket(ticket.id)}
+                                    disabled={loading}
+                                    className="btn btn--primary btn--sm"
+                                  >
+                                    Claim
+                                  </button>
+                                )}
+
+                                {ticket.status === 'CALLED' && (
+                                  <button
+                                    onClick={() => handleCancelTicket(ticket.id)}
+                                    disabled={loading}
+                                    className="btn btn--outline btn--sm"
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {ticket.notes && (
+                              <div style={{ 
+                                marginTop: 'var(--space-2)', 
+                                fontSize: 'var(--fs-300)', 
+                                opacity: '0.8' 
+                              }}>
+                                <strong>Notes:</strong> {ticket.notes}
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
+                  )
+                })()}
 
-                    {ticket.notes && (
-                      <div className="mt-2 text-sm text-gray-600">
-                        <strong>Notes:</strong> {ticket.notes}
+                {/* Completed Queue (NO_SHOW and DONE) */}
+                {(() => {
+                  const completedTickets = queue.filter(ticket => 
+                    ticket.status === 'NO_SHOW' || ticket.status === 'DONE' || ticket.status === 'CANCELED'
+                  )
+                  return completedTickets.length > 0 && (
+                    <div>
+                      <h3 style={{ 
+                        fontSize: 'var(--fs-500)', 
+                        fontWeight: '600', 
+                        marginBottom: 'var(--space-3)',
+                        opacity: '0.7'
+                      }}>
+                        Completed ({completedTickets.length})
+                      </h3>
+                      <div style={{ 
+                        display: 'grid', 
+                        gap: 'var(--space-3)', 
+                        maxHeight: '200px', 
+                        overflowY: 'auto' 
+                      }}>
+                        {completedTickets.map((ticket) => (
+                          <div
+                            key={ticket.id}
+                            className="surface"
+                            style={{ 
+                              padding: 'var(--space-3)',
+                              border: '1px solid var(--clr-border)',
+                              opacity: '0.7'
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div style={{ 
+                                  fontSize: 'var(--fs-400)', 
+                                  fontWeight: '600' 
+                                }}>
+                                  {ticket.number}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: '500', fontSize: 'var(--fs-300)' }}>
+                                    {ticket.customer_name || 'Anonymous'}
+                                  </div>
+                                  <div style={{ fontSize: 'var(--fs-300)', opacity: '0.6' }}>
+                                    {toLocalTime(ticket.created_at)}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <span className={`${STATUS_COLORS[ticket.status]}`} style={{ fontSize: 'var(--fs-300)' }}>
+                                {ticket.status.replace('_', ' ')}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </div>
-                ))}
+                    </div>
+                  )
+                })()}
 
                 {queue.length === 0 && (
-                  <div className="text-center text-gray-500 py-8">
+                  <div style={{ textAlign: 'center', padding: 'var(--space-8)', opacity: '0.6' }}>
                     No tickets in queue
                   </div>
                 )}
               </div>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   )

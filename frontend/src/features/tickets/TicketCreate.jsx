@@ -1,11 +1,12 @@
 // src/features/tickets/TicketCreate.jsx
-import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { api } from '../../lib/api.js';
 import Swal from 'sweetalert2';
 
 export default function TicketCreate() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [titleChoice, setTitleChoice] = useState('');
   const [customTitle, setCustomTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -31,6 +32,52 @@ const canSubmitTitle = !!titleChoice && (titleChoice !== 'Lain-lain' || customTi
 
   // NEW: Ticket modal state
   const [isTicketOpen, setIsTicketOpen] = useState(false);
+
+  // Store queue ticket data for later use
+  const [queueTicketData, setQueueTicketData] = useState(null);
+
+  // Handle pre-filled data from queue
+  useEffect(() => {
+    // Check for data from sessionStorage (from CSDashboard)
+    const queueData = sessionStorage.getItem('queueTicketData');
+    if (queueData) {
+      try {
+        const parsedData = JSON.parse(queueData);
+        const { name: queueName, phone: queuePhone, email: queueEmail } = parsedData.prefillData;
+        setName(queueName || '');
+        setPhone(queuePhone || '');
+        setEmail(queueEmail || '');
+        
+        // Store queue ticket data for later use
+        setQueueTicketData(parsedData);
+        
+        // Auto-execute search if requested
+        if (parsedData.autoSearch && (queueName || queuePhone || queueEmail)) {
+          // Clear the sessionStorage after using it
+          sessionStorage.removeItem('queueTicketData');
+          searchCustomers();
+        }
+      } catch (err) {
+        console.error('Error parsing queue ticket data:', err);
+      }
+    }
+    
+    // Also check location state for backward compatibility
+    if (location.state?.prefillData) {
+      const { name: queueName, phone: queuePhone, email: queueEmail } = location.state.prefillData;
+      setName(queueName || '');
+      setPhone(queuePhone || '');
+      setEmail(queueEmail || '');
+      
+      // Store queue ticket data for later use
+      setQueueTicketData(location.state);
+      
+      // Auto-execute search if requested
+      if (location.state.autoSearch && (queueName || queuePhone || queueEmail)) {
+        searchCustomers();
+      }
+    }
+  }, [location.state]);
 
   // —— helpers ——
   const normalizePhone = (val) => (val || '').replace(/\D/g, '').slice(0, 12); // keep max at 12
@@ -256,6 +303,20 @@ async function submit(e) {
     }
 
     setIsTicketOpen(false);
+    
+    // If this ticket was created from queue data, mark the queue ticket as DONE
+    if (queueTicketData && queueTicketData.queueTicketId) {
+      try {
+        await api(`/queue/ticket/${queueTicketData.queueTicketId}/resolve`, {
+          method: 'POST',
+          body: { notes: `Converted to support ticket ${data.id}` }
+        });
+      } catch (err) {
+        console.error('Failed to mark queue ticket as resolved:', err);
+        // Don't show error to user since ticket was created successfully
+      }
+    }
+    
     await Swal.fire({ icon: 'success', title: 'Ticket Created 🎉', timer: 900, showConfirmButton: false, position: 'top' });
 
     navigate(`/tickets/${data.id}`, { state: { justCreated: true } });

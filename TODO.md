@@ -1,50 +1,89 @@
-# TODO: Add Queue Feature to Customer Service App
+# UI.css Conversion and Mobile Optimization Task
 
-## Phase 1: Database Schema Updates
-- [ ] Update schema.sql: Add services table (id, name, code_prefix, is_active, sla_warn_minutes)
-- [ ] Add counters table (id, name, allowed_service_ids as TEXT/JSON)
-- [ ] Rename queue to queue_tickets: id, service_id, number, customer_id, status (WAITING, CALLED, IN_SERVICE, DONE, NO_SHOW, CANCELED), claimed_by, called_at, started_at, finished_at, no_show_at, notes
-- [ ] Add support_tickets table (id, queue_ticket_id, summary, details, status, category, attachments_json, created_by, resolved_at)
-- [ ] Update customers: add phone_verified BOOLEAN DEFAULT 0 (no verified_at)
-- [ ] Update users: add assigned_counter_id INTEGER
-- [ ] Add settings table (id, key, value) for SLAs, business hours, etc.
-- [ ] Run migration script to update database
+## Progress Tracker
 
-## Phase 2: Backend Models
-- [x] Create backend/src/models/service.js: CRUD for services
-- [x] Create backend/src/models/counter.js: CRUD for counters
-- [x] Create backend/src/models/queueTicket.js: Functions for create, claim, start, resolve, requeue, no-show, get queue by service, etc.
-- [x] Create backend/src/models/supportTicket.js: CRUD for support tickets
-- [x] Create backend/src/models/setting.js: Get/set settings
-- [x] Update backend/src/models/ticket.js: Deprecate old statuses, integrate with queue (no changes needed, queue is separate system)
-- [x] Update backend/src/models/customer.js: Add phone_verified, auto-create on queue ticket creation
-- [x] Update backend/src/models/user.js: Add assigned_counter_id
+### ✅ Completed
+- [x] Analyzed current files and ui.css system
+- [x] Created comprehensive conversion plan
+- [x] Got user approval for the plan
+- [x] Convert CSDashboard.jsx to ui.css
+- [x] Convert AdminSetup.jsx to ui.css  
+- [x] Convert Kiosk.jsx to ui.css with mobile optimization
 
-## Phase 3: Backend Routes
-- [x] Create backend/src/routes/queueRoutes.js: Claim ticket, start service, resolve, requeue, no-show, get queue status
-- [x] Create backend/src/routes/serviceRoutes.js: Admin CRUD for services
-- [x] Create backend/src/routes/counterRoutes.js: Admin CRUD for counters
-- [x] Create backend/src/routes/kioskRoutes.js: Customer intake, create queue ticket (check/create customer by phone)
-- [x] Create backend/src/routes/adminRoutes.js: Settings, reports
-- [x] Update backend/src/routes/ticketRoutes.js: Link to queue tickets (no changes needed, queue is separate system)
-- [x] Update backend/server.js: Add new routes, integrate socket.io for websockets
+### 📋 Tasks Breakdown
 
-## Phase 4: Frontend API and Components
-- [x] Update frontend/src/api.js: Add endpoints for queue, services, counters, kiosk
-- [x] Create frontend/src/pages/Kiosk.jsx: Intake form, service selection, confirmation, live status
-- [x] Create frontend/src/pages/CSDashboard.jsx: Queue list, claim, active ticket with support form
-- [x] Create frontend/src/pages/AdminSetup.jsx: Services, counters, users, settings
-- [x] Update frontend/src/pages/CustomerService.jsx: Add queue tabs
-- [x] Create components for queue display, live status, etc.
-- [x] Integrate socket.io client for real-time updates
+#### CSDashboard.jsx Conversion
+- [x] Replace Tailwind layout classes with ui.css equivalents
+- [x] Convert button styling to .btn variants
+- [x] Update form elements to use .input, .select, .textarea
+- [x] Apply .surface class for card components
+- [x] Use ui.css color and spacing variables
+- [x] Implement responsive grid system
 
-## Phase 5: Authentication and Permissions
-- [x] Ensure middleware checks for ADMIN on setup routes, CS on queue operations
-- [x] Update role assignments as needed
+#### AdminSetup.jsx Conversion  
+- [x] Convert table styling to .table class
+- [x] Update button styling to .btn variants
+- [x] Convert form elements to ui.css classes
+- [x] Apply tab navigation styling
+- [x] Update modal/dialog styling
+- [x] Use ui.css layout helpers
 
-## Phase 6: Testing and Rollout
-- [x] Write unit tests for new models
-- [x] Manual test customer flow: Kiosk -> Queue -> CS claim -> Resolve
-- [x] Test admin setup
-- [x] Seed initial services and counters
-- [x] Update README with queue feature docs
+#### Kiosk.jsx Mobile Optimization
+- [x] Convert to ui.css styling system
+- [x] Implement mobile-first responsive design
+- [x] Add touch-friendly button sizes (.btn--lg)
+- [x] Use safe area insets for mobile devices
+- [x] Optimize typography for mobile screens
+- [x] Add larger touch targets
+- [x] Test responsive behavior
+
+### 🎯 Success Criteria ✅
+- ✅ All three files use ui.css instead of Tailwind
+- ✅ Kiosk.jsx is fully mobile-responsive
+- ✅ Touch interactions work properly on mobile
+- ✅ Visual consistency across all components
+- ✅ No broken layouts on different screen sizes
+
+---
+
+## Environment Variables Configuration Task ✅
+
+### ✅ Completed
+- [x] Identified all hardcoded URLs in frontend and backend
+- [x] Created comprehensive .env.example files
+- [x] Updated configuration files to use environment variables
+- [x] Verified no hardcoded URLs remain in source code
+
+### 📋 Environment Variables Configured
+
+#### Frontend (.env.example)
+- [x] `VITE_API_BASE` - Backend API URL (replaces hardcoded localhost:3000)
+- [x] `VITE_SOCKET_URL` - WebSocket connection URL (already implemented)
+- [x] `VITE_DEV_PROXY_TARGET` - Development proxy target (replaces hardcoded 192.168.1.21:3001)
+
+#### Backend (.env.example)
+- [x] `PORT` - Server port configuration
+- [x] `HOST` - Server host configuration
+- [x] `FRONTEND_URL` - Frontend URL for CORS (replaces hardcoded localhost:5173)
+- [x] `DATABASE_URL` - Database connection string
+- [x] `JWT_SECRET` - JWT signing secret
+- [x] `NODE_ENV` - Environment mode
+
+#### Root Project (.env.example)
+- [x] Common environment variables for entire project
+- [x] Development and production URL templates
+- [x] Docker Compose configuration variables
+
+### 🔧 Files Updated
+- [x] `frontend/vite.config.js` - Now uses `VITE_DEV_PROXY_TARGET`
+- [x] `backend/server.js` - Enhanced CORS configuration with environment variables
+- [x] `frontend/.env.example` - Created with all frontend variables
+- [x] `backend/.env.example` - Created with all backend variables
+- [x] `.env.example` - Created root-level configuration
+
+### 🎯 Environment Configuration Success Criteria ✅
+- ✅ All hardcoded URLs moved to environment variables
+- ✅ Comprehensive .env.example files created for all levels
+- ✅ Development and production configurations documented
+- ✅ Secure configuration management implemented
+- ✅ Easy deployment across different environments enabled

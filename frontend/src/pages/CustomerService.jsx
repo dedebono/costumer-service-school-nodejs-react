@@ -41,8 +41,25 @@ const groupedTabs = [
 
 export default function CustomerService() {
   const { user, logout } = useAuth();
-  const [tab, setTab] = useState('search');
+  const [tab, setTab] = useState(() => {
+    // Check for hash in URL to determine initial tab
+    const hash = window.location.hash.replace('#', '');
+    return hash || 'search';
+  });
   const socketRef = useRef(null);
+
+  useEffect(() => {
+    // Listen for hash changes to update tab
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        setTab(hash);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   useEffect(() => {
     socketRef.current = io(import.meta.env.VITE_SOCKET_URL, {
