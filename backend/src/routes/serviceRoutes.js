@@ -26,13 +26,13 @@ router.get('/', requireRole(['CustomerService', 'Supervisor']), async (req, res)
 // POST /api/services - Supervisor only
 router.post('/', requireRole('Supervisor'), async (req, res) => {
   try {
-    const { name, codePrefix, isActive = true, slaWarnMinutes = 10 } = req.body;
+    const { name, codePrefix, isActive = true, slaWarnMinutes = 10, connectionType = 'none' } = req.body;
 
     if (!name || !codePrefix) {
       return res.status(400).json({ error: 'Name and codePrefix are required' });
     }
 
-    const service = await createService({ name, codePrefix, isActive, slaWarnMinutes });
+    const service = await createService({ name, codePrefix, isActive, slaWarnMinutes, connectionType });
     res.status(201).json(service);
   } catch (e) {
     console.error(e);
@@ -55,8 +55,8 @@ router.get('/:id', requireRole(['CustomerService', 'Supervisor']), async (req, r
 // PATCH /api/services/:id - Supervisor only
 router.patch('/:id', requireRole('Supervisor'), async (req, res) => {
   try {
-    const { name, codePrefix, isActive, slaWarnMinutes } = req.body;
-    const updated = await updateService(req.params.id, { name, codePrefix, isActive, slaWarnMinutes });
+    const { name, codePrefix, isActive, slaWarnMinutes, connectionType } = req.body;
+    const updated = await updateService(req.params.id, { name, codePrefix, isActive, slaWarnMinutes, connectionType });
     if (!updated) return res.status(404).json({ error: 'Service not found' });
     res.json({ message: 'Service updated' });
   } catch (e) {

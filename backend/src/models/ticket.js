@@ -118,25 +118,22 @@ function updateTicketStatus(id, status, changedBy) {
 
 function deleteTicket(id) {
   return new Promise((resolve, reject) => {
-    const deleteQueueSql = 'DELETE FROM queue WHERE ticket_id = ?';
-    db.run(deleteQueueSql, [id], (err) => {
-      if (err) return reject(err);
-      const deleteTicketSql = 'DELETE FROM tickets WHERE id = ?';
-      db.run(deleteTicketSql, [id], (err2) => {
-        if (err2) reject(err2);
-        else resolve(true);
-      });
+    // Note: queue_tickets table doesn't have ticket_id field, it's for queue system
+    // Just delete the ticket directly since tickets and queue_tickets are separate systems
+    const deleteTicketSql = 'DELETE FROM tickets WHERE id = ?';
+    db.run(deleteTicketSql, [id], (err) => {
+      if (err) reject(err);
+      else resolve(true);
     });
   });
 }
 
 function enqueueTicket(ticketId) {
   return new Promise((resolve, reject) => {
-    const sql = 'INSERT INTO queue (ticket_id, position, enqueued_at) VALUES (?, (SELECT IFNULL(MAX(position), 0) + 1 FROM queue), CURRENT_TIMESTAMP)';
-    db.run(sql, [ticketId], function (err) {
-      if (err) reject(err);
-      else resolve(true);
-    });
+    // Note: The queue_tickets table is for the queue system, not for regular tickets
+    // Regular tickets don't need to be enqueued in the queue system
+    // This function can be a no-op or we can remove the call from ticket routes
+    resolve(true);
   });
 }
 

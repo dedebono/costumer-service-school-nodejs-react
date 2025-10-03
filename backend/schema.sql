@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS services (
     code_prefix TEXT NOT NULL,
     is_active BOOLEAN DEFAULT 1,
     sla_warn_minutes INTEGER DEFAULT 10,
+    connection_type TEXT CHECK(connection_type IN ('none', 'admission', 'ticket')) DEFAULT 'none',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

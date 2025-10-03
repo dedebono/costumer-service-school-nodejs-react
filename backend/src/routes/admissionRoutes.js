@@ -321,4 +321,42 @@ router.delete('/pipelines/:id', async (req, res) => {
     }
   });
 
+  // POST /api/admission/auto-create-applicant
+  router.post('/auto-create-applicant', async (req, res) => {
+    const { pipelineId, customerName, customerPhone, customerEmail } = req.body;
+
+    if (!pipelineId || !customerName) {
+      return res.status(400).json({ message: 'pipelineId and customerName are required' });
+    }
+
+    try {
+      // Get the first step of the pipeline
+      const steps = await getStepsByPipelineId(pipelineId);
+      if (!steps || steps.length === 0) {
+        return res.status(400).json({ message: 'Pipeline has no steps' });
+      }
+      const firstStep = steps.find(s => s.ord === 1);
+      if (!firstStep) {
+        return res.status(400).json({ message: 'Pipeline has no first step' });
+      }
+
+      // Create applicant with queue data
+      const applicant = await createApplicant({
+        pipeline_id: pipelineId,
+        current_step_id: firstStep.id,
+        name: customerName,
+        parent_phone: customerPhone,
+        email: customerEmail,
+        address: null,
+        nisn: null,
+        birthdate: null,
+        notes: `Auto-created from queue service - ${new Date().toISOString()}`
+      });
+
+      res.status(201).json(applicant);
+    } catch (e) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
 module.exports = router;
