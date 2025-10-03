@@ -7,7 +7,7 @@ import {
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  verticalListSortingStrategy,
+  horizontalListSortingStrategy,
   arrayMove
 } from '@dnd-kit/sortable';
 import SortableItem from './SortableItem.jsx';
@@ -159,7 +159,7 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
         >
           <SortableContext
             items={steps.map((s) => s.id)}
-            strategy={verticalListSortingStrategy}
+            strategy={horizontalListSortingStrategy}
           >
             <ul className="steps-list">
               {steps.map((s) => (
@@ -209,7 +209,7 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
       </Modal>
 
       <div className="mt-4">
-        <button className="btn btn--primary" 
+        <button className="btnsimpan" 
         disabled
         onClick={() => alert('All changes have been auto-saved.')}>
           Simpan

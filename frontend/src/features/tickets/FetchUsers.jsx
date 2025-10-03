@@ -226,7 +226,7 @@ export default function FetchUser() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '20px' }}>
       {/* Search bar */}
       <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
         <div style={{ display: 'grid', gap: 6 }}>

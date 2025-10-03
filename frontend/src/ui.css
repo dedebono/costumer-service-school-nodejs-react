@@ -405,7 +405,8 @@ margin: 10px;
 }
 
 /* ---------- Responsive grid helpers ---------- */
-.grid{ display: grid; gap: var(--space-4); }
+.grid{ display: grid; 
+  gap: var(--space-4); }
 .grid--2{ grid-template-columns: repeat(2, 1fr); }
 .grid--3{ grid-template-columns: repeat(3, 1fr); }
 .grid--4{ grid-template-columns: repeat(4, 1fr); }
@@ -643,7 +644,23 @@ margin: 10px;
   cursor: grabbing;
 }
 
-.steps-list > li { position: relative; }
+.btnsimpan{
+  display:none;
+}
+
+.steps-list {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  gap: 1px;
+  padding: 10px 0 0 0;
+}
+
+.steps-list > li {
+  list-style: none;
+  position: relative;
+  width: fit-content;
+}
 
 /* ===== Applicant card (draggable) ===== */
 .card{
@@ -708,8 +725,7 @@ margin: 10px;
 }
 
 .liststeps li{
-    font-weight: 900;
-}
+    font-weight: 900;}
 /*step style*/
 .stepmove{
   background-color: #264da1;

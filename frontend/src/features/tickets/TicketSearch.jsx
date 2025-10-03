@@ -217,7 +217,7 @@ export default function TicketSearch() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
+    <div style={{ display: 'grid', gap: 12, marginBottom: 16 , padding:'20px' }}>
       <div style={{ display:'flex', flexDirection: 'row', gap: 12, alignItems: 'start', marginBottom: 8 }}>
         <div style={{ display:'flex', flexDirection: 'column', gap: 6, flexGrow: 1 }}>
           <label style={{ fontSize: 15, fontWeight:'600' }}>Search by Name</label>

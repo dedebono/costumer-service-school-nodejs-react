@@ -177,7 +177,7 @@ export default function TicketsTable({ supervisor }) {
   const COLS = supervisor ? 10 : 9;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 , padding:'20px'}}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
         <input
           value={q}
