@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS customers (
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     phone TEXT,
+    phone_verified BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -27,13 +28,67 @@ CREATE TABLE IF NOT EXISTS tickets (
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
--- Create queue table for managing ticket queue
-CREATE TABLE IF NOT EXISTS queue (
+-- Create services table
+CREATE TABLE IF NOT EXISTS services (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ticket_id TEXT NOT NULL,
-    position INTEGER NOT NULL,
-    enqueued_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (ticket_id) REFERENCES tickets(id)
+    name TEXT NOT NULL,
+    code_prefix TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT 1,
+    sla_warn_minutes INTEGER DEFAULT 10,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create counters table
+CREATE TABLE IF NOT EXISTS counters (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    allowed_service_ids TEXT, -- comma-separated IDs
+    is_active BOOLEAN DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create queue_tickets table (renamed from queue)
+CREATE TABLE IF NOT EXISTS queue_tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    service_id INTEGER NOT NULL,
+    number TEXT NOT NULL,
+    customer_id INTEGER NOT NULL,
+    status TEXT CHECK(status IN ('WAITING', 'CALLED', 'IN_SERVICE', 'DONE', 'NO_SHOW', 'CANCELED')) DEFAULT 'WAITING',
+    claimed_by INTEGER,
+    called_at DATETIME,
+    started_at DATETIME,
+    finished_at DATETIME,
+    no_show_at DATETIME,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (service_id) REFERENCES services(id),
+    FOREIGN KEY (customer_id) REFERENCES customers(id),
+    FOREIGN KEY (claimed_by) REFERENCES users(id)
+);
+
+-- Create support_tickets table
+CREATE TABLE IF NOT EXISTS support_tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    queue_ticket_id INTEGER NOT NULL,
+    summary TEXT,
+    details TEXT,
+    status TEXT CHECK(status IN ('OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED')) DEFAULT 'OPEN',
+    category TEXT,
+    attachments_json TEXT, -- JSON array of attachments
+    created_by INTEGER NOT NULL,
+    resolved_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (queue_ticket_id) REFERENCES queue_tickets(id),
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+-- Create settings table
+CREATE TABLE IF NOT EXISTS settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT UNIQUE NOT NULL,
+    value TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create ticket_history table for tracking changes
@@ -55,9 +110,11 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     role TEXT CHECK(role IN ('CustomerService', 'Supervisor', 'ADMIN')) NOT NULL,
+    assigned_counter_id INTEGER,
     is_active BOOLEAN DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (assigned_counter_id) REFERENCES counters(id)
 );
 
 -- Create password_reset_requests table
@@ -78,7 +135,11 @@ CREATE TABLE IF NOT EXISTS password_reset_requests (
 CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
 CREATE INDEX IF NOT EXISTS idx_tickets_priority ON tickets(priority);
 CREATE INDEX IF NOT EXISTS idx_tickets_customer_id ON tickets(customer_id);
-CREATE INDEX IF NOT EXISTS idx_queue_position ON queue(position);
+CREATE INDEX IF NOT EXISTS idx_queue_tickets_status ON queue_tickets(status);
+CREATE INDEX IF NOT EXISTS idx_queue_tickets_service ON queue_tickets(service_id);
+CREATE INDEX IF NOT EXISTS idx_queue_tickets_customer ON queue_tickets(customer_id);
+CREATE INDEX IF NOT EXISTS idx_services_active ON services(is_active);
+CREATE INDEX IF NOT EXISTS idx_counters_active ON counters(is_active);
 
 -- Admission System Tables
 

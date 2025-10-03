@@ -19,7 +19,7 @@ const [loading, setLoading] = useState(true);
         try {
           // Set token for the upcoming API call
           setToken(currentToken);
-          const { user: freshUser } = await api('/api/auth/me');
+          const { user: freshUser } = await api('/auth/me');
           setUsr(freshUser);
           setUser(freshUser); // also save to localStorage
         } catch (error) {
@@ -38,8 +38,7 @@ const [loading, setLoading] = useState(true);
 
 
 const login = async (email, password) => {
-const data = await api('/api/auth/login', { method: 'POST', body: { email, password } });
-setToken(data.token);
+    const data = await api('/auth/login', { method: 'POST', body: { email, password } });setToken(data.token);
 setUser(data.user);
 setTok(data.token);
 setUsr(data.user);

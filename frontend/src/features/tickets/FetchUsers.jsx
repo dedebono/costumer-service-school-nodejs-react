@@ -31,7 +31,7 @@ export default function FetchUser() {
   async function loadAll() {
     setLoading(true);
     try {
-      const data = await api('/api/customers');
+      const data = await api('/customers');
       setCustomers(Array.isArray(data) ? data : []);
       if (!data?.length) {
         await Swal.fire({ icon: 'info', title: 'No customers', text: 'No customers found.' });
@@ -72,7 +72,7 @@ export default function FetchUser() {
       if (qEmail.trim()) params.append('email', qEmail.trim());
       if (phone) params.append('phone', phone);
 
-      const data = await api(`/api/customers/search?${params.toString()}`);
+      const data = await api(`/customers/search?${params.toString()}`);
       setCustomers(Array.isArray(data) ? data : []);
       if (!data?.length) {
         await Swal.fire({ icon: 'warning', title: 'No results', text: 'No customers matched your search.' });
@@ -135,7 +135,7 @@ export default function FetchUser() {
     }
 
     try {
-      await api(`/api/customers/${editId}`, {
+      await api(`/customers/${editId}`, {
         method: 'PATCH',
         body: { name, email, phone: phone || null },
       });
@@ -174,7 +174,7 @@ export default function FetchUser() {
     if (!res.isConfirmed) return;
 
     try {
-      await api(`/api/customers/${c.id}`, { method: 'DELETE' });
+      await api(`/customers/${c.id}`, { method: 'DELETE' });
       await Swal.fire({ icon: 'success', title: 'Customer deleted' });
       // remove locally
       setCustomers((curr) => curr.filter((x) => x.id !== c.id));
@@ -201,7 +201,7 @@ export default function FetchUser() {
     setLoading(true);
     try {
         console.log('Sending bulk upload request...');
-        const response = await api('/api/customers/bulk', {
+        const response = await api('/customers/bulk', {
             method: 'POST',
             body: formData,
         });

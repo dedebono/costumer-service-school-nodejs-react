@@ -56,6 +56,18 @@ costumer-service-school-nodejs-react/
 └── README.md           # You are here!
 ```
 
+## Queue Feature
+
+This application now includes a full queue management feature for customer service:
+
+- Services: Define service types with code prefixes and SLAs.
+- Counters: Define counters with allowed services.
+- Queue Tickets: Manage queue tickets with statuses (WAITING, CALLED, IN_SERVICE, DONE, NO_SHOW, CANCELED).
+- Support Tickets: Linked support tickets for queue tickets.
+- Settings: Configurable settings for SLAs and business hours.
+- Role-based access control for CustomerService and Supervisor roles.
+- Real-time updates planned via websockets.
+
 ## Frontend Flow
 
 The frontend application provides a user interface for interacting with the customer service system.
@@ -176,3 +188,22 @@ For a manual setup, you need to create `.env` files in the respective directorie
     Create this file and add the following content. This tells the frontend where to find the backend API.
     ```env
     VITE_API_BASE=http://localhost:3000
+    ```
+
+## API Documentation
+
+See the `backend/API_DOCUMENTATION.md` file for detailed API endpoint descriptions and usage.
+
+## Testing
+
+- Unit tests for backend models and routes are planned.
+- Manual testing should cover the customer kiosk flow, queue management by customer service, and admin setup.
+- Real-time updates via websockets are planned for future releases.
+
+## Contribution
+
+Contributions are welcome! Please fork the repository and submit pull requests.
+
+## License
+
+MIT License

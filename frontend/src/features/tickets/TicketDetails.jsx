@@ -23,7 +23,7 @@ export default function TicketDetails({
       setLoading(true);
       setError('');
       try {
-        const data = await api(`/api/tickets/${ticketId}`);
+        const data = await api(`/tickets/${ticketId}`);
         if (active) setTicket(data);
       } catch (e) {
         if (active) setError(e?.message || 'Failed to load ticket');

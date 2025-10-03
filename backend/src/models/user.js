@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt'); // boleh tetap di sini walau hashing utama di 
 function authenticateUser(email, password) {
   return new Promise((resolve, reject) => {
     db.get(
-      'SELECT id, username, email, password_hash AS passwordHash, role FROM users WHERE email = ?',
+      'SELECT id, username, email, password_hash AS passwordHash, role, assigned_counter_id FROM users WHERE email = ?',
       [email],
       async (err, row) => {
         if (err) return reject(err);
@@ -12,7 +12,7 @@ function authenticateUser(email, password) {
         try {
           const ok = await bcrypt.compare(password, row.passwordHash);
           if (!ok) return resolve(null);
-          resolve({ id: row.id, username: row.username, email: row.email, role: row.role });
+          resolve({ id: row.id, username: row.username, email: row.email, role: row.role, assignedCounterId: row.assigned_counter_id });
         } catch (e) {
           reject(e);
         }
@@ -21,7 +21,7 @@ function authenticateUser(email, password) {
   });
 }
 
-function createUser({ username, email, passwordHash, role = 'CustomerService' }) {
+function createUser({ username, email, passwordHash, role = 'CustomerService', assignedCounterId }) {
   return new Promise((resolve, reject) => {
     if (!username || !email || !passwordHash) {
       return reject(new Error('username, email, passwordHash required'));
@@ -33,12 +33,12 @@ function createUser({ username, email, passwordHash, role = 'CustomerService' })
 
       // ID bisa UUID-string atau AUTOINCREMENT, sesuaikan dengan schema.sql kamu
       db.run(
-        'INSERT INTO users (username, email, password_hash, role, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',
-        [username, email, passwordHash, role],
+        'INSERT INTO users (username, email, password_hash, role, assigned_counter_id, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+        [username, email, passwordHash, role, assignedCounterId || null],
         function (err2) {
           if (err2) return reject(err2);
           // this.lastID berisi rowid jika AUTOINCREMENT; jika pakai UUID via trigger, query lagi untuk ambil id
-          db.get('SELECT id, username, email, role FROM users WHERE rowid = ?', [this.lastID], (e3, newRow) => {
+          db.get('SELECT id, username, email, role, assigned_counter_id FROM users WHERE rowid = ?', [this.lastID], (e3, newRow) => {
             if (e3) return reject(e3);
             resolve(newRow);
           });
@@ -50,7 +50,7 @@ function createUser({ username, email, passwordHash, role = 'CustomerService' })
 
 function getAllUsers() {
   return new Promise((resolve, reject) => {
-    db.all('SELECT id, username, email, role FROM users ORDER BY username', [], (err, rows) => {
+    db.all('SELECT id, username, email, role, assigned_counter_id FROM users ORDER BY username', [], (err, rows) => {
       if (err) return reject(err);
       resolve(rows);
     });
@@ -59,14 +59,14 @@ function getAllUsers() {
 
 function getUserById(id) {
   return new Promise((resolve, reject) => {
-    db.get('SELECT id, username, email, role FROM users WHERE id = ?', [id], (err, row) => {
+    db.get('SELECT id, username, email, role, assigned_counter_id FROM users WHERE id = ?', [id], (err, row) => {
       if (err) return reject(err);
       resolve(row || null);
     });
   });
 }
 
-function updateUser(id, { username, email, role, passwordHash }) {
+function updateUser(id, { username, email, role, passwordHash, assignedCounterId }) {
   return new Promise((resolve, reject) => {
     // Ambil user lama dulu
     db.get('SELECT id, username, email FROM users WHERE id = ?', [id], (err, current) => {
@@ -96,9 +96,10 @@ function updateUser(id, { username, email, role, passwordHash }) {
                  email    = COALESCE(?, email),
                  role     = COALESCE(?, role),
                  password_hash = COALESCE(?, password_hash),
+                 assigned_counter_id = COALESCE(?, assigned_counter_id),
                  updated_at = CURRENT_TIMESTAMP
            WHERE id = ?`,
-          [username ?? null, email ?? null, role ?? null, passwordHash ?? null, id],
+          [username ?? null, email ?? null, role ?? null, passwordHash ?? null, assignedCounterId ?? null, id],
           function (e3) {
             if (e3) return reject(e3);
             resolve(this.changes); // 1 jika berhasil

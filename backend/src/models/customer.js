@@ -47,7 +47,7 @@ function searchCustomers({ name, phone, email, limit = 20, offset = 0 } = {}) {
 
     const whereSql = 'WHERE ' + clauses.join(' OR '); // <-- OR semantics
     const sql = `
-      SELECT c.id, c.name, c.email, c.phone
+      SELECT c.id, c.name, c.email, c.phone, c.phone_verified
       FROM customers c
       ${whereSql}
       ORDER BY c.name ASC
@@ -55,6 +55,31 @@ function searchCustomers({ name, phone, email, limit = 20, offset = 0 } = {}) {
     const listParams = [...params, lim, off];
 
     db.all(sql, listParams, (err, rows) => (err ? reject(err) : resolve(rows)));
+  });
+}
+
+function findOrCreateCustomerByPhone({ name, email, phone }) {
+  return new Promise((resolve, reject) => {
+    if (!phone) {
+      return reject(new Error('Phone is required'));
+    }
+
+    // First, try to find existing customer by phone
+    db.get('SELECT * FROM customers WHERE phone = ?', [phone], (err, existing) => {
+      if (err) return reject(err);
+      if (existing) {
+        return resolve(existing);
+      }
+
+      // If not found, create new customer
+      if (!name || !email) {
+        return reject(new Error('Name and email are required to create new customer'));
+      }
+
+      createCustomer({ name, email, phone })
+        .then(resolve)
+        .catch(reject);
+    });
   });
 }
 
@@ -113,5 +138,6 @@ module.exports = {
   getCustomerById,
   updateCustomer,
   deleteCustomer,
-  searchCustomers
+  searchCustomers,
+  findOrCreateCustomerByPhone,
 };

@@ -83,7 +83,7 @@ export default function TicketsTable({ supervisor }) {
       // Combine free-text q and selected base title into one search string
       const qSearch = [q, baseTitle].filter(Boolean).join(' ').trim();
       const data = await api(
-        `/api/tickets${qs({ status, priority, q: qSearch, page, pageSize, sortBy: 'created_at', sortDir: 'DESC' })}`
+        `/tickets${qs({ status, priority, q: qSearch, page, pageSize, sortBy: 'created_at', sortDir: 'DESC' })}`
       );
       setItems(data.data || []);
       setTotal(data.pagination?.total || 0);
@@ -101,7 +101,7 @@ export default function TicketsTable({ supervisor }) {
   async function onDelete(id) {
     if (!confirm(`Delete ticket ${id}?`)) return;
     try {
-      await api(`/api/tickets/${id}`, { method: 'DELETE' });
+      await api(`/tickets/${id}`, { method: 'DELETE' });
       load();
     } catch (e) {
       alert(e.message);
@@ -118,7 +118,7 @@ export default function TicketsTable({ supervisor }) {
     setSaving(s => ({ ...s, [ticket.id]: true }));
 
     try {
-      await api(`/api/tickets/${ticket.id}/status`, {
+      await api(`/tickets/${ticket.id}/status`, {
         method: 'PATCH',
         body: { status: nextStatus },
       });

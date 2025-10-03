@@ -2,6 +2,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import TicketsTable from '../features/tickets/TicketsTable.jsx';
 import CreateUserForm from '../features/users/CreateUserForm.jsx';
 import TicketSearch from '../features/tickets/TicketSearch.jsx';
+import AdminSetup from './AdminSetup.jsx';
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
 import PipelineBuilder from '../features/admission/PipelineBuilder.jsx';
@@ -13,6 +14,12 @@ const groupedTabs = [
     items: [
       { value: 'tickets', label: 'Semua Tiket' },
       { value: 'search', label: 'Cari Tiket' },
+    ],
+  },
+  {
+    title: 'QUEUE',
+    items: [
+      { value: 'admin-setup', label: 'Admin Setup' },
     ],
   },
   {
@@ -43,6 +50,7 @@ export default function Supervisor() {
             {tab === 'tickets' && <TicketsTable supervisor />}
             {tab === 'createUser' && <CreateUserForm />}
             {tab === 'search' && <TicketSearch />}
+            {tab === 'admin-setup' && <AdminSetup />}
             {tab === 'pipelineBuilder' && <PipelineBuilderForSupervisor />}
           </div>
         </div>
@@ -65,7 +73,7 @@ function PipelineBuilderForSupervisor() {
   useEffect(() => {
     async function fetchPipelines() {
       try {
-        const data = await api('/api/admission/pipelines');
+        const data = await api('/admission/pipelines');
         setPipelines(data);
         if (data.length > 0) {
           setSelectedPipelineId(data[0].id);
@@ -83,7 +91,7 @@ function PipelineBuilderForSupervisor() {
       return;
     }
     try {
-      const newPipeline = await api('/api/admission/pipelines', {
+      const newPipeline = await api('/admission/pipelines', {
         method: 'POST',
         body: { name: newPipelineName, year: newPipelineYear }
       });
@@ -101,7 +109,7 @@ function PipelineBuilderForSupervisor() {
     if (!selectedPipelineId || selectedPipelineId === 'new') return;
     if (confirm('Are you sure you want to delete this pipeline? This will also delete all its steps.')) {
       try {
-        await api(`/api/admission/pipelines/${selectedPipelineId}`, {
+        await api(`/admission/pipelines/${selectedPipelineId}`, {
           method: 'DELETE',
         });
         setPipelines(prev => prev.filter(p => p.id !== selectedPipelineId));
@@ -118,12 +126,12 @@ function PipelineBuilderForSupervisor() {
         return;
     }
     try {
-      const pipeline = await api(`/api/admission/pipelines/${selectedPipelineId}`);
+      const pipeline = await api(`/admission/pipelines/${selectedPipelineId}`);
       // Ensure we clone the steps array for editing
       setEditSteps(pipeline.steps ? [...pipeline.steps] : []);
       // Fetch dynamic details for each step
       const detailsPromises = pipeline.steps.map(step =>
-        api(`/api/admission/${selectedPipelineId}/steps/${step.id}/details`).catch(() => [])
+        api(`/admission/${selectedPipelineId}/steps/${step.id}/details`).catch(() => [])
       );
       const detailsResults = await Promise.all(detailsPromises);
       const newDetails = {};
@@ -145,7 +153,7 @@ function PipelineBuilderForSupervisor() {
           alert('Title and slug are required for all steps');
           return;
         }
-        await api(`/api/admission/${selectedPipelineId}/steps/${step.id}`, {
+        await api(`/admission/${selectedPipelineId}/steps/${step.id}`, {
           method: 'PUT',
           body: { title: step.title, slug: step.slug, is_final: step.is_final },
         });
@@ -161,13 +169,13 @@ function PipelineBuilderForSupervisor() {
           }
           if (detail.id) {
             // Update existing
-            await api(`/api/admission/${selectedPipelineId}/steps/${step.id}/details/${detail.id}`, {
+            await api(`/admission/${selectedPipelineId}/steps/${step.id}/details/${detail.id}`, {
               method: 'PUT',
               body: { key: detail.key, type: detail.type, required: detail.required, label: detail.label, options: detail.options },
             });
           } else {
             // Create new
-            await api(`/api/admission/${selectedPipelineId}/steps/${step.id}/details`, {
+            await api(`/admission/${selectedPipelineId}/steps/${step.id}/details`, {
               method: 'POST',
               body: { key: detail.key, type: detail.type, required: detail.required, label: detail.label, options: detail.options },
             });
@@ -367,7 +375,7 @@ function PipelineBuilderForSupervisor() {
                               if (detail.id) {
                                 // Delete from backend
                                 try {
-                                  await api(`/api/admission/${selectedPipelineId}/steps/${step.id}/details/${detail.id}`, {
+                                  await api(`/admission/${selectedPipelineId}/steps/${step.id}/details/${detail.id}`, {
                                     method: 'DELETE',
                                   });
                                 } catch (e) {

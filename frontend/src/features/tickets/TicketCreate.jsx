@@ -107,7 +107,7 @@ async function handleSaveCustomer(e) {
   }
 
   try {
-    const cust = await api('/api/customers', {
+    const cust = await api('/customers', {
       method: 'POST',
       body: { name: modalName, email: modalEmail, phone: modalPhone },
     });
@@ -128,7 +128,7 @@ async function handleSaveCustomer(e) {
     if (status === 409 || /exists|duplicate|UNIQUE/i.test(msg)) {
       try {
         const emailNorm = (modalEmail || '').trim().toLowerCase();
-        const matches = await api(`/api/customers/search?email=${encodeURIComponent(emailNorm)}`);
+        const matches = await api(`/customers/search?email=${encodeURIComponent(emailNorm)}`);
         if (Array.isArray(matches) && matches.length) {
           const existing = matches[0];
           const res = await Swal.fire({
@@ -187,7 +187,7 @@ async function searchCustomers() {
     if (phone) params.append('phone', phone);
     if (email) params.append('email', email); // NEW
 
-    const data = await api(`/api/customers/search?${params.toString()}`);
+    const data = await api(`/customers/search?${params.toString()}`);
     const arr = Array.isArray(data) ? data : [];
     setSearchResults(arr);
 
@@ -248,7 +248,7 @@ async function submit(e) {
       status,
       customerId: selectedCustomer.id,
     };
-    const data = await api('/api/tickets', { method: 'POST', body });
+    const data = await api('/tickets', { method: 'POST', body });
 
     if (!data?.id) {
       showError('Create Ticket Error', 'Server did not return a ticket ID.');

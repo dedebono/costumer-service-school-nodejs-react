@@ -47,7 +47,7 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const p = await api(`/api/admission/pipelines/${pipelineId}`);
+        const p = await api(`/admission/pipelines/${pipelineId}`);
         setSteps((p.steps || []).sort((a, b) => (a.ord ?? 0) - (b.ord ?? 0)));
       } catch (e) {
         console.error('Failed to load pipeline:', e);
@@ -74,7 +74,7 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
     setSteps(reordered);
 
     try {
-      await api(`/api/admission/${pipelineId}/steps`, {
+      await api(`/admission/${pipelineId}/steps`, {
         method: 'PUT',
         body: { steps: reordered },
       });
@@ -90,7 +90,7 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
       return;
     }
     try {
-      const created = await api(`/api/admission/${pipelineId}/steps`, {
+      const created = await api(`/admission/${pipelineId}/steps`, {
         method: 'POST',
         body: { name: newStepName, slug: newStepSlug, is_final: isFinal },
       });

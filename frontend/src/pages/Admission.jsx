@@ -17,14 +17,14 @@ export default function Admission({ hideAddStep = false, hideCreatePipeline = fa
 
   const fetchPipelines = async () => {
     try {
-      const list = await api('/api/admission/pipelines');
+      const list = await api('/admission/pipelines');
       setPipelines(list);
     } catch (e) { console.error('Failed to fetch pipelines:', e); }
   };
 
   const fetchFullPipeline = async (id) => {
     try {
-      const full = await api(`/api/admission/pipelines/${id}`);
+      const full = await api(`/admission/pipelines/${id}`);
       setSelectedPipeline(full);
     } catch (e) { console.error('Failed to fetch full pipeline:', e); }
   };
@@ -35,7 +35,7 @@ export default function Admission({ hideAddStep = false, hideCreatePipeline = fa
     const name = formData.get('name');
     const year = formData.get('year');
     try {
-      const newP = await api('/api/admission/pipelines', { method: 'POST', body: { name, year } });
+      const newP = await api('/admission/pipelines', { method: 'POST', body: { name, year } });
       setPipelines([...pipelines, newP]);
       setShowCreate(false);
     } catch (e) { console.error('Failed to create pipeline:', e); }
@@ -58,7 +58,7 @@ export default function Admission({ hideAddStep = false, hideCreatePipeline = fa
       address: formData.get('address'),
     };
     try {
-      await api('/api/admission/applicants', { method: 'POST', body: data });
+      await api('/admission/applicants', { method: 'POST', body: data });
       Swal.fire('Success', 'Applicant created successfully!', 'success');
       setShowCreateApplicant(false);
       setApplicantRefreshKey((k) => k + 1); // refresh board

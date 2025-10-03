@@ -87,7 +87,7 @@ export default function TicketSearch() {
     const q = [nameQ, emailQ, phoneQ].filter(Boolean).join(' ').trim();
 
     try {
-      const data = await api(`/api/tickets${qs({ q, page: 1, pageSize: 50 })}`);
+      const data = await api(`/tickets${qs({ q, page: 1, pageSize: 50 })}`);
       const list = data?.data || [];
 
       setItems(list);
@@ -200,7 +200,7 @@ export default function TicketSearch() {
     setSelected((curr) => (curr && curr.id === ticketId ? { ...curr, status: nextStatus } : curr));
 
     try {
-      await api(`/api/tickets/${ticketId}/status`, {
+      await api(`/tickets/${ticketId}/status`, {
         method: 'PATCH',
         body: { status: nextStatus },
       });
@@ -424,7 +424,7 @@ Phone: ${customerPhone || '-'}`;
         ...(baseTicket.customer_id ? { customerId: baseTicket.customer_id } : {}),
       };
 
-      const data = await api('/api/tickets', { method: 'POST', body });
+      const data = await api('/tickets', { method: 'POST', body });
       setSubmittedTicket(data);
 
       if (onCloseOriginal) {

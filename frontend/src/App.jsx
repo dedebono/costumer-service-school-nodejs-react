@@ -4,6 +4,7 @@ import Protected from './components/Protected.jsx';
 import Supervisor from './pages/Supervisor.jsx';
 import CustomerService from './pages/CustomerService.jsx';
 import Login from './features/auth/login.jsx';
+import Kiosk from './pages/Kiosk.jsx';
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -33,6 +34,7 @@ export default function App() {
               </Protected>
             }
           />
+          <Route path="/kiosk" element={<Kiosk />} />
           <Route
             path="/*"
             element={

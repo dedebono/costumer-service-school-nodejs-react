@@ -1,71 +1,192 @@
-const API_BASE_URL = '/api'
+
+
+import { api as apiHelper } from './lib/api';
 
 export const api = {
   // Get all tickets
   getTickets: async () => {
-    const response = await fetch(`${API_BASE_URL}/tickets`)
-    if (!response.ok) {
-      throw new Error('Failed to fetch tickets')
-    }
-    return response.json()
+    return apiHelper('/tickets');
   },
 
   // Get a single ticket by ID
   getTicket: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/tickets/${id}`)
-    if (!response.ok) {
-      throw new Error('Failed to fetch ticket')
-    }
-    return response.json()
+    return apiHelper(`/tickets/${id}`);
   },
 
   // Create a new ticket
   createTicket: async (ticketData) => {
-    const response = await fetch(`${API_BASE_URL}/tickets`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(ticketData),
-    })
-    if (!response.ok) {
-      throw new Error('Failed to create ticket')
-    }
-    return response.json()
+    return apiHelper('/tickets', { method: 'POST', body: ticketData });
   },
 
   // Update a ticket
   updateTicket: async (id, ticketData) => {
-    const response = await fetch(`${API_BASE_URL}/tickets/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(ticketData),
-    })
-    if (!response.ok) {
-      throw new Error('Failed to update ticket')
-    }
-    return response.json()
+    return apiHelper(`/tickets/${id}`, { method: 'PUT', body: ticketData });
   },
 
   // Delete a ticket
   deleteTicket: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/tickets/${id}`, {
-      method: 'DELETE',
-    })
-    if (!response.ok) {
-      throw new Error('Failed to delete ticket')
-    }
-    return response.json()
+    return apiHelper(`/tickets/${id}`, { method: 'DELETE' });
   },
 
   // Get queue status
   getQueueStatus: async () => {
-    const response = await fetch(`${API_BASE_URL}/queue/status`)
-    if (!response.ok) {
-      throw new Error('Failed to fetch queue status')
-    }
-    return response.json()
+    return apiHelper('/queue/status');
+  },
+
+  // Queue API endpoints
+  queue: {
+    // Get queue for a service
+    getQueue: async (serviceId, status, limit = 50) => {
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      if (limit) params.append('limit', limit);
+      return apiHelper(`/queue/${serviceId}?${params}`);
+    },
+
+    // Get queue status counts
+    getQueueStatus: async (serviceId) => {
+      return apiHelper(`/queue/${serviceId}/status`);
+    },
+
+    // Get specific queue ticket
+    getQueueTicket: async (id) => {
+      return apiHelper(`/queue/ticket/${id}`);
+    },
+
+    // Claim a ticket
+    claimTicket: async (id) => {
+      return apiHelper(`/queue/ticket/${id}/claim`, { method: 'POST' });
+    },
+
+    // Start service for a ticket
+    startService: async (id) => {
+      return apiHelper(`/queue/ticket/${id}/start`, { method: 'POST' });
+    },
+
+    // Resolve a ticket
+    resolveTicket: async (id, notes) => {
+      return apiHelper(`/queue/ticket/${id}/resolve`, { method: 'POST', body: { notes } });
+    },
+
+    // Requeue a ticket
+    requeueTicket: async (id, notes) => {
+      return apiHelper(`/queue/ticket/${id}/requeue`, { method: 'POST', body: { notes } });
+    },
+
+    // Mark ticket as no-show
+    markNoShow: async (id) => {
+      return apiHelper(`/queue/ticket/${id}/no-show`, { method: 'POST' });
+    },
+
+    // Cancel a ticket
+    cancelTicket: async (id, notes) => {
+      return apiHelper(`/queue/ticket/${id}/cancel`, { method: 'POST', body: { notes } });
+    },
+
+    // Create support ticket for queue ticket
+    createSupportTicket: async (queueTicketId, supportData) => {
+      return apiHelper(`/queue/ticket/${queueTicketId}/support`, { method: 'POST', body: supportData });
+    },
+
+    // Get support tickets for queue ticket
+    getSupportTickets: async (queueTicketId) => {
+      return apiHelper(`/queue/ticket/${queueTicketId}/support`);
+    },
+  },
+
+  // Services API endpoints
+  services: {
+    getAll: async (activeOnly = true) => {
+      const params = new URLSearchParams();
+      params.append('activeOnly', activeOnly);
+      return apiHelper(`/services?${params}`);
+    },
+
+    getById: async (id) => {
+      return apiHelper(`/services/${id}`);
+    },
+
+    create: async (serviceData) => {
+      return apiHelper('/services', { method: 'POST', body: serviceData });
+    },
+
+    update: async (id, serviceData) => {
+      return apiHelper(`/services/${id}`, { method: 'PATCH', body: serviceData });
+    },
+
+    delete: async (id) => {
+      return apiHelper(`/services/${id}`, { method: 'DELETE' });
+    },
+  },
+
+  // Counters API endpoints
+  counters: {
+    getAll: async (activeOnly = true) => {
+      const params = new URLSearchParams();
+      params.append('activeOnly', activeOnly);
+      return apiHelper(`/counters?${params}`);
+    },
+
+    getById: async (id) => {
+      return apiHelper(`/counters/${id}`);
+    },
+
+    create: async (counterData) => {
+      return apiHelper('/counters', { method: 'POST', body: counterData });
+    },
+
+    update: async (id, counterData) => {
+      return apiHelper(`/counters/${id}`, { method: 'PATCH', body: counterData });
+    },
+
+    delete: async (id) => {
+      return apiHelper(`/counters/${id}`, { method: 'DELETE' });
+    },
+  },
+
+  // Kiosk API endpoints (public)
+  kiosk: {
+    getServices: async () => {
+      return apiHelper('/kiosk/services');
+    },
+
+    createQueueTicket: async (ticketData) => {
+      return apiHelper('/kiosk/ticket', { method: 'POST', body: ticketData });
+    },
+
+    getQueueTicket: async (id) => {
+      return apiHelper(`/kiosk/ticket/${id}`);
+    },
+  },
+
+  // Admin API endpoints
+  admin: {
+    // Settings
+    getSettings: async () => {
+      return apiHelper('/admin/settings');
+    },
+
+    getSetting: async (key) => {
+      return apiHelper(`/admin/settings/${key}`);
+    },
+
+    setSetting: async (key, value) => {
+      return apiHelper(`/admin/settings/${key}`, { method: 'PUT', body: { value } });
+    },
+
+    // Reports
+    getSupportTicketsReport: async (params = {}) => {
+      const queryParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value);
+        }
+      });
+      return apiHelper(`/admin/reports/support-tickets?${queryParams}`);
+    },
+
+    getQueueStats: async () => {
+      return apiHelper('/admin/reports/queue-stats');
+    },
   },
 }

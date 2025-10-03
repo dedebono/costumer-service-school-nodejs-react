@@ -87,7 +87,7 @@ export default function ApplicantsBoard({ pipeline }) {
 
   const reloadApplicantCard = async () => {
     try {
-      const list = await api(`/api/admission/applicants?pipelineId=${pipeline.id}`);
+      const list = await api(`/admission/applicants?pipelineId=${pipeline.id}`);
       setColumns((cols) =>
         cols.map((c) => ({
           ...c,
@@ -119,12 +119,12 @@ export default function ApplicantsBoard({ pipeline }) {
     setIsEditing(false);
     try {
       const stepDetails = await api(
-        `/api/admission/${pipeline.id}/steps/${applicant.current_step_id}/details`
+        `/admission/${pipeline.id}/steps/${applicant.current_step_id}/details`
       );
       setStepDynamicDetails(stepDetails);
 
       const appDetails = await api(
-        `/api/admission/applicants/${applicant.id}/dynamic-details`
+        `/admission/applicants/${applicant.id}/dynamic-details`
       );
       const detailsMap = {};
       appDetails.forEach((d) => {
@@ -143,7 +143,7 @@ export default function ApplicantsBoard({ pipeline }) {
     if (!selectedApplicant) return;
     try {
       // Save notes
-      await api(`/api/admission/applicants/${selectedApplicant.id}`, {
+      await api(`/admission/applicants/${selectedApplicant.id}`, {
         method: 'PUT',
         body: { notes },
       });
@@ -154,7 +154,7 @@ export default function ApplicantsBoard({ pipeline }) {
         value: applicantDynamicDetails[detail.key] || null,
       }));
 
-      await api(`/api/admission/applicants/${selectedApplicant.id}/dynamic-details`, {
+      await api(`/admission/applicants/${selectedApplicant.id}/dynamic-details`, {
         method: 'POST',
         body: { details: dynamicDetailsToSave },
       });
@@ -185,7 +185,7 @@ export default function ApplicantsBoard({ pipeline }) {
         if (currentStepIndex !== -1 && currentStepIndex < pipeline.steps.length - 1) {
           const nextStep = pipeline.steps[currentStepIndex + 1];
           try {
-            await api(`/api/admission/${selectedApplicant.id}/move`, {
+            await api(`/admission/${selectedApplicant.id}/move`, {
               method: 'POST',
               body: { toStepId: nextStep.id },
             });
@@ -365,7 +365,7 @@ export default function ApplicantsBoard({ pipeline }) {
 
       // Bulk create applicants sequentially (simple & safe)
       for (const applicant of newApplicants) {
-        await api('/api/admission/applicants', {
+        await api('/admission/applicants', {
           method: 'POST',
           body: applicant,
         });

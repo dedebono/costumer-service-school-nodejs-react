@@ -22,7 +22,7 @@ const [newPassword, setNewPassword] = useState('');
 async function fetchUsers() {
   setLoading(true);
   try {
-    const data = await api('/api/users');
+    const data = await api('/users');
     setUsers(Array.isArray(data) ? data : []);
   } catch (e) {
     await Swal.fire({ icon: 'error', title: 'Fetch error', text: e.message || 'Unknown error' });
@@ -39,7 +39,7 @@ async function submit(e) {
 e.preventDefault();
 setMsg('');
 try {
-const data = await api('/api/users', { method: 'POST', body: { username, email, password, role } });
+const data = await api('/users', { method: 'POST', body: { username, email, password, role } });
 setMsg(`User created: ${data.user?.username || username}`);
 setUsername(''); setEmail(''); setPassword(''); setRole('CustomerService');
 await fetchUsers(); // refresh list
@@ -58,7 +58,7 @@ setEditUser({ id: '', username: '', email: '', role: '' });
 async function saveEdit(e) {
 e.preventDefault();
 try {
-await api(`/api/users/${editUser.id}`, { method: 'PATCH', body: { username: editUser.username, email: editUser.email, role: editUser.role } });
+await api(`/users/${editUser.id}`, { method: 'PATCH', body: { username: editUser.username, email: editUser.email, role: editUser.role } });
 await Swal.fire({ icon: 'success', title: 'User updated' });
 closeEdit();
 await fetchUsers();
@@ -85,7 +85,7 @@ await Swal.fire({ icon: 'error', title: 'Password required', text: 'Please enter
 return;
 }
 try {
-await api(`/api/users/${changePasswordUser.id}`, { method: 'PATCH', body: { password: newPassword } });
+await api(`/users/${changePasswordUser.id}`, { method: 'PATCH', body: { password: newPassword } });
 await Swal.fire({ icon: 'success', title: 'Password changed' });
 closeChangePassword();
 await fetchUsers();
@@ -107,7 +107,7 @@ confirmButtonColor: '#b91c1c',
 });
 if (!res.isConfirmed) return;
 try {
-await api(`/api/users/${u.id}`, { method: 'DELETE' });
+await api(`/users/${u.id}`, { method: 'DELETE' });
 await Swal.fire({ icon: 'success', title: 'User deleted' });
 setUsers((curr) => curr.filter((x) => x.id !== u.id));
 } catch (e) {
@@ -139,32 +139,37 @@ return (
 
 {/* User List Table */}
 <div>
-<table
-className='table'>
-<th>
-</th>
-<tbody>
-{loading ? (
-<tr><td style={td} colSpan={4}>Loading…</td></tr>
-) : users.length === 0 ? (
-<tr><td style={td} colSpan={4}>No users found</td></tr>
-) : (
-users.map((u) => (
-<tr key={u.id} style={{ borderTop: '1px solid #eee' }}>
-<td style={td}>{u.username}</td>
-<td style={td}>{u.email}</td>
-<td style={td}>{u.role}</td>
-<td style={td}>
-<div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-<button onClick={() => openEdit(u)} style={btnSecondary}>Edit</button>
-<button onClick={() => openChangePassword(u)} style={btnSecondary}>Change Password</button>
-<button onClick={() => deleteUser(u)} style={btnDanger}>Delete</button>
-</div>
-</td>
-</tr>
-))
-)}
-</tbody>
+<table className='table'>
+  <thead>
+    <tr>
+      <th style={th}>Username</th>
+      <th style={th}>Email</th>
+      <th style={th}>Role</th>
+      <th style={th}>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {loading ? (
+      <tr><td style={td} colSpan={4}>Loading…</td></tr>
+    ) : users.length === 0 ? (
+      <tr><td style={td} colSpan={4}>No users found</td></tr>
+    ) : (
+      users.map((u) => (
+        <tr key={u.id} style={{ borderTop: '1px solid #eee' }}>
+          <td style={td}>{u.username}</td>
+          <td style={td}>{u.email}</td>
+          <td style={td}>{u.role}</td>
+          <td style={td}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button onClick={() => openEdit(u)} style={btnSecondary}>Edit</button>
+              <button onClick={() => openChangePassword(u)} style={btnSecondary}>Change Password</button>
+              <button onClick={() => deleteUser(u)} style={btnDanger}>Delete</button>
+            </div>
+          </td>
+        </tr>
+      ))
+    )}
+  </tbody>
 </table>
 </div>
 
