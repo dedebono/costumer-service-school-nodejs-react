@@ -1,4 +1,4 @@
-# Environment Setup Guide
+ironment Setup Guide
 
 This guide explains how to configure environment variables for the Customer Service School project.
 
