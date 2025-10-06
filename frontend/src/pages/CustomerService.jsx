@@ -44,7 +44,7 @@ export default function CustomerService() {
   const [tab, setTab] = useState(() => {
     // Check for hash in URL to determine initial tab
     const hash = window.location.hash.replace('#', '');
-    return hash || 'search';
+    return hash || 'cs-dashboard';
   });
   const socketRef = useRef(null);
 

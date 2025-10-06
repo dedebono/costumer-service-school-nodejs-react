@@ -1,5 +1,5 @@
 // src/features/tickets/TicketSearch.jsx
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { api } from '../../lib/api.js';
 import { qs, toLocalTime } from '../../lib/utils.js';
@@ -7,6 +7,16 @@ import TicketDetails from './TicketDetails.jsx';
 
 const repeatCountRegex = /^(?:Follow\s*up\s*:?\s*)+/i;
 const numberedPrefixRegex = /^Follow\s*up\s*(\d+)\s*[xX]\s*:\s*/i;
+
+// Shared with TicketCreate (keep in sync)
+const DESCRIPTION_OPTIONS = {
+  'Menerima Saran / Kritik': ['Saran', 'Kritik', 'Pertanyaan Umum'],
+  'Pembelian Seragam': ['Ukuran tidak tersedia', 'Stok habis', 'Penukaran ukuran', 'Pembayaran'],
+  'Siswa Pindah Sekolah': ['Permohonan pindah', 'Pengambilan berkas', 'Konfirmasi sekolah tujuan'],
+  'Ketertinggalan Picker Card': ['Lupa bawa kartu', 'Kartu rusak', 'Pengambilan sementara'],
+  'Menerima Tamu': ['Orang tua', 'Tamu resmi', 'Vendor'],
+  // "Lain-lain" intentionally no options → free text
+};
 
 function computeFollowUpTitle(baseTitleRaw /*, customerName, customerPhone */) {
   let baseTitle = (baseTitleRaw || '').trim();
@@ -28,11 +38,16 @@ function computeFollowUpTitle(baseTitleRaw /*, customerName, customerPhone */) {
   return `Follow up ${next}X: ${baseTitle}`;
 }
 
+function stripFollowUpPrefix(title) {
+  if (!title) return '';
+  return title.replace(numberedPrefixRegex, '').replace(repeatCountRegex, '').trim();
+}
+
 const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val || '');
 
 export default function TicketSearch() {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState(''); // currently not shown/used, but kept if you re-enable email search
+  const [email, setEmail] = useState(''); // kept for future use
   const [phone, setPhone] = useState('');
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -40,7 +55,7 @@ export default function TicketSearch() {
   // follow-up modal
   const [followUpOpen, setFollowUpOpen] = useState(false);
 
-  // details modal (FIX: state must be inside component)
+  // details modal
   const [detailsOpen, setDetailsOpen] = useState(false);
   function openDetails(t) {
     setSelected(t);
@@ -286,7 +301,6 @@ export default function TicketSearch() {
                       background: '#fff',
                       cursor: 'pointer',
                     }}
-                    // FIX: clicking the card opens details
                     onClick={() => openDetails(t)}
                   >
                     <div style={{ fontWeight: 600 }}>{t.title}</div>
@@ -390,10 +404,27 @@ function FollowUpTicket({ baseTicket, onClose, onCloseOriginal, onRefresh }) {
 Customer: ${customerName || '-'}
 Phone: ${customerPhone || '-'}`;
 
-  const [details, setDetails] = useState('');
-  const [baseTitle, setBaseTitle] = useState(baseTicket.title || '');
-  const finalTitle = computeFollowUpTitle(baseTitle);
+  // Base title (without the "Follow up ...")
+  const [baseTitle] = useState(stripFollowUpPrefix(baseTicket.title || ''));
+  const finalTitle = computeFollowUpTitle(baseTicket.title || baseTitle || '');
   const [priority, setPriority] = useState(baseTicket.priority || 'medium');
+
+  // ---- NEW: description option handling (mirrors TicketCreate) ----
+  const rootTitle = baseTitle; // the "real" title that maps to DESCRIPTION_OPTIONS
+  const descOptions = DESCRIPTION_OPTIONS[rootTitle] || [];
+  const isLainLain = rootTitle === 'Lain-lain';
+
+  const [descOption, setDescOption] = useState(() =>
+    descOptions.length ? descOptions[0] : ''
+  );
+  useEffect(() => {
+    if (descOptions.length) setDescOption(descOptions[0]);
+    else setDescOption('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rootTitle]);
+
+  // Optional additional note appended after the selected option
+  const [extraDetails, setExtraDetails] = useState('');
 
   const [msg, setMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -403,23 +434,33 @@ Phone: ${customerPhone || '-'}`;
   async function submit(e) {
     e.preventDefault();
     if (isSubmitting || submittedTicket) return;
-    if ((baseTicket.status || '').toLowerCase() === 'closed') {
-      setMsg('This ticket is closed. You cannot create a follow-up.');
-      return;
-    }
 
     setIsSubmitting(true);
     setMsg('');
 
     try {
-      const description =
-        details.trim().length > 0
-          ? `${lockedPrefix}\n\n${details.trim()}`
-          : lockedPrefix;
+      // Build final description:
+      // - If title has options → use the selected option + optional extra details
+      // - If "Lain-lain" → use the free-text area
+      let bodyDescription = lockedPrefix + '\n\n';
+      if (!isLainLain && descOptions.length) {
+        bodyDescription += descOption || '';
+        if (extraDetails.trim()) {
+          bodyDescription += `\n\n${extraDetails.trim()}`;
+        }
+      } else {
+        // Free text required for Lain-lain
+        if (!extraDetails.trim()) {
+          setIsSubmitting(false);
+          setMsg('Please enter description for "Lain-lain".');
+          return;
+        }
+        bodyDescription += extraDetails.trim();
+      }
 
       const body = {
         title: finalTitle,
-        description,
+        description: bodyDescription,
         priority,
         ...(baseTicket.customer_id ? { customerId: baseTicket.customer_id } : {}),
       };
@@ -468,6 +509,7 @@ Phone: ${customerPhone || '-'}`;
         <div style={{ display: 'flex', gap: 8, marginTop: 8, justifyContent: 'flex-end' }}>
           <button type="button" onClick={onClose} style={btnPrimary}>Close</button>
         </div>
+        {msg && <p style={{ fontSize: 13, color: msg.startsWith('Error') ? '#b91c1c' : '#374151' }}>{msg}</p>}
       </div>
     );
   }
@@ -482,23 +524,45 @@ Phone: ${customerPhone || '-'}`;
 
       <label>Subject</label>
       <input
-        style={{ ...inp,background: '#4a4a4aff', color: '#ffffffff', fontWeight: '600' }}        
+        style={{ ...inp, background: '#4a4a4aff', color: '#ffffffff', fontWeight: '600' }}
         value={baseTitle}
-        onChange={(e) => setBaseTitle(e.target.value)}
-        placeholder="Used title (without 'Follow up ...')"
         readOnly
       />
       <div style={{ fontSize: 12, color: '#64748b', marginTop: -4 }}>
         Final title → <b>{finalTitle}</b>
       </div>
 
-      <label>Follow-up Details</label>
-      <textarea
-        style={{ ...inp, minHeight: 120 }}
-        value={details}
-        onChange={(e) => setDetails(e.target.value)}
-        placeholder="Add more context here (optional)"
-      />
+      {/* NEW: Description options (same behavior as TicketCreate) */}
+      <label>Description</label>
+      {!isLainLain && descOptions.length > 0 ? (
+        <>
+          <select
+            style={inp}
+            value={descOption}
+            onChange={(e) => setDescOption(e.target.value)}
+            required
+          >
+            {descOptions.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+          <label style={{ marginTop: 4 }}>Add details (optional)</label>
+          <textarea
+            style={{ ...inp, minHeight: 100 }}
+            value={extraDetails}
+            onChange={(e) => setExtraDetails(e.target.value)}
+            placeholder="Add more context (optional)"
+          />
+        </>
+      ) : (
+        <textarea
+          style={{ ...inp, minHeight: 120 }}
+          value={extraDetails}
+          onChange={(e) => setExtraDetails(e.target.value)}
+          placeholder='Tuliskan deskripsi untuk "Lain-lain"'
+          required
+        />
+      )}
 
       <label>Priority</label>
       <select style={inp} value={priority} onChange={(e) => setPriority(e.target.value)}>
@@ -548,4 +612,4 @@ const modalCard = {
   background: '#fff', border: '1px solid #eee', borderRadius: 12, padding: 16,
   width: 'min(560px, 100%)', boxShadow: '0 10px 30px rgba(0,0,0,0.15)'
 };
-const btnDanger = { padding: '8px 12px',margin:'10px', borderRadius: 8, background: '#b91c1c', color: '#fff', border: 'none', cursor: 'pointer' };
+const btnDanger = { padding: '8px 12px', margin:'10px', borderRadius: 8, background: '#b91c1c', color: '#fff', border: 'none', cursor: 'pointer' };
