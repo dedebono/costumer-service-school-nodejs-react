@@ -114,14 +114,16 @@ function claimTicket(id, claimedBy) {
       db.run(sql, ['CALLED', claimedBy, id], function (err2) {
         if (err2) reject(err2);
         else {
-          // Emit queue update
-          if (global.emitQueueUpdate) {
-            global.emitQueueUpdate(ticket.service_id, { action: 'claim', ticketId: id });
-          }
-          // Emit ticket update
-          if (global.emitTicketUpdate) {
-            global.emitTicketUpdate(id, { status: 'CALLED', claimed_by: claimedBy });
-          }
+          // Emit queue update with delay for robustness
+          setTimeout(() => {
+            if (global.emitQueueUpdate) {
+              global.emitQueueUpdate(ticket.service_id, { action: 'claim', ticketId: id });
+            }
+            // Emit ticket update
+            if (global.emitTicketUpdate) {
+              global.emitTicketUpdate(id, { status: 'CALLED', claimed_by: claimedBy });
+            }
+          }, 100);
           resolve(this.changes);
         }
       });
@@ -140,10 +142,12 @@ function startService(id) {
       db.run(sql, ['IN_SERVICE', id], function (err2) {
         if (err2) reject(err2);
         else {
-          // Emit queue update
-          if (global.emitQueueUpdate) {
-            global.emitQueueUpdate(ticket.service_id, { action: 'start', ticketId: id });
-          }
+          // Emit queue update with delay for robustness
+          setTimeout(() => {
+            if (global.emitQueueUpdate) {
+              global.emitQueueUpdate(ticket.service_id, { action: 'start', ticketId: id });
+            }
+          }, 100);
           resolve(this.changes);
         }
       });
@@ -153,7 +157,7 @@ function startService(id) {
 
 function resolveTicket(id, notes) {
   return new Promise((resolve, reject) => {
-    db.get('SELECT status FROM queue_tickets WHERE id = ?', [id], (err, ticket) => {
+    db.get('SELECT status, service_id FROM queue_tickets WHERE id = ?', [id], (err, ticket) => {
       if (err) return reject(err);
       if (!ticket) return reject(new Error('Ticket not found'));
       if (!['CALLED', 'IN_SERVICE'].includes(ticket.status)) return reject(new Error('Ticket not in service'));
@@ -161,7 +165,15 @@ function resolveTicket(id, notes) {
       const sql = 'UPDATE queue_tickets SET status = ?, finished_at = CURRENT_TIMESTAMP, notes = COALESCE(?, notes) WHERE id = ?';
       db.run(sql, ['DONE', notes, id], function (err2) {
         if (err2) reject(err2);
-        else resolve(this.changes);
+        else {
+          // Emit queue update with delay for robustness
+          setTimeout(() => {
+            if (global.emitQueueUpdate) {
+              global.emitQueueUpdate(ticket.service_id, { action: 'resolve', ticketId: id });
+            }
+          }, 100);
+          resolve(this.changes);
+        }
       });
     });
   });
@@ -169,7 +181,7 @@ function resolveTicket(id, notes) {
 
 function requeueTicket(id, notes) {
   return new Promise((resolve, reject) => {
-    db.get('SELECT status FROM queue_tickets WHERE id = ?', [id], (err, ticket) => {
+    db.get('SELECT status, service_id FROM queue_tickets WHERE id = ?', [id], (err, ticket) => {
       if (err) return reject(err);
       if (!ticket) return reject(new Error('Ticket not found'));
       if (!['CALLED', 'IN_SERVICE'].includes(ticket.status)) return reject(new Error('Ticket not in service'));
@@ -177,7 +189,15 @@ function requeueTicket(id, notes) {
       const sql = 'UPDATE queue_tickets SET status = ?, claimed_by = NULL, called_at = NULL, started_at = NULL, notes = COALESCE(?, notes) WHERE id = ?';
       db.run(sql, ['WAITING', notes, id], function (err2) {
         if (err2) reject(err2);
-        else resolve(this.changes);
+        else {
+          // Emit queue update with delay for robustness
+          setTimeout(() => {
+            if (global.emitQueueUpdate) {
+              global.emitQueueUpdate(ticket.service_id, { action: 'requeue', ticketId: id });
+            }
+          }, 100);
+          resolve(this.changes);
+        }
       });
     });
   });
@@ -185,7 +205,7 @@ function requeueTicket(id, notes) {
 
 function markNoShow(id) {
   return new Promise((resolve, reject) => {
-    db.get('SELECT status FROM queue_tickets WHERE id = ?', [id], (err, ticket) => {
+    db.get('SELECT status, service_id FROM queue_tickets WHERE id = ?', [id], (err, ticket) => {
       if (err) return reject(err);
       if (!ticket) return reject(new Error('Ticket not found'));
       if (ticket.status !== 'CALLED') return reject(new Error('Only called tickets can be marked as no-show'));
@@ -193,7 +213,15 @@ function markNoShow(id) {
       const sql = 'UPDATE queue_tickets SET status = ?, no_show_at = CURRENT_TIMESTAMP WHERE id = ?';
       db.run(sql, ['NO_SHOW', id], function (err2) {
         if (err2) reject(err2);
-        else resolve(this.changes);
+        else {
+          // Emit queue update with delay for robustness
+          setTimeout(() => {
+            if (global.emitQueueUpdate) {
+              global.emitQueueUpdate(ticket.service_id, { action: 'no-show', ticketId: id });
+            }
+          }, 100);
+          resolve(this.changes);
+        }
       });
     });
   });
@@ -201,10 +229,23 @@ function markNoShow(id) {
 
 function cancelTicket(id, notes) {
   return new Promise((resolve, reject) => {
-    const sql = 'UPDATE queue_tickets SET status = ?, notes = COALESCE(?, notes) WHERE id = ? AND status IN (?, ?, ?)';
-    db.run(sql, ['CANCELED', notes, id, 'WAITING', 'CALLED', 'IN_SERVICE'], function (err) {
-      if (err) reject(err);
-      else resolve(this.changes);
+    db.get('SELECT service_id FROM queue_tickets WHERE id = ?', [id], (err, ticket) => {
+      if (err) return reject(err);
+      if (!ticket) return reject(new Error('Ticket not found'));
+
+      const sql = 'UPDATE queue_tickets SET status = ?, notes = COALESCE(?, notes) WHERE id = ? AND status IN (?, ?, ?)';
+      db.run(sql, ['CANCELED', notes, id, 'WAITING', 'CALLED', 'IN_SERVICE'], function (err2) {
+        if (err2) reject(err2);
+        else {
+          // Emit queue update with delay for robustness
+          setTimeout(() => {
+            if (global.emitQueueUpdate) {
+              global.emitQueueUpdate(ticket.service_id, { action: 'cancel', ticketId: id });
+            }
+          }, 100);
+          resolve(this.changes);
+        }
+      });
     });
   });
 }

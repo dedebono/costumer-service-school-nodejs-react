@@ -1,6 +1,5 @@
 // src/pages/CSDashboard.jsx
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { toLocalTime } from '../lib/utils'
 import io from 'socket.io-client'
@@ -12,11 +11,10 @@ const STATUS_COLORS = {
   IN_SERVICE: 'badge',
   DONE: 'badge',
   NO_SHOW: 'badge',
-  CANCELED: 'badge'
+  CANCELED: 'badge',
 }
 
 export default function CSDashboard() {
-  const navigate = useNavigate()
   const [services, setServices] = useState([])
   const [selectedService, setSelectedService] = useState(null)
   const [queue, setQueue] = useState([])
@@ -25,34 +23,57 @@ export default function CSDashboard() {
   const [error, setError] = useState('')
   const [supportNotes, setSupportNotes] = useState('')
   const [pipelines, setPipelines] = useState([])
+
+  // Socket + freshness refs
   const socketRef = useRef(null)
+  const selectedServiceIdRef = useRef(null)
+  const loadQueueRef = useRef(() => {})
+  const prevServiceIdRef = useRef(null)
+  const queueUpdateTimeoutRef = useRef(null)
 
   useEffect(() => {
     loadServices()
     setupSocket()
-    return () => { if (socketRef.current) socketRef.current.disconnect() }
+    return () => {
+      if (queueUpdateTimeoutRef.current) clearTimeout(queueUpdateTimeoutRef.current)
+      if (socketRef.current) socketRef.current.disconnect()
+    }
   }, [])
 
   useEffect(() => {
-    if (selectedService) {
-      loadQueue()
-      joinQueueRoom()
-    }
+    loadQueueRef.current = loadQueue
+  })
+
+  useEffect(() => {
+    selectedServiceIdRef.current = selectedService?.id ?? null
+  }, [selectedService])
+
+  useEffect(() => {
+    const s = socketRef.current
+    const nextId = selectedService?.id
+    const prevId = prevServiceIdRef.current
+    if (!s || !nextId) return
+    if (prevId && prevId !== nextId) s.emit('leave-queue', prevId)
+    s.emit('join-queue', nextId)
+    prevServiceIdRef.current = nextId
+    loadQueue()
   }, [selectedService])
 
   const setupSocket = () => {
-    socketRef.current = io(import.meta.env.VITE_SOCKET_URL, { transports: ['websocket', 'polling'] })
-    socketRef.current.on('connect', () => console.log('Connected to socket server'))
-    socketRef.current.on('queue-update', (data) => {
-      if (selectedService && data.serviceId === selectedService.id) loadQueue()
-    })
-    socketRef.current.on('disconnect', () => console.log('Disconnected from socket server'))
-  }
+    const s = io(import.meta.env.VITE_SOCKET_URL, { transports: ['websocket', 'polling'] })
+    socketRef.current = s
 
-  const joinQueueRoom = () => {
-    if (socketRef.current && selectedService) {
-      socketRef.current.emit('join-queue', selectedService.id)
-    }
+    s.on('connect', () => console.log('Connected to socket server'))
+
+    s.on('queue-update', (data) => {
+      if (!selectedServiceIdRef.current || data.serviceId !== selectedServiceIdRef.current) return
+      if (queueUpdateTimeoutRef.current) clearTimeout(queueUpdateTimeoutRef.current)
+      queueUpdateTimeoutRef.current = setTimeout(() => {
+        loadQueueRef.current()
+      }, 120)
+    })
+
+    s.on('disconnect', () => console.log('Disconnected from socket server'))
   }
 
   const loadServices = async () => {
@@ -71,8 +92,18 @@ export default function CSDashboard() {
     try {
       const data = await api.queue.getQueue(selectedService.id, null, 100)
       setQueue(data)
-      const active = data.find(t => t.status === 'CALLED' || t.status === 'IN_SERVICE')
-      setActiveTicket(active || null)
+
+      let newActiveTicket = null
+      if (activeTicket) {
+        const stillActive = data.find(
+          t => t.id === activeTicket.id && (t.status === 'CALLED' || t.status === 'IN_SERVICE')
+        )
+        if (stillActive) newActiveTicket = stillActive
+      }
+      if (!newActiveTicket) {
+        newActiveTicket = data.find(t => t.status === 'CALLED' || t.status === 'IN_SERVICE') || null
+      }
+      setActiveTicket(newActiveTicket)
     } catch (err) {
       console.error('Failed to load queue:', err)
     }
@@ -98,13 +129,13 @@ export default function CSDashboard() {
       const customerData = {
         name: activeTicket.customer_name || activeTicket.queue_customer_name || '',
         phone: activeTicket.customer_phone || activeTicket.queue_customer_phone || '',
-        email: activeTicket.customer_email || activeTicket.queue_customer_email || ''
+        email: activeTicket.customer_email || activeTicket.queue_customer_email || '',
       }
       sessionStorage.setItem('queueTicketData', JSON.stringify({
         prefillData: customerData,
         autoSearch: false,
         fromQueue: true,
-        queueTicketId: ticketId
+        queueTicketId: ticketId,
       }))
       window.location.hash = '#create'
       window.location.reload()
@@ -130,7 +161,7 @@ export default function CSDashboard() {
           showCancelButton: true,
           confirmButtonText: 'Create Applicant',
           cancelButtonText: 'Cancel',
-          preConfirm: () => parseInt(document.getElementById('pipeline-select').value)
+          preConfirm: () => parseInt(document.getElementById('pipeline-select').value, 10),
         })
 
         if (selectedPipelineId) {
@@ -140,7 +171,7 @@ export default function CSDashboard() {
               pipelineId: selectedPipelineId,
               customerName: activeTicket.customer_name || activeTicket.queue_customer_name || 'Queue Customer',
               customerPhone: activeTicket.customer_phone || activeTicket.queue_customer_phone || '',
-              customerEmail: activeTicket.customer_email || activeTicket.queue_customer_email || ''
+              customerEmail: activeTicket.customer_email || activeTicket.queue_customer_email || '',
             }
             await api.admission.autoCreateApplicant(applicantData)
             await api.queue.resolveTicket(ticketId, `Converted to admission applicant in pipeline`)
@@ -220,7 +251,7 @@ export default function CSDashboard() {
     }
   }
 
-  /* ===== CSV Export (current queue) ===== */
+  // CSV Export
   const safe = (v) => String(v ?? '').replace(/"/g, '""')
   const formatISO = (v) => { if (!v) return ''; try { return new Date(v).toISOString() } catch { return String(v) } }
   const toCSV = (rows) => {
@@ -250,7 +281,7 @@ export default function CSDashboard() {
         'Customer Phone': t.customer_phone || t.queue_customer_phone || '',
         'Customer Email': t.customer_email || t.queue_customer_email || '',
         'Created At (ISO)': formatISO(t.created_at),
-        Notes: t.notes || ''
+        Notes: t.notes || '',
       }))
       const csv = toCSV(rows)
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -276,8 +307,8 @@ export default function CSDashboard() {
             <select
               value={selectedService?.id || ''}
               onChange={(e) => {
-                const service = services.find(s => s.id === parseInt(e.target.value))
-                setSelectedService(service)
+                const service = services.find(s => s.id === parseInt(e.target.value, 10))
+                setSelectedService(service || null)
               }}
               className="select"
             >
@@ -287,61 +318,93 @@ export default function CSDashboard() {
                 </option>
               ))}
             </select>
-            <button onClick={loadQueue} className="btn btn--primary btn--sm">Refresh</button>
           </div>
         </header>
 
         <main className="container-2" style={{ paddingTop: 'var(--space-6)', paddingBottom: 'var(--space-6)' }}>
           {error && (
-            <div className="surface-2" style={{
-              background: 'color-mix(in oklab, red 10%, var(--clr-bg))',
-              border: '1px solid color-mix(in oklab, red 30%, transparent)',
-              color: 'color-mix(in oklab, red 80%, black)',
-              padding: 'var(--space-4)',
-              marginBottom: 'var(--space-6)',
-              position: 'relative'
-            }}>
+            <div
+              className="surface-2"
+              style={{
+                background: 'color-mix(in oklab, red 10%, var(--clr-bg))',
+                border: '1px solid color-mix(in oklab, red 30%, transparent)',
+                color: 'color-mix(in oklab, red 80%, black)',
+                padding: 'var(--space-4)',
+                marginBottom: 'var(--space-6)',
+                position: 'relative',
+              }}
+            >
               {error}
               <button
                 onClick={() => setError('')}
                 className="btn-icon"
                 style={{
-                  position: 'absolute', top: 'var(--space-2)', right: 'var(--space-2)',
-                  background: 'none', border: 'none', fontSize: 'var(--fs-500)', cursor: 'pointer'
+                  position: 'absolute',
+                  top: 'var(--space-2)',
+                  right: 'var(--space-2)',
+                  background: 'none',
+                  border: 'none',
+                  fontSize: 'var(--fs-500)',
+                  cursor: 'pointer',
                 }}
-              >×</button>
+              >
+                ×
+              </button>
             </div>
           )}
 
           <div className="grid grid--2" style={{ gap: 'var(--space-6)' }}>
             {/* Active Ticket Panel */}
             <div className="surface-2">
-              <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', marginBottom: 'var(--space-4)' }}>ANTRIAN AKTIF</h2>
+              <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', marginBottom: 'var(--space-4)' }}>
+                ANTRIAN AKTIF
+              </h2>
+
               {activeTicket ? (
                 <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 'var(--fs-700)', fontWeight: '700', color: 'var(--clr-primary)', marginBottom: 'var(--space-2)' }}>
+                    <div
+                      style={{
+                        fontSize: 'var(--fs-700)',
+                        fontWeight: '700',
+                        color: 'var(--clr-primary)',
+                        marginBottom: 'var(--space-2)',
+                      }}
+                    >
                       {activeTicket.number}
                     </div>
-                    <div style={{ fontSize: 'var(--fs-300)', opacity: '0.8' }}>
+                    <div style={{ fontSize: 'var(--fs-300)', opacity: 0.8 }}>
                       {activeTicket.customer_name || activeTicket.queue_customer_name || 'Anonymous'}
                     </div>
                   </div>
 
                   <div style={{ display: 'grid', gap: 'var(--space-2)', fontSize: 'var(--fs-300)' }}>
-                    <div><strong>Status:</strong>
+                    <div>
+                      <strong>Status:</strong>
                       <span className={`${STATUS_COLORS[activeTicket.status]}`} style={{ marginLeft: 'var(--space-2)' }}>
                         {activeTicket.status.replace('_', ' ')}
                       </span>
                     </div>
-                    <div><strong>Phone:</strong> {activeTicket.customer_phone || activeTicket.queue_customer_phone}</div>
-                    <div><strong>Created:</strong> {toLocalTime(activeTicket.created_at)}</div>
-                    {activeTicket.notes && (<div><strong>Notes:</strong> {activeTicket.notes}</div>)}
+                    <div>
+                      <strong>Phone:</strong> {activeTicket.customer_phone || activeTicket.queue_customer_phone || '-'}
+                    </div>
+                    <div>
+                      <strong>Created:</strong> {toLocalTime(activeTicket.created_at)}
+                    </div>
+                    {activeTicket.notes && (
+                      <div>
+                        <strong>Notes:</strong> {activeTicket.notes}
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
                     {activeTicket.status === 'CALLED' && (
-                      <button onClick={() => handleStartService(activeTicket.id)} disabled={loading} className="btn btn--accent w-full">
+                      <button
+                        onClick={() => handleStartService(activeTicket.id)}
+                        disabled={loading}
+                        className="btn btn--accent w-full"
+                      >
                         Start Service
                       </button>
                     )}
@@ -366,76 +429,124 @@ export default function CSDashboard() {
                     )}
 
                     <div className="flex gap-2">
-                      <button onClick={() => handleRequeueTicket(activeTicket.id)} disabled={loading} className="btn btn--outline btn--sm" style={{ flex: 1 }}>
+                      <button
+                        onClick={() => handleRequeueTicket(activeTicket.id)}
+                        disabled={loading}
+                        className="btn btn--outline btn--sm"
+                        style={{ flex: 1 }}
+                      >
                         Requeue
                       </button>
-                      <button onClick={() => handleMarkNoShow(activeTicket.id)} disabled={loading} className="btn btn--outline btn--sm" style={{ flex: 1 }}>
+                      <button
+                        onClick={() => handleMarkNoShow(activeTicket.id)}
+                        disabled={loading}
+                        className="btn btn--outline btn--sm"
+                        style={{ flex: 1 }}
+                      >
                         No Show
                       </button>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', padding: 'var(--space-8)', opacity: '0.6' }}>No active ticket</div>
+                <div style={{ textAlign: 'center', padding: 'var(--space-8)', opacity: 0.6 }}>
+                  No active ticket
+                </div>
               )}
             </div>
 
             {/* Queue List */}
             <div className="surface-2">
               <div className="flex items-center justify-between mb-4">
-                <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', margin: 0 }}>
-                  ANTRIAN
-                </h2>
-                {/* RIGHT: Completed page + Export + Reload */}
+                <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', margin: 0 }}>ANTRIAN</h2>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={exportCSV}
-                    className="btn"
-                    title="Export current queue to CSV"
-                  >
+                  <button onClick={exportCSV} className="btn" title="Export current queue to CSV">
                     Export CSV
                   </button>
-                  <button onClick={loadQueue} className="btn btn--primary btn--sm">Reload</button>
                 </div>
               </div>
 
               <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
-                {/* Active Queue (WAITING and CALLED) */}
+                {/* Active Queue as a LIST (WAITING and CALLED) */}
                 {(() => {
                   const activeTickets = queue.filter(t => t.status === 'WAITING' || t.status === 'CALLED')
-                  return activeTickets.length > 0 && (
+                  if (activeTickets.length === 0) return null
+
+                  return (
                     <div>
-                      <h3 style={{ fontSize: 'var(--fs-500)', fontWeight: '600', marginBottom: 'var(--space-3)', color: 'var(--clr-primary)' }}>
-                        Active Queue ({activeTickets.length})
+                      <h3
+                        style={{
+                          fontSize: 'var(--fs-500)',
+                          fontWeight: '600',
+                          marginBottom: 'var(--space-3)',
+                          color: 'var(--clr-primary)',
+                        }}
+                      >
+                        Daftar Antrian Aktif ({activeTickets.length})
                       </h3>
-                      <div style={{ display: 'grid', gap: 'var(--space-3)', maxHeight: '500px', overflowY: 'auto' }}>
+
+                      {/* LIST: single column, scrollable up to 500px */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 'var(--space-3)',
+                          maxHeight: '500px',
+                          overflowY: 'auto',
+                        }}
+                      >
                         {activeTickets.map((ticket) => (
-                          <div key={ticket.id} className="surface" style={{
-                            padding: 'var(--space-4)',
-                            border: ticket.status === 'WAITING' ? '2px solid var(--clr-accent)' : '2px solid var(--clr-primary)'
-                          }}>
+                          <div
+                            key={ticket.id}
+                            className="surface"
+                            style={{
+                              padding: 'var(--space-4)',
+                              border:
+                                ticket.status === 'WAITING'
+                                  ? '2px solid var(--clr-accent)'
+                                  : '2px solid var(--clr-primary)',
+                            }}
+                          >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4">
                                 <div style={{ fontSize: 'var(--fs-500)', fontWeight: '700' }}>{ticket.number}</div>
                                 <div>
-                                  <div style={{ fontWeight: '600' }}>{ticket.customer_name || ticket.queue_customer_name || 'Anonymous'}</div>
-                                  <div style={{ fontSize: 'var(--fs-300)', opacity: '0.7' }}>{toLocalTime(ticket.created_at)}</div>
+                                  <div style={{ fontWeight: '600' }}>
+                                    {ticket.customer_name || ticket.queue_customer_name || 'Anonymous'}
+                                  </div>
+                                  <div style={{ fontSize: 'var(--fs-300)', opacity: 0.7 }}>
+                                    {toLocalTime(ticket.created_at)}
+                                  </div>
                                 </div>
                               </div>
 
                               <div className="flex items-center gap-3">
-                                <span className={`${STATUS_COLORS[ticket.status]}`}>{ticket.status.replace('_', ' ')}</span>
+                                <span className={`${STATUS_COLORS[ticket.status]}`}>
+                                  {ticket.status.replace('_', ' ')}
+                                </span>
                                 {ticket.status === 'WAITING' && (
-                                  <button onClick={() => handleClaimTicket(ticket.id)} disabled={loading} className="btn btn--primary btn--sm">Claim</button>
+                                  <button
+                                    onClick={() => handleClaimTicket(ticket.id)}
+                                    disabled={loading}
+                                    className="btn btn--primary btn--sm"
+                                  >
+                                    Claim
+                                  </button>
                                 )}
                                 {ticket.status === 'CALLED' && (
-                                  <button onClick={() => handleCancelTicket(ticket.id)} disabled={loading} className="btn btn--outline btn--sm">Cancel</button>
+                                  <button
+                                    onClick={() => handleCancelTicket(ticket.id)}
+                                    disabled={loading}
+                                    className="btn btn--outline btn--sm"
+                                  >
+                                    Cancel
+                                  </button>
                                 )}
                               </div>
                             </div>
 
                             {ticket.notes && (
-                              <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--fs-300)', opacity: '0.8' }}>
+                              <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--fs-300)', opacity: 0.8 }}>
                                 <strong>Notes:</strong> {ticket.notes}
                               </div>
                             )}
@@ -446,10 +557,8 @@ export default function CSDashboard() {
                   )
                 })()}
 
-                {/* (Completed moved to its own page) */}
-
                 {queue.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: 'var(--space-8)', opacity: '0.6' }}>
+                  <div style={{ textAlign: 'center', padding: 'var(--space-8)', opacity: 0.6 }}>
                     No tickets in queue
                   </div>
                 )}

@@ -41,10 +41,12 @@ router.post('/ticket', async (req, res) => {
       notes,
     });
 
-    // Emit queue update to specific service room and notifications room
-    global.emitQueueUpdate(serviceId, { serviceId, serviceName: queueTicket.service_name });
-    const io = req.app.get('io');
-    io.to('notifications').emit('queue-update', { serviceId, serviceName: queueTicket.service_name });
+    // Emit queue update to specific service room and notifications room with delay for robustness
+    setTimeout(() => {
+      global.emitQueueUpdate(serviceId, { serviceId, serviceName: queueTicket.service_name });
+      const io = req.app.get('io');
+      io.to('notifications').emit('queue-update', { serviceId, serviceName: queueTicket.service_name });
+    }, 200);
 
     res.status(201).json({
       ticket: queueTicket,
