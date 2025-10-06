@@ -96,13 +96,13 @@ export default function CSDashboard() {
 
     if (connectionType === 'ticket') {
       const customerData = {
-        name: activeTicket.customer_name || '',
-        phone: activeTicket.customer_phone || '',
-        email: activeTicket.customer_email || ''
+        name: activeTicket.customer_name || activeTicket.queue_customer_name || '',
+        phone: activeTicket.customer_phone || activeTicket.queue_customer_phone || '',
+        email: activeTicket.customer_email || activeTicket.queue_customer_email || ''
       }
       sessionStorage.setItem('queueTicketData', JSON.stringify({
         prefillData: customerData,
-        autoSearch: true,
+        autoSearch: false,
         fromQueue: true,
         queueTicketId: ticketId
       }))
@@ -138,9 +138,9 @@ export default function CSDashboard() {
           try {
             const applicantData = {
               pipelineId: selectedPipelineId,
-              customerName: activeTicket.customer_name || 'Queue Customer',
-              customerPhone: activeTicket.customer_phone || '',
-              customerEmail: activeTicket.customer_email || ''
+              customerName: activeTicket.customer_name || activeTicket.queue_customer_name || 'Queue Customer',
+              customerPhone: activeTicket.customer_phone || activeTicket.queue_customer_phone || '',
+              customerEmail: activeTicket.customer_email || activeTicket.queue_customer_email || ''
             }
             await api.admission.autoCreateApplicant(applicantData)
             await api.queue.resolveTicket(ticketId, `Converted to admission applicant in pipeline`)
@@ -246,9 +246,9 @@ export default function CSDashboard() {
         ID: t.id,
         Number: t.number,
         Status: t.status,
-        'Customer Name': t.customer_name || '',
-        'Customer Phone': t.customer_phone || '',
-        'Customer Email': t.customer_email || '',
+        'Customer Name': t.customer_name || t.queue_customer_name || '',
+        'Customer Phone': t.customer_phone || t.queue_customer_phone || '',
+        'Customer Email': t.customer_email || t.queue_customer_email || '',
         'Created At (ISO)': formatISO(t.created_at),
         Notes: t.notes || ''
       }))
@@ -324,7 +324,7 @@ export default function CSDashboard() {
                       {activeTicket.number}
                     </div>
                     <div style={{ fontSize: 'var(--fs-300)', opacity: '0.8' }}>
-                      {activeTicket.customer_name || 'Anonymous'}
+                      {activeTicket.customer_name || activeTicket.queue_customer_name || 'Anonymous'}
                     </div>
                   </div>
 
@@ -334,7 +334,7 @@ export default function CSDashboard() {
                         {activeTicket.status.replace('_', ' ')}
                       </span>
                     </div>
-                    <div><strong>Phone:</strong> {activeTicket.customer_phone}</div>
+                    <div><strong>Phone:</strong> {activeTicket.customer_phone || activeTicket.queue_customer_phone}</div>
                     <div><strong>Created:</strong> {toLocalTime(activeTicket.created_at)}</div>
                     {activeTicket.notes && (<div><strong>Notes:</strong> {activeTicket.notes}</div>)}
                   </div>
@@ -418,7 +418,7 @@ export default function CSDashboard() {
                               <div className="flex items-center gap-4">
                                 <div style={{ fontSize: 'var(--fs-500)', fontWeight: '700' }}>{ticket.number}</div>
                                 <div>
-                                  <div style={{ fontWeight: '600' }}>{ticket.customer_name || 'Anonymous'}</div>
+                                  <div style={{ fontWeight: '600' }}>{ticket.customer_name || ticket.queue_customer_name || 'Anonymous'}</div>
                                   <div style={{ fontSize: 'var(--fs-300)', opacity: '0.7' }}>{toLocalTime(ticket.created_at)}</div>
                                 </div>
                               </div>

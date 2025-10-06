@@ -10,6 +10,16 @@ CREATE TABLE IF NOT EXISTS customers (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Create queue_customers table (for kiosk - email optional)
+CREATE TABLE IF NOT EXISTS queue_customers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    email TEXT,
+    phone TEXT NOT NULL,
+    phone_verified BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create tickets table
 CREATE TABLE IF NOT EXISTS tickets (
     id TEXT PRIMARY KEY,
@@ -53,7 +63,8 @@ CREATE TABLE IF NOT EXISTS queue_tickets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     service_id INTEGER NOT NULL,
     number TEXT NOT NULL,
-    customer_id INTEGER NOT NULL,
+    customer_id INTEGER,
+    queue_customer_id INTEGER,
     status TEXT CHECK(status IN ('WAITING', 'CALLED', 'IN_SERVICE', 'DONE', 'NO_SHOW', 'CANCELED')) DEFAULT 'WAITING',
     claimed_by INTEGER,
     called_at DATETIME,
@@ -64,7 +75,9 @@ CREATE TABLE IF NOT EXISTS queue_tickets (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (service_id) REFERENCES services(id),
     FOREIGN KEY (customer_id) REFERENCES customers(id),
-    FOREIGN KEY (claimed_by) REFERENCES users(id)
+    FOREIGN KEY (queue_customer_id) REFERENCES queue_customers(id),
+    FOREIGN KEY (claimed_by) REFERENCES users(id),
+    CHECK ((customer_id IS NOT NULL AND queue_customer_id IS NULL) OR (customer_id IS NULL AND queue_customer_id IS NOT NULL))
 );
 
 -- Create support_tickets table
@@ -139,6 +152,8 @@ CREATE INDEX IF NOT EXISTS idx_tickets_customer_id ON tickets(customer_id);
 CREATE INDEX IF NOT EXISTS idx_queue_tickets_status ON queue_tickets(status);
 CREATE INDEX IF NOT EXISTS idx_queue_tickets_service ON queue_tickets(service_id);
 CREATE INDEX IF NOT EXISTS idx_queue_tickets_customer ON queue_tickets(customer_id);
+CREATE INDEX IF NOT EXISTS idx_queue_tickets_queue_customer ON queue_tickets(queue_customer_id);
+CREATE INDEX IF NOT EXISTS idx_queue_customers_phone ON queue_customers(phone);
 CREATE INDEX IF NOT EXISTS idx_services_active ON services(is_active);
 CREATE INDEX IF NOT EXISTS idx_counters_active ON counters(is_active);
 

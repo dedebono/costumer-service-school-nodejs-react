@@ -457,7 +457,7 @@ export default function Kiosk() {
 
               <div>
                 <label style={{ display: 'block', fontSize: 'var(--fs-400)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>
-                  Email
+                  Email (Opsional)
                 </label>
                 <input
                   type="email"
@@ -466,7 +466,7 @@ export default function Kiosk() {
                   onChange={handleEmailChange}
                   className="input"
                   style={{ fontSize: 'var(--fs-400)', minHeight: '3rem' }}
-                  placeholder="nama@domain.com"
+                  placeholder="nama@domain.com (opsional)"
                   aria-invalid={!!emailError}
                   aria-describedby="email-error"
                 />

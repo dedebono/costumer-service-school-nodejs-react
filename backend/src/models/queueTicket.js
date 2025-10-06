@@ -2,10 +2,14 @@ const { db } = require('./db');
 
 const ALLOWED_STATUSES = new Set(['WAITING', 'CALLED', 'IN_SERVICE', 'DONE', 'NO_SHOW', 'CANCELED']);
 
-function createQueueTicket({ serviceId, customerId, notes }) {
+function createQueueTicket({ serviceId, customerId, queueCustomerId, notes }) {
   return new Promise((resolve, reject) => {
-    if (!serviceId || !customerId) {
-      return reject(new Error('serviceId and customerId are required'));
+    if (!serviceId || (!customerId && !queueCustomerId)) {
+      return reject(new Error('serviceId and either customerId or queueCustomerId are required'));
+    }
+
+    if (customerId && queueCustomerId) {
+      return reject(new Error('Cannot specify both customerId and queueCustomerId'));
     }
 
     // Get service code_prefix for number generation
@@ -24,16 +28,18 @@ function createQueueTicket({ serviceId, customerId, notes }) {
         const number = `${service.code_prefix}${String(row.next_num).padStart(3, '0')}`;
 
         const insertSql = `
-          INSERT INTO queue_tickets (service_id, number, customer_id, status, notes, created_at)
-          VALUES (?, ?, ?, 'WAITING', ?, CURRENT_TIMESTAMP)`;
-        db.run(insertSql, [serviceId, number, customerId, notes || null], function (err3) {
+          INSERT INTO queue_tickets (service_id, number, customer_id, queue_customer_id, status, notes, created_at)
+          VALUES (?, ?, ?, ?, 'WAITING', ?, CURRENT_TIMESTAMP)`;
+        db.run(insertSql, [serviceId, number, customerId || null, queueCustomerId || null, notes || null], function (err3) {
           if (err3) return reject(err3);
           db.get(`
             SELECT qt.*, s.name AS service_name, s.code_prefix,
-                   c.name AS customer_name, c.phone AS customer_phone
+                   c.name AS customer_name, c.phone AS customer_phone,
+                   qc.name AS queue_customer_name, qc.phone AS queue_customer_phone
             FROM queue_tickets qt
             LEFT JOIN services s ON s.id = qt.service_id
             LEFT JOIN customers c ON c.id = qt.customer_id
+            LEFT JOIN queue_customers qc ON qc.id = qt.queue_customer_id
             WHERE qt.id = ?
           `, [this.lastID], (err4, ticket) => {
             if (err4) reject(err4);
@@ -50,6 +56,7 @@ function getQueueTicketById(id) {
     const sql = `
       SELECT qt.*, s.name AS service_name, s.code_prefix,
              c.name AS customer_name, c.phone AS customer_phone,
+             qc.name AS queue_customer_name, qc.phone AS queue_customer_phone,
              u.username AS claimed_by_username,
              (SELECT COUNT(*) + 1
               FROM queue_tickets qt2
@@ -59,6 +66,7 @@ function getQueueTicketById(id) {
       FROM queue_tickets qt
       LEFT JOIN services s ON s.id = qt.service_id
       LEFT JOIN customers c ON c.id = qt.customer_id
+      LEFT JOIN queue_customers qc ON qc.id = qt.queue_customer_id
       LEFT JOIN users u ON u.id = qt.claimed_by
       WHERE qt.id = ?`;
     db.get(sql, [id], (err, row) => {
@@ -73,10 +81,12 @@ function getQueueByService(serviceId, { status, limit = 50 } = {}) {
     let sql = `
       SELECT qt.*, s.name AS service_name, s.code_prefix,
              c.name AS customer_name, c.phone AS customer_phone,
+             qc.name AS queue_customer_name, qc.phone AS queue_customer_phone,
              u.username AS claimed_by_username
       FROM queue_tickets qt
       LEFT JOIN services s ON s.id = qt.service_id
       LEFT JOIN customers c ON c.id = qt.customer_id
+      LEFT JOIN queue_customers qc ON qc.id = qt.queue_customer_id
       LEFT JOIN users u ON u.id = qt.claimed_by
       WHERE qt.service_id = ?`;
     const params = [serviceId];

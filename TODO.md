@@ -1,89 +1,23 @@
-# UI.css Conversion and Mobile Optimization Task
+# Fix CSCompleted.jsx - Queue Customer Data Display
 
-## Progress Tracker
+## Tasks to Complete:
 
-### ✅ Completed
-- [x] Analyzed current files and ui.css system
-- [x] Created comprehensive conversion plan
-- [x] Got user approval for the plan
-- [x] Convert CSDashboard.jsx to ui.css
-- [x] Convert AdminSetup.jsx to ui.css  
-- [x] Convert Kiosk.jsx to ui.css with mobile optimization
+- [x] Update customer name display logic in CSCompleted.jsx to check both `customer_name` and `queue_customer_name`
+- [x] Update customer phone display logic to check both `customer_phone` and `queue_customer_phone` 
+- [x] Update CSV export to include correct customer information from both sources
+- [ ] Test the changes to ensure customer names from queue_customers are displayed correctly
 
-### 📋 Tasks Breakdown
+## Progress:
+- [x] Analyzed the issue and created plan
+- [x] Got user confirmation to proceed
+- [x] Implement the fixes
+- [ ] Verify the changes work correctly
 
-#### CSDashboard.jsx Conversion
-- [x] Replace Tailwind layout classes with ui.css equivalents
-- [x] Convert button styling to .btn variants
-- [x] Update form elements to use .input, .select, .textarea
-- [x] Apply .surface class for card components
-- [x] Use ui.css color and spacing variables
-- [x] Implement responsive grid system
+## Changes Made:
+1. **Customer Name Display**: Updated `{t.customer_name || 'Anonymous'}` to `{t.customer_name || t.queue_customer_name || 'Anonymous'}`
+2. **CSV Export**: Updated customer name and phone fields to include both regular customers and queue customers:
+   - 'Customer Name': `t.customer_name || t.queue_customer_name || ''`
+   - 'Customer Phone': `t.customer_phone || t.queue_customer_phone || ''`
 
-#### AdminSetup.jsx Conversion  
-- [x] Convert table styling to .table class
-- [x] Update button styling to .btn variants
-- [x] Convert form elements to ui.css classes
-- [x] Apply tab navigation styling
-- [x] Update modal/dialog styling
-- [x] Use ui.css layout helpers
-
-#### Kiosk.jsx Mobile Optimization
-- [x] Convert to ui.css styling system
-- [x] Implement mobile-first responsive design
-- [x] Add touch-friendly button sizes (.btn--lg)
-- [x] Use safe area insets for mobile devices
-- [x] Optimize typography for mobile screens
-- [x] Add larger touch targets
-- [x] Test responsive behavior
-
-### 🎯 Success Criteria ✅
-- ✅ All three files use ui.css instead of Tailwind
-- ✅ Kiosk.jsx is fully mobile-responsive
-- ✅ Touch interactions work properly on mobile
-- ✅ Visual consistency across all components
-- ✅ No broken layouts on different screen sizes
-
----
-
-## Environment Variables Configuration Task ✅
-
-### ✅ Completed
-- [x] Identified all hardcoded URLs in frontend and backend
-- [x] Created comprehensive .env.example files
-- [x] Updated configuration files to use environment variables
-- [x] Verified no hardcoded URLs remain in source code
-
-### 📋 Environment Variables Configured
-
-#### Frontend (.env.example)
-- [x] `VITE_API_BASE` - Backend API URL (replaces hardcoded localhost:3000)
-- [x] `VITE_SOCKET_URL` - WebSocket connection URL (already implemented)
-- [x] `VITE_DEV_PROXY_TARGET` - Development proxy target (replaces hardcoded 192.168.1.21:3001)
-
-#### Backend (.env.example)
-- [x] `PORT` - Server port configuration
-- [x] `HOST` - Server host configuration
-- [x] `FRONTEND_URL` - Frontend URL for CORS (replaces hardcoded localhost:5173)
-- [x] `DATABASE_URL` - Database connection string
-- [x] `JWT_SECRET` - JWT signing secret
-- [x] `NODE_ENV` - Environment mode
-
-#### Root Project (.env.example)
-- [x] Common environment variables for entire project
-- [x] Development and production URL templates
-- [x] Docker Compose configuration variables
-
-### 🔧 Files Updated
-- [x] `frontend/vite.config.js` - Now uses `VITE_DEV_PROXY_TARGET`
-- [x] `backend/server.js` - Enhanced CORS configuration with environment variables
-- [x] `frontend/.env.example` - Created with all frontend variables
-- [x] `backend/.env.example` - Created with all backend variables
-- [x] `.env.example` - Created root-level configuration
-
-### 🎯 Environment Configuration Success Criteria ✅
-- ✅ All hardcoded URLs moved to environment variables
-- ✅ Comprehensive .env.example files created for all levels
-- ✅ Development and production configurations documented
-- ✅ Secure configuration management implemented
-- ✅ Easy deployment across different environments enabled
+## Summary:
+The CSCompleted.jsx file now properly displays customer information from both the `customers` table and `queue_customers` table, eliminating the "Anonymous" display issue when queue customer data is available.

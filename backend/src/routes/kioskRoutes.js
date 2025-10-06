@@ -3,8 +3,8 @@ const {
   createQueueTicket,
 } = require('../models/queueTicket');
 const {
-  findOrCreateCustomerByPhone,
-} = require('../models/customer');
+  findOrCreateQueueCustomerByPhone,
+} = require('../models/queueCustomer');
 const {
   getAllServices,
 } = require('../models/service');
@@ -22,7 +22,7 @@ router.get('/services', async (req, res) => {
   }
 });
 
-// POST /api/kiosk/ticket - Create queue ticket for customer
+// POST /api/kiosk/ticket - Create queue ticket for queue customer
 router.post('/ticket', async (req, res) => {
   try {
     const { name, email, phone, serviceId, notes } = req.body;
@@ -31,13 +31,13 @@ router.post('/ticket', async (req, res) => {
       return res.status(400).json({ error: 'Phone and serviceId are required' });
     }
 
-    // Find or create customer
-    const customer = await findOrCreateCustomerByPhone({ name, email, phone });
+    // Find or create queue customer (email is optional)
+    const queueCustomer = await findOrCreateQueueCustomerByPhone({ name, email, phone });
 
     // Create queue ticket
     const queueTicket = await createQueueTicket({
       serviceId,
-      customerId: customer.id,
+      queueCustomerId: queueCustomer.id,
       notes,
     });
 
@@ -48,7 +48,7 @@ router.post('/ticket', async (req, res) => {
 
     res.status(201).json({
       ticket: queueTicket,
-      customer: customer,
+      queueCustomer: queueCustomer,
       message: 'Queue ticket created successfully',
     });
   } catch (e) {

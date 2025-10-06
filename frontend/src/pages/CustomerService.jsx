@@ -82,7 +82,7 @@ export default function CustomerService() {
         timer: 3000,
         timerProgressBar: true,
         icon: 'info',
-        title: `New queue ticket added for service ${data.serviceName || 'unknown'}`
+        title: `Antrian baru: ${data.serviceName || 'unknown'}`
       });
     });
 

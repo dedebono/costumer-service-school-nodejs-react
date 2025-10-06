@@ -91,8 +91,8 @@ export default function CSCompleted() {
         ID: t.id,
         Number: t.number,
         Status: STATUS_LABEL[t.status] || t.status,
-        'Customer Name': t.customer_name || '',
-        'Customer Phone': t.customer_phone || '',
+        'Customer Name': t.customer_name || t.queue_customer_name || '',
+        'Customer Phone': t.customer_phone || t.queue_customer_phone || '',
         'Customer Email': t.customer_email || '',
         'Created At (ISO)': formatISO(t.created_at),
         Notes: t.notes || ''
@@ -154,7 +154,7 @@ export default function CSCompleted() {
               ))}
             </select>
 
-            <div style={{ display:'flex',gap:'10px' , borderRadius:'1px' }}>
+            <div style={{ display:'flex',gap:'10px' , borderRadius:'10px' }}>
               {/* Status filter: choose one status (or All) */}
               <select
                 value={filter}
@@ -235,7 +235,7 @@ export default function CSCompleted() {
                         <div className="flex items-center gap-3">
                           <div style={{ fontSize: 'var(--fs-400)', fontWeight: 600 }}>{t.number}</div>
                           <div>
-                            <div style={{ fontWeight: 500, fontSize: 'var(--fs-300)' }}>{t.customer_name || 'Anonymous'}</div>
+                            <div style={{ fontWeight: 500, fontSize: 'var(--fs-300)' }}>{t.customer_name || t.queue_customer_name || 'Anonymous'}</div>
                             <div style={{ fontSize: 'var(--fs-300)', opacity: 0.6 }}>{toLocalTime(t.created_at)}</div>
                           </div>
                         </div>
