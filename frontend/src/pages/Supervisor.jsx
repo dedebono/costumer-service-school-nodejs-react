@@ -9,29 +9,30 @@ import PipelineBuilder from '../features/admission/PipelineBuilder.jsx';
 import Sidebar from '../components/Sidebar.jsx';
 
 const groupedTabs = [
+    {
+    title: 'ANTRIAN',
+    items: [
+      { value: 'admin-setup', label: 'Admin Setup', icon: '⚙️' },
+    ],
+  },
+    {
+    title: 'PMB',
+    items: [
+      { value: 'pipelineBuilder', label: 'Pembuatan Alur PMB', icon: '🎓' },
+    ],
+  },
+
   {
     title: 'TIKET',
     items: [
-      { value: 'tickets', label: 'Semua Tiket' },
-      { value: 'search', label: 'Cari Tiket' },
-    ],
-  },
-  {
-    title: 'QUEUE',
-    items: [
-      { value: 'admin-setup', label: 'Admin Setup' },
+      { value: 'tickets', label: 'Semua Tiket', icon: '🎫' },
+      { value: 'search', label: 'Cari Tiket' , icon: '🔍' },
     ],
   },
   {
     title: 'PENGGUNA',
     items: [
-      { value: 'createUser', label: 'Kelola Akun' },
-    ],
-  },
-  {
-    title: 'PMB',
-    items: [
-      { value: 'pipelineBuilder', label: 'Pembuatan Alur PMB' },
+      { value: 'createUser', label: 'Kelola Akun', icon: '👥' },
     ],
   },
 ];

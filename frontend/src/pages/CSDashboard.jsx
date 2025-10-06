@@ -1,3 +1,4 @@
+// src/pages/CSDashboard.jsx
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
@@ -29,12 +30,7 @@ export default function CSDashboard() {
   useEffect(() => {
     loadServices()
     setupSocket()
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect()
-      }
-    }
+    return () => { if (socketRef.current) socketRef.current.disconnect() }
   }, [])
 
   useEffect(() => {
@@ -45,24 +41,12 @@ export default function CSDashboard() {
   }, [selectedService])
 
   const setupSocket = () => {
-    socketRef.current = io(import.meta.env.VITE_SOCKET_URL, {
-      transports: ['websocket', 'polling']
-    });
-
-    socketRef.current.on('connect', () => {
-      console.log('Connected to socket server')
-    })
-
+    socketRef.current = io(import.meta.env.VITE_SOCKET_URL, { transports: ['websocket', 'polling'] })
+    socketRef.current.on('connect', () => console.log('Connected to socket server'))
     socketRef.current.on('queue-update', (data) => {
-      console.log('Queue update received:', data)
-      if (selectedService && data.serviceId === selectedService.id) {
-        loadQueue() // Refresh queue when updates come in
-      }
+      if (selectedService && data.serviceId === selectedService.id) loadQueue()
     })
-
-    socketRef.current.on('disconnect', () => {
-      console.log('Disconnected from socket server')
-    })
+    socketRef.current.on('disconnect', () => console.log('Disconnected from socket server'))
   }
 
   const joinQueueRoom = () => {
@@ -75,9 +59,7 @@ export default function CSDashboard() {
     try {
       const data = await api.services.getAll()
       setServices(data)
-      if (data.length > 0 && !selectedService) {
-        setSelectedService(data[0])
-      }
+      if (data.length > 0 && !selectedService) setSelectedService(data[0])
     } catch (err) {
       setError('Failed to load services')
       console.error(err)
@@ -86,15 +68,10 @@ export default function CSDashboard() {
 
   const loadQueue = async () => {
     if (!selectedService) return
-
     try {
       const data = await api.queue.getQueue(selectedService.id, null, 100)
       setQueue(data)
-
-      // Find active ticket (CALLED or IN_SERVICE)
-      const active = data.find(ticket =>
-        ticket.status === 'CALLED' || ticket.status === 'IN_SERVICE'
-      )
+      const active = data.find(t => t.status === 'CALLED' || t.status === 'IN_SERVICE')
       setActiveTicket(active || null)
     } catch (err) {
       console.error('Failed to load queue:', err)
@@ -115,66 +92,48 @@ export default function CSDashboard() {
 
   const handleStartService = async (ticketId) => {
     if (!selectedService || !activeTicket) return
-
     const connectionType = selectedService.connection_type || 'none'
 
     if (connectionType === 'ticket') {
-      // Store queue data in sessionStorage and navigate to ticket create tab
       const customerData = {
         name: activeTicket.customer_name || '',
         phone: activeTicket.customer_phone || '',
         email: activeTicket.customer_email || ''
       }
-      
-      // Store data in sessionStorage for TicketCreate to pick up
       sessionStorage.setItem('queueTicketData', JSON.stringify({
         prefillData: customerData,
         autoSearch: true,
         fromQueue: true,
         queueTicketId: ticketId
       }))
-      
-      // Navigate to the create tab in CustomerService
       window.location.hash = '#create'
       window.location.reload()
       return
     }
 
     if (connectionType === 'admission') {
-      // Load pipelines and show selection modal
       try {
         const pipelinesData = await api.admission.getPipelines()
         setPipelines(pipelinesData)
-        
-        if (pipelinesData.length === 0) {
-          setError('No admission pipelines available')
-          return
-        }
+        if (pipelinesData.length === 0) { setError('No admission pipelines available'); return }
 
-        // Show pipeline selection modal
         const { value: selectedPipelineId } = await Swal.fire({
           title: 'Select Pipeline',
           html: `
             <div style="text-align: left;">
               <label for="pipeline-select" style="display: block; margin-bottom: 8px; font-weight: bold;">Choose Pipeline:</label>
               <select id="pipeline-select" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                ${pipelinesData.map(pipeline => 
-                  `<option value="${pipeline.id}">${pipeline.name}</option>`
-                ).join('')}
+                ${pipelinesData.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
               </select>
             </div>
           `,
           showCancelButton: true,
           confirmButtonText: 'Create Applicant',
           cancelButtonText: 'Cancel',
-          preConfirm: () => {
-            const pipelineId = document.getElementById('pipeline-select').value
-            return parseInt(pipelineId)
-          }
+          preConfirm: () => parseInt(document.getElementById('pipeline-select').value)
         })
 
         if (selectedPipelineId) {
-          // Auto-create applicant using queue data
           setLoading(true)
           try {
             const applicantData = {
@@ -183,18 +142,9 @@ export default function CSDashboard() {
               customerPhone: activeTicket.customer_phone || '',
               customerEmail: activeTicket.customer_email || ''
             }
-
             await api.admission.autoCreateApplicant(applicantData)
-            
-            // Mark queue ticket as resolved
             await api.queue.resolveTicket(ticketId, `Converted to admission applicant in pipeline`)
-            
-            Swal.fire({
-              icon: 'success',
-              title: 'Applicant Created',
-              text: 'Queue customer has been converted to admission applicant successfully.'
-            })
-            
+            Swal.fire({ icon: 'success', title: 'Applicant Created', text: 'Queue customer has been converted to admission applicant successfully.' })
             await loadQueue()
           } catch (err) {
             setError(err.message || 'Failed to create applicant')
@@ -209,7 +159,6 @@ export default function CSDashboard() {
       return
     }
 
-    // Default behavior for 'none' connection type
     setLoading(true)
     try {
       await api.queue.startService(ticketId)
@@ -222,11 +171,7 @@ export default function CSDashboard() {
   }
 
   const handleResolveTicket = async (ticketId) => {
-    if (!supportNotes.trim()) {
-      setError('Please enter resolution notes')
-      return
-    }
-
+    if (!supportNotes.trim()) { setError('Please enter resolution notes'); return }
     setLoading(true)
     try {
       await api.queue.resolveTicket(ticketId, supportNotes)
@@ -275,43 +220,81 @@ export default function CSDashboard() {
     }
   }
 
+  /* ===== CSV Export (current queue) ===== */
+  const safe = (v) => String(v ?? '').replace(/"/g, '""')
+  const formatISO = (v) => { if (!v) return ''; try { return new Date(v).toISOString() } catch { return String(v) } }
+  const toCSV = (rows) => {
+    if (!rows.length) return ''
+    const headers = Object.keys(rows[0])
+    const lines = [
+      headers.map(h => `"${safe(h)}"`).join(','),
+      ...rows.map(r => headers.map(h => `"${safe(r[h])}"`).join(',')),
+    ]
+    return '\uFEFF' + lines.join('\r\n')
+  }
+  const timestamp = () => {
+    const d = new Date(); const pad = (n) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
+  }
+  const exportCSV = async () => {
+    try {
+      if (!queue.length) {
+        await Swal.fire({ icon: 'info', title: 'Nothing to export', text: 'Queue is empty.' })
+        return
+      }
+      const rows = queue.map(t => ({
+        ID: t.id,
+        Number: t.number,
+        Status: t.status,
+        'Customer Name': t.customer_name || '',
+        'Customer Phone': t.customer_phone || '',
+        'Customer Email': t.customer_email || '',
+        'Created At (ISO)': formatISO(t.created_at),
+        Notes: t.notes || ''
+      }))
+      const csv = toCSV(rows)
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const name = selectedService?.code_prefix || selectedService?.name || 'queue'
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${name}-tickets-${timestamp()}.csv`
+      document.body.appendChild(a); a.click(); a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error(e)
+      await Swal.fire({ icon: 'error', title: 'Export failed', text: e.message || 'Unknown error' })
+    }
+  }
+
   return (
     <div className="page">
       <div className="w-full">
-        <header className="surface" style={{ borderRadius: 0, borderBottom: '1px solid var(--clr-border)' }}>
-          <div className="container">
-            <div className="flex items-center justify-between" style={{ padding: 'var(--space-4) 0' }}>
-              <h1 style={{ fontSize: 'var(--fs-700)', fontWeight: '700', margin: 0 }}>Antrian</h1>
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={loadQueue}
-                  className="btn btn--primary btn--sm"
-                >
-                  Reload Queue
-                </button>
-                <select
-                  value={selectedService?.id || ''}
-                  onChange={(e) => {
-                    const service = services.find(s => s.id === parseInt(e.target.value))
-                    setSelectedService(service)
-                  }}
-                  className="select"
-                >
-                  {services.map(service => (
-                    <option key={service.id} value={service.id}>
-                      {service.name} ({service.code_prefix})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+        <header>
+          <div className="container-antrian">
+            <h1>ANTRIAN</h1>
+            <select
+              value={selectedService?.id || ''}
+              onChange={(e) => {
+                const service = services.find(s => s.id === parseInt(e.target.value))
+                setSelectedService(service)
+              }}
+              className="select"
+            >
+              {services.map(service => (
+                <option key={service.id} value={service.id}>
+                  {service.name} ({service.code_prefix})
+                </option>
+              ))}
+            </select>
+            <button onClick={loadQueue} className="btn btn--primary btn--sm">Refresh</button>
           </div>
         </header>
 
-        <main className="container" style={{ paddingTop: 'var(--space-6)', paddingBottom: 'var(--space-6)' }}>
+        <main className="container-2" style={{ paddingTop: 'var(--space-6)', paddingBottom: 'var(--space-6)' }}>
           {error && (
-            <div className="surface" style={{ 
-              background: 'color-mix(in oklab, red 10%, var(--clr-bg))', 
+            <div className="surface-2" style={{
+              background: 'color-mix(in oklab, red 10%, var(--clr-bg))',
               border: '1px solid color-mix(in oklab, red 30%, transparent)',
               color: 'color-mix(in oklab, red 80%, black)',
               padding: 'var(--space-4)',
@@ -322,35 +305,22 @@ export default function CSDashboard() {
               <button
                 onClick={() => setError('')}
                 className="btn-icon"
-                style={{ 
-                  position: 'absolute', 
-                  top: 'var(--space-2)', 
-                  right: 'var(--space-2)',
-                  background: 'none',
-                  border: 'none',
-                  fontSize: 'var(--fs-500)',
-                  cursor: 'pointer'
+                style={{
+                  position: 'absolute', top: 'var(--space-2)', right: 'var(--space-2)',
+                  background: 'none', border: 'none', fontSize: 'var(--fs-500)', cursor: 'pointer'
                 }}
-              >
-                ×
-              </button>
+              >×</button>
             </div>
           )}
 
           <div className="grid grid--2" style={{ gap: 'var(--space-6)' }}>
             {/* Active Ticket Panel */}
-            <div className="surface p-6">
-              <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', marginBottom: 'var(--space-4)' }}>Active Ticket</h2>
-
+            <div className="surface-2">
+              <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', marginBottom: 'var(--space-4)' }}>ANTRIAN AKTIF</h2>
               {activeTicket ? (
                 <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ 
-                      fontSize: 'var(--fs-700)', 
-                      fontWeight: '700', 
-                      color: 'var(--clr-primary)', 
-                      marginBottom: 'var(--space-2)' 
-                    }}>
+                    <div style={{ fontSize: 'var(--fs-700)', fontWeight: '700', color: 'var(--clr-primary)', marginBottom: 'var(--space-2)' }}>
                       {activeTicket.number}
                     </div>
                     <div style={{ fontSize: 'var(--fs-300)', opacity: '0.8' }}>
@@ -366,18 +336,12 @@ export default function CSDashboard() {
                     </div>
                     <div><strong>Phone:</strong> {activeTicket.customer_phone}</div>
                     <div><strong>Created:</strong> {toLocalTime(activeTicket.created_at)}</div>
-                    {activeTicket.notes && (
-                      <div><strong>Notes:</strong> {activeTicket.notes}</div>
-                    )}
+                    {activeTicket.notes && (<div><strong>Notes:</strong> {activeTicket.notes}</div>)}
                   </div>
 
                   <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
                     {activeTicket.status === 'CALLED' && (
-                      <button
-                        onClick={() => handleStartService(activeTicket.id)}
-                        disabled={loading}
-                        className="btn btn--accent w-full"
-                      >
+                      <button onClick={() => handleStartService(activeTicket.id)} disabled={loading} className="btn btn--accent w-full">
                         Start Service
                       </button>
                     )}
@@ -402,129 +366,76 @@ export default function CSDashboard() {
                     )}
 
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => handleRequeueTicket(activeTicket.id)}
-                        disabled={loading}
-                        className="btn btn--outline btn--sm"
-                        style={{ flex: 1 }}
-                      >
+                      <button onClick={() => handleRequeueTicket(activeTicket.id)} disabled={loading} className="btn btn--outline btn--sm" style={{ flex: 1 }}>
                         Requeue
                       </button>
-                      <button
-                        onClick={() => handleMarkNoShow(activeTicket.id)}
-                        disabled={loading}
-                        className="btn btn--outline btn--sm"
-                        style={{ flex: 1 }}
-                      >
+                      <button onClick={() => handleMarkNoShow(activeTicket.id)} disabled={loading} className="btn btn--outline btn--sm" style={{ flex: 1 }}>
                         No Show
                       </button>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', padding: 'var(--space-8)', opacity: '0.6' }}>
-                  No active ticket
-                </div>
+                <div style={{ textAlign: 'center', padding: 'var(--space-8)', opacity: '0.6' }}>No active ticket</div>
               )}
             </div>
 
             {/* Queue List */}
-            <div className="surface p-6">
+            <div className="surface-2">
               <div className="flex items-center justify-between mb-4">
                 <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', margin: 0 }}>
-                  Queue ({queue.length} tickets)
+                  ANTRIAN
                 </h2>
-                <button
-                  onClick={loadQueue}
-                  className="btn btn--primary btn--sm"
-                >
-                  Reload
-                </button>
+                {/* RIGHT: Completed page + Export + Reload */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={exportCSV}
+                    className="btn"
+                    title="Export current queue to CSV"
+                  >
+                    Export CSV
+                  </button>
+                  <button onClick={loadQueue} className="btn btn--primary btn--sm">Reload</button>
+                </div>
               </div>
 
               <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
                 {/* Active Queue (WAITING and CALLED) */}
                 {(() => {
-                  const activeTickets = queue.filter(ticket => 
-                    ticket.status === 'WAITING' || ticket.status === 'CALLED'
-                  )
+                  const activeTickets = queue.filter(t => t.status === 'WAITING' || t.status === 'CALLED')
                   return activeTickets.length > 0 && (
                     <div>
-                      <h3 style={{ 
-                        fontSize: 'var(--fs-500)', 
-                        fontWeight: '600', 
-                        marginBottom: 'var(--space-3)',
-                        color: 'var(--clr-primary)'
-                      }}>
+                      <h3 style={{ fontSize: 'var(--fs-500)', fontWeight: '600', marginBottom: 'var(--space-3)', color: 'var(--clr-primary)' }}>
                         Active Queue ({activeTickets.length})
                       </h3>
-                      <div style={{ 
-                        display: 'grid', 
-                        gap: 'var(--space-3)', 
-                        maxHeight: '300px', 
-                        overflowY: 'auto' 
-                      }}>
+                      <div style={{ display: 'grid', gap: 'var(--space-3)', maxHeight: '500px', overflowY: 'auto' }}>
                         {activeTickets.map((ticket) => (
-                          <div
-                            key={ticket.id}
-                            className="surface"
-                            style={{ 
-                              padding: 'var(--space-4)',
-                              border: ticket.status === 'WAITING' ? '2px solid var(--clr-accent)' :
-                                     '2px solid var(--clr-primary)'
-                            }}
-                          >
+                          <div key={ticket.id} className="surface" style={{
+                            padding: 'var(--space-4)',
+                            border: ticket.status === 'WAITING' ? '2px solid var(--clr-accent)' : '2px solid var(--clr-primary)'
+                          }}>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4">
-                                <div style={{ 
-                                  fontSize: 'var(--fs-500)', 
-                                  fontWeight: '700' 
-                                }}>
-                                  {ticket.number}
-                                </div>
+                                <div style={{ fontSize: 'var(--fs-500)', fontWeight: '700' }}>{ticket.number}</div>
                                 <div>
-                                  <div style={{ fontWeight: '600' }}>
-                                    {ticket.customer_name || 'Anonymous'}
-                                  </div>
-                                  <div style={{ fontSize: 'var(--fs-300)', opacity: '0.7' }}>
-                                    {toLocalTime(ticket.created_at)}
-                                  </div>
+                                  <div style={{ fontWeight: '600' }}>{ticket.customer_name || 'Anonymous'}</div>
+                                  <div style={{ fontSize: 'var(--fs-300)', opacity: '0.7' }}>{toLocalTime(ticket.created_at)}</div>
                                 </div>
                               </div>
 
                               <div className="flex items-center gap-3">
-                                <span className={`${STATUS_COLORS[ticket.status]}`}>
-                                  {ticket.status.replace('_', ' ')}
-                                </span>
-
+                                <span className={`${STATUS_COLORS[ticket.status]}`}>{ticket.status.replace('_', ' ')}</span>
                                 {ticket.status === 'WAITING' && (
-                                  <button
-                                    onClick={() => handleClaimTicket(ticket.id)}
-                                    disabled={loading}
-                                    className="btn btn--primary btn--sm"
-                                  >
-                                    Claim
-                                  </button>
+                                  <button onClick={() => handleClaimTicket(ticket.id)} disabled={loading} className="btn btn--primary btn--sm">Claim</button>
                                 )}
-
                                 {ticket.status === 'CALLED' && (
-                                  <button
-                                    onClick={() => handleCancelTicket(ticket.id)}
-                                    disabled={loading}
-                                    className="btn btn--outline btn--sm"
-                                  >
-                                    Cancel
-                                  </button>
+                                  <button onClick={() => handleCancelTicket(ticket.id)} disabled={loading} className="btn btn--outline btn--sm">Cancel</button>
                                 )}
                               </div>
                             </div>
 
                             {ticket.notes && (
-                              <div style={{ 
-                                marginTop: 'var(--space-2)', 
-                                fontSize: 'var(--fs-300)', 
-                                opacity: '0.8' 
-                              }}>
+                              <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--fs-300)', opacity: '0.8' }}>
                                 <strong>Notes:</strong> {ticket.notes}
                               </div>
                             )}
@@ -535,65 +446,7 @@ export default function CSDashboard() {
                   )
                 })()}
 
-                {/* Completed Queue (NO_SHOW and DONE) */}
-                {(() => {
-                  const completedTickets = queue.filter(ticket => 
-                    ticket.status === 'NO_SHOW' || ticket.status === 'DONE' || ticket.status === 'CANCELED'
-                  )
-                  return completedTickets.length > 0 && (
-                    <div>
-                      <h3 style={{ 
-                        fontSize: 'var(--fs-500)', 
-                        fontWeight: '600', 
-                        marginBottom: 'var(--space-3)',
-                        opacity: '0.7'
-                      }}>
-                        Completed ({completedTickets.length})
-                      </h3>
-                      <div style={{ 
-                        display: 'grid', 
-                        gap: 'var(--space-3)', 
-                        maxHeight: '200px', 
-                        overflowY: 'auto' 
-                      }}>
-                        {completedTickets.map((ticket) => (
-                          <div
-                            key={ticket.id}
-                            className="surface"
-                            style={{ 
-                              padding: 'var(--space-3)',
-                              border: '1px solid var(--clr-border)',
-                              opacity: '0.7'
-                            }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div style={{ 
-                                  fontSize: 'var(--fs-400)', 
-                                  fontWeight: '600' 
-                                }}>
-                                  {ticket.number}
-                                </div>
-                                <div>
-                                  <div style={{ fontWeight: '500', fontSize: 'var(--fs-300)' }}>
-                                    {ticket.customer_name || 'Anonymous'}
-                                  </div>
-                                  <div style={{ fontSize: 'var(--fs-300)', opacity: '0.6' }}>
-                                    {toLocalTime(ticket.created_at)}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <span className={`${STATUS_COLORS[ticket.status]}`} style={{ fontSize: 'var(--fs-300)' }}>
-                                {ticket.status.replace('_', ' ')}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })()}
+                {/* (Completed moved to its own page) */}
 
                 {queue.length === 0 && (
                   <div style={{ textAlign: 'center', padding: 'var(--space-8)', opacity: '0.6' }}>

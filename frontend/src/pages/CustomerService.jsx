@@ -9,32 +9,34 @@ import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../components/Sidebar.jsx';
 import io from 'socket.io-client';
 import Swal from 'sweetalert2';
+import CSCompleted from './CSCompleted.jsx'; 
 
 const groupedTabs = [
     {
+    title:'Antrian',
+    items: [
+      { value: 'cs-dashboard', label: 'Dashboard' , icon: '🚀' },
+      {value:'CSCompleted', label:'Selesai', icon:'✅' }
+    ],
+  },
+    {
     title: 'CRM',
     items: [
-      { value: 'admission', label: 'PMB' }
+      { value: 'admission', label: 'PMB' , icon: '🎓' },
     ],
   },
   {
     title: 'Tiket',
     items: [
-      { value: 'search', label: 'Cari' },
-      { value: 'create', label: 'Buat' },
-      { value: 'tickets', label: 'Semua' },
-    ],
-  },
-  {
-    title: 'Queue',
-    items: [
-      { value: 'cs-dashboard', label: 'CS Dashboard' },
+      { value: 'search', label: 'Cari' , icon: '🔍' },
+      { value: 'create', label: 'Buat' , icon: '➕' },
+      { value: 'tickets', label: 'Semua' , icon: '🎫' },
     ],
   },
   {
     title: 'Pengguna',
     items: [
-      { value: 'users', label: 'Konsumen' },
+      { value: 'users', label: 'Konsumen' , icon: '👥' },
     ],
   },
 ];
@@ -108,6 +110,7 @@ export default function CustomerService() {
             {tab === 'users' && <FetchUser />}
             {tab === 'admission' && <Admission hideAddStep hideCreatePipeline />}
             {tab === 'cs-dashboard' && <CSDashboard />}
+            {tab === 'CSCompleted' && <CSCompleted />}
           </div>
         </div>
       </main>

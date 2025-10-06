@@ -4,6 +4,15 @@ import { toLocalTime } from '../lib/utils'
 import io from 'socket.io-client'
 import Swal from 'sweetalert2'
 
+const STATUS_LABEL_ID = {
+  WAITING: 'Menunggu',
+  CALLED: 'Dipanggil',
+  IN_SERVICE: 'Sedang Dilayani',
+  DONE: 'Selesai',
+  NO_SHOW: 'Tidak Hadir',
+  CANCELED: 'Dibatalkan',
+}
+
 export default function Kiosk() {
   const [services, setServices] = useState([])
   const [selectedService, setSelectedService] = useState(null)
@@ -13,10 +22,30 @@ export default function Kiosk() {
     phone: '',
     notes: ''
   })
+  const [phoneError, setPhoneError] = useState('')
+  const [emailError, setEmailError] = useState('')
   const [loading, setLoading] = useState(false)
   const [ticket, setTicket] = useState(null)
   const [error, setError] = useState('')
   const socketRef = useRef(null)
+
+  // ——— helper validasi ———
+  const normalizePhone = (val) => (val || '').replace(/\D/g, '').slice(0, 12)
+  const isValidPhone = (val) => /^\d{11,12}$/.test(val || '')
+  const isValidEmail = (v) =>
+    /^[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,}$/i.test((v || '').trim())
+
+  const phoneKeyGuard = (e) => {
+    const k = e.key
+    if (k === 'Enter') return
+    const allowed = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End']
+    if (allowed.includes(k)) return
+    if (/^\d$/.test(k)) {
+      if ((e.target.value || '').replace(/\D/g, '').length >= 12) e.preventDefault()
+      return
+    }
+    e.preventDefault()
+  }
 
   useEffect(() => {
     loadServices()
@@ -29,12 +58,12 @@ export default function Kiosk() {
       });
 
       socketRef.current.on('connect', () => {
-        console.log('Connected to socket server for ticket updates');
+        console.log('Terhubung ke server socket untuk pembaruan tiket');
         socketRef.current.emit('join-ticket', ticket.id);
       });
 
       socketRef.current.on('ticket-update', (data) => {
-        console.log('Ticket update received:', data);
+        console.log('Pembaruan tiket diterima:', data);
         setTicket(prev => ({ ...prev, ...data }));
         if (data.status === 'CALLED') {
           Swal.fire({
@@ -44,13 +73,13 @@ export default function Kiosk() {
             timer: 5000,
             timerProgressBar: true,
             icon: 'info',
-            title: `Your ticket ${ticket.number} is now being called!`
+            title: `Nomor antrian ${data.number || ticket.number} sedang dipanggil!`
           });
         }
       });
 
       socketRef.current.on('disconnect', () => {
-        console.log('Disconnected from socket server');
+        console.log('Terputus dari server socket');
       });
 
       return () => {
@@ -66,7 +95,7 @@ export default function Kiosk() {
       const data = await api.kiosk.getServices()
       setServices(data)
     } catch (err) {
-      setError('Failed to load services')
+      setError('Gagal memuat layanan')
       console.error(err)
     }
   }
@@ -76,7 +105,32 @@ export default function Kiosk() {
     setError('')
   }
 
-  const handleInputChange = (e) => {
+  // Handler khusus agar validasi realtime
+  const handlePhoneChange = (e) => {
+    const val = normalizePhone(e.target.value)
+    setFormData((s) => ({ ...s, phone: val }))
+    if (!val) {
+      setPhoneError('')
+    } else if (!isValidPhone(val)) {
+      setPhoneError('Nomor telepon harus 11–12 digit.')
+    } else {
+      setPhoneError('')
+    }
+  }
+
+  const handleEmailChange = (e) => {
+    const val = e.target.value
+    setFormData((s) => ({ ...s, email: val }))
+    if (!val.trim()) {
+      setEmailError('') // opsional
+    } else if (!isValidEmail(val)) {
+      setEmailError('Masukkan email yang valid (nama@domain.com).')
+    } else {
+      setEmailError('')
+    }
+  }
+
+  const handleBasicChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -86,11 +140,24 @@ export default function Kiosk() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!selectedService) {
-      setError('Please select a service')
+      setError('Silakan pilih layanan')
       return
     }
     if (!formData.phone) {
-      setError('Phone number is required')
+      setPhoneError('Nomor telepon wajib diisi.')
+      setError('Nomor telepon wajib diisi')
+      return
+    }
+    if (!isValidPhone(formData.phone)) {
+      setPhoneError('Nomor telepon harus 11–12 digit.')
+      setError('Nomor telepon harus 11–12 digit.')
+      await Swal.fire({ icon: 'error', title: 'Nomor telepon tidak valid', text: 'Nomor telepon harus 11–12 digit.' })
+      return
+    }
+    if (formData.email && !isValidEmail(formData.email)) {
+      setEmailError('Masukkan email yang valid (nama@domain.com).')
+      setError('Format email tidak valid')
+      await Swal.fire({ icon: 'error', title: 'Email tidak valid', text: 'Gunakan format yang benar (nama@domain.com).' })
       return
     }
 
@@ -105,7 +172,7 @@ export default function Kiosk() {
       const result = await api.kiosk.createQueueTicket(ticketData)
       setTicket(result.ticket)
     } catch (err) {
-      setError(err.message || 'Failed to create queue ticket')
+      setError(err.message || 'Gagal membuat nomor antrian')
       console.error(err)
     } finally {
       setLoading(false)
@@ -115,6 +182,8 @@ export default function Kiosk() {
   const resetForm = () => {
     setSelectedService(null)
     setFormData({ name: '', email: '', phone: '', notes: '' })
+    setPhoneError('')
+    setEmailError('')
     setTicket(null)
     setError('')
   }
@@ -155,14 +224,14 @@ export default function Kiosk() {
               margin: '0 0 var(--space-2)', 
               color: 'var(--clr-text)' 
             }}>
-              Queue Ticket Created!
+              Nomor Antrian Berhasil Dibuat!
             </h1>
             <p style={{ 
               fontSize: 'var(--fs-400)', 
               opacity: '0.8', 
               margin: 0 
             }}>
-              Please save this ticket number for your records.
+              Simpan nomor antrian ini.
             </p>
           </div>
 
@@ -183,7 +252,7 @@ export default function Kiosk() {
               fontSize: 'var(--fs-300)', 
               opacity: '0.7' 
             }}>
-              Ticket Number
+              Nomor Antrian
             </div>
           </div>
 
@@ -194,21 +263,16 @@ export default function Kiosk() {
             marginBottom: 'var(--space-6)',
             fontSize: 'var(--fs-400)'
           }}>
-            <div><strong>Service:</strong> {ticket.service_name}</div>
-            <div><strong>Created:</strong> {toLocalTime(ticket.created_at)}</div>
+            <div><strong>Layanan:</strong> {ticket.service_name}</div>
+            <div><strong>Dibuat:</strong> {toLocalTime(ticket.created_at)}</div>
             <div>
               <strong>Status:</strong> 
-              <span className={`badge ${
-                ticket.status === 'WAITING' ? 'tag-accent' :
-                ticket.status === 'CALLED' ? 'tag-primary' :
-                ticket.status === 'IN_SERVICE' ? 'badge' :
-                'badge'
-              }`} style={{ marginLeft: 'var(--space-2)' }}>
-                {ticket.status}
+              <span className="badge" style={{ marginLeft: 'var(--space-2)' }}>
+                {STATUS_LABEL_ID[ticket.status] || ticket.status}
               </span>
             </div>
             {ticket.queue_position && ticket.status === 'WAITING' && (
-              <div><strong>Queue Position:</strong> {ticket.queue_position}</div>
+              <div><strong>Posisi Antrian:</strong> {ticket.queue_position}</div>
             )}
           </div>
 
@@ -219,16 +283,16 @@ export default function Kiosk() {
             lineHeight: '1.6'
           }}>
             {ticket.status === 'WAITING' && (
-              <p>Please wait for your number to be called. You can check your position on the display screens.</p>
+              <p>Silakan menunggu sampai nomor Anda dipanggil. Anda dapat melihat posisi antrian di layar.</p>
             )}
             {ticket.status === 'CALLED' && (
-              <p>Your ticket is now being called! Please proceed to the counter.</p>
+              <p>Nomor Anda sedang dipanggil. Silakan menuju loket.</p>
             )}
             {ticket.status === 'IN_SERVICE' && (
-              <p>You are currently being served.</p>
+              <p>Anda sedang dilayani.</p>
             )}
             {ticket.status === 'DONE' && (
-              <p>Your service has been completed.</p>
+              <p>Layanan Anda telah selesai.</p>
             )}
           </div>
 
@@ -241,7 +305,7 @@ export default function Kiosk() {
               fontWeight: '600'
             }}
           >
-            Create Another Ticket
+            Buat Tiket Lain
           </button>
         </div>
       </div>
@@ -253,28 +317,18 @@ export default function Kiosk() {
       minHeight: '100vh', 
       padding: 'var(--space-6) var(--space-4)' 
     }}>
-      <div style={{ 
-        maxWidth: '480px', 
-        margin: '0 auto' 
-      }}>
-        <div style={{ 
-          textAlign: 'center', 
-          marginBottom: 'var(--space-8)' 
-        }}>
+      <div style={{ maxWidth: '480px', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}>
           <h1 style={{ 
             fontSize: 'clamp(1.8rem, 6vw, 2.5rem)', 
             fontWeight: '700', 
             margin: '0 0 var(--space-2)', 
             color: 'var(--clr-text)' 
           }}>
-            Customer Kiosk
+            Kios Pelanggan
           </h1>
-          <p style={{ 
-            fontSize: 'var(--fs-400)', 
-            opacity: '0.8', 
-            margin: 0 
-          }}>
-            Select a service and join the queue
+          <p style={{ fontSize: 'var(--fs-400)', opacity: '0.8', margin: 0 }}>
+            Pilih layanan dan bergabung ke antrian
           </p>
         </div>
 
@@ -293,12 +347,8 @@ export default function Kiosk() {
 
         {!selectedService ? (
           <div className="surface" style={{ padding: 'var(--space-6)' }}>
-            <h2 style={{ 
-              fontSize: 'var(--fs-600)', 
-              fontWeight: '600', 
-              marginBottom: 'var(--space-4)' 
-            }}>
-              Select a Service
+            <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', marginBottom: 'var(--space-4)' }}>
+              Pilih Layanan
             </h2>
             <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
               {services.map(service => (
@@ -320,26 +370,19 @@ export default function Kiosk() {
                     justifyContent: 'center'
                   }}
                   onMouseOver={(e) => {
-                    e.target.style.borderColor = 'var(--clr-primary)'
-                    e.target.style.background = 'color-mix(in oklab, var(--clr-primary) 5%, var(--clr-bg))'
+                    e.currentTarget.style.borderColor = 'var(--clr-primary)'
+                    e.currentTarget.style.background = 'color-mix(in oklab, var(--clr-primary) 5%, var(--clr-bg))'
                   }}
                   onMouseOut={(e) => {
-                    e.target.style.borderColor = 'var(--clr-border)'
-                    e.target.style.background = 'var(--clr-bg)'
+                    e.currentTarget.style.borderColor = 'var(--clr-border)'
+                    e.currentTarget.style.background = 'var(--clr-bg)'
                   }}
                 >
-                  <div style={{ 
-                    fontWeight: '600', 
-                    fontSize: 'var(--fs-500)',
-                    marginBottom: 'var(--space-1)'
-                  }}>
+                  <div style={{ fontWeight: '600', fontSize: 'var(--fs-500)', marginBottom: 'var(--space-1)' }}>
                     {service.name}
                   </div>
-                  <div style={{ 
-                    fontSize: 'var(--fs-300)', 
-                    opacity: '0.7' 
-                  }}>
-                    Code: {service.code_prefix}
+                  <div style={{ fontSize: 'var(--fs-300)', opacity: '0.7' }}>
+                    Kode: {service.code_prefix}
                   </div>
                 </button>
               ))}
@@ -348,18 +391,11 @@ export default function Kiosk() {
         ) : (
           <div className="surface" style={{ padding: 'var(--space-6)' }}>
             <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-6)' }}>
-              <h2 style={{ 
-                fontSize: 'var(--fs-600)', 
-                fontWeight: '600', 
-                margin: 0 
-              }}>
-                Customer Information
+              <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', margin: 0 }}>
+                Data Pelanggan
               </h2>
-              <button
-                onClick={() => setSelectedService(null)}
-                className="btn btn--ghost btn--sm"
-              >
-                Change Service
+              <button onClick={() => setSelectedService(null)} className="btn btn--ghost btn--sm">
+                Ubah Layanan
               </button>
             </div>
 
@@ -369,112 +405,90 @@ export default function Kiosk() {
               background: 'color-mix(in oklab, var(--clr-primary) 10%, var(--clr-bg))',
               border: '1px solid color-mix(in oklab, var(--clr-primary) 20%, transparent)'
             }}>
-              <div style={{ 
-                fontWeight: '600', 
-                color: 'var(--clr-primary)',
-                marginBottom: 'var(--space-1)'
-              }}>
-                Selected Service
+              <div style={{ fontWeight: '600', color: 'var(--clr-primary)', marginBottom: 'var(--space-1)' }}>
+                Layanan Terpilih
               </div>
-              <div style={{ 
-                color: 'var(--clr-primary)', 
-                fontSize: 'var(--fs-500)' 
-              }}>
+              <div style={{ color: 'var(--clr-primary)', fontSize: 'var(--fs-500)' }}>
                 {selectedService.name}
               </div>
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 'var(--space-4)' }}>
               <div>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: 'var(--fs-400)', 
-                  fontWeight: '600', 
-                  marginBottom: 'var(--space-2)' 
-                }}>
-                  Phone Number *
+                <label style={{ display: 'block', fontSize: 'var(--fs-400)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>
+                  Nomor Telepon *
                 </label>
                 <input
                   type="tel"
                   name="phone"
                   value={formData.phone}
-                  onChange={handleInputChange}
+                  onChange={handlePhoneChange}
+                  onKeyDown={phoneKeyGuard}
                   className="input"
-                  style={{ 
-                    fontSize: 'var(--fs-400)',
-                    minHeight: '3rem'
-                  }}
-                  placeholder="Enter your phone number"
+                  style={{ fontSize: 'var(--fs-400)', minHeight: '3rem' }}
+                  placeholder="08xxxxxxxxxx"
+                  inputMode="numeric"
+                  maxLength={12}
+                  aria-invalid={!!phoneError}
+                  aria-describedby="phone-error"
                   required
                 />
+                {phoneError && (
+                  <div id="phone-error" style={{ color: '#b91c1c', fontSize: 12, marginTop: 6 }}>
+                    {phoneError}
+                  </div>
+                )}
               </div>
 
               <div>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: 'var(--fs-400)', 
-                  fontWeight: '600', 
-                  marginBottom: 'var(--space-2)' 
-                }}>
-                  Full Name
+                <label style={{ display: 'block', fontSize: 'var(--fs-400)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>
+                  Nama Lengkap
                 </label>
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
-                  onChange={handleInputChange}
+                  onChange={handleBasicChange}
                   className="input"
-                  style={{ 
-                    fontSize: 'var(--fs-400)',
-                    minHeight: '3rem'
-                  }}
-                  placeholder="Enter your full name"
+                  style={{ fontSize: 'var(--fs-400)', minHeight: '3rem' }}
+                  placeholder="Nama lengkap Anda"
                 />
               </div>
 
               <div>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: 'var(--fs-400)', 
-                  fontWeight: '600', 
-                  marginBottom: 'var(--space-2)' 
-                }}>
+                <label style={{ display: 'block', fontSize: 'var(--fs-400)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>
                   Email
                 </label>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
-                  onChange={handleInputChange}
+                  onChange={handleEmailChange}
                   className="input"
-                  style={{ 
-                    fontSize: 'var(--fs-400)',
-                    minHeight: '3rem'
-                  }}
-                  placeholder="Enter your email"
+                  style={{ fontSize: 'var(--fs-400)', minHeight: '3rem' }}
+                  placeholder="nama@domain.com"
+                  aria-invalid={!!emailError}
+                  aria-describedby="email-error"
                 />
+                {emailError && (
+                  <div id="email-error" style={{ color: '#b91c1c', fontSize: 12, marginTop: 6 }}>
+                    {emailError}
+                  </div>
+                )}
               </div>
 
               <div>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: 'var(--fs-400)', 
-                  fontWeight: '600', 
-                  marginBottom: 'var(--space-2)' 
-                }}>
-                  Notes
+                <label style={{ display: 'block', fontSize: 'var(--fs-400)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>
+                  Catatan
                 </label>
                 <textarea
                   name="notes"
                   value={formData.notes}
-                  onChange={handleInputChange}
+                  onChange={handleBasicChange}
                   rows={3}
                   className="textarea"
-                  style={{ 
-                    fontSize: 'var(--fs-400)',
-                    minHeight: '4rem'
-                  }}
-                  placeholder="Any additional notes or special requirements"
+                  style={{ fontSize: 'var(--fs-400)', minHeight: '4rem' }}
+                  placeholder="Catatan tambahan atau kebutuhan khusus"
                 />
               </div>
 
@@ -483,26 +497,17 @@ export default function Kiosk() {
                   type="button"
                   onClick={() => setSelectedService(null)}
                   className="btn btn--outline btn--lg"
-                  style={{ 
-                    flex: 1,
-                    minHeight: '3.5rem',
-                    fontSize: 'var(--fs-400)'
-                  }}
+                  style={{ flex: 1, minHeight: '3.5rem', fontSize: 'var(--fs-400)' }}
                 >
-                  Back
+                  Kembali
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
                   className="btn btn--primary btn--lg"
-                  style={{ 
-                    flex: 1,
-                    minHeight: '3.5rem',
-                    fontSize: 'var(--fs-400)',
-                    fontWeight: '600'
-                  }}
+                  style={{ flex: 1, minHeight: '3.5rem', fontSize: 'var(--fs-400)', fontWeight: '600' }}
                 >
-                  {loading ? 'Creating Ticket...' : 'Get Queue Ticket'}
+                  {loading ? 'Membuat Nomor…' : 'Ambil Nomor Antrian'}
                 </button>
               </div>
             </form>

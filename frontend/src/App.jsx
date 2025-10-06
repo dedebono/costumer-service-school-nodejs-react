@@ -17,6 +17,7 @@ export default function App() {
     <div className="app-shell">
       <main>
         <Routes>
+
           <Route path="/login" element={<Login />} />
           <Route
             path="/supervisor/*"
