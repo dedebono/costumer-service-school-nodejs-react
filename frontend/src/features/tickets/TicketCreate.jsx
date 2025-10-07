@@ -398,11 +398,17 @@ export default function TicketCreate() {
         icon: 'success',
         title: 'Ticket Created 🎉',
         timer: 900,
-        showConfirmButton: false,
+        showConfirmButton: true,
         position: 'top',
       });
 
-      navigate(`/tickets/${data.id}`, { state: { justCreated: true } });
+      const customerNameForSearch =
+        (selectedCustomer?.name || name || '').trim();
+      setTimeout(() => {
+        navigate('./TicketSearch.jsx', {
+          state: { prefillName: customerNameForSearch, autoSearch: true },
+        });
+      }, 100);
 
       // reset fields
       setTitleChoice('');

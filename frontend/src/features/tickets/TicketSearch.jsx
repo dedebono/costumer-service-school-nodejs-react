@@ -1,5 +1,6 @@
 // src/features/tickets/TicketSearch.jsx
 import { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { api } from '../../lib/api.js';
 import { qs, toLocalTime } from '../../lib/utils.js';
@@ -48,6 +49,7 @@ const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val || '');
 export default function TicketSearch() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState(''); // kept for future use
+  const location = useLocation();
   const [phone, setPhone] = useState('');
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -127,6 +129,24 @@ export default function TicketSearch() {
       await Swal.fire({ icon: 'error', title: 'Search error', text: msg });
     }
   }
+
+    // If navigated here with a prefilled name, auto-run the search once
+  useEffect(() => {
+    const pre = location.state?.prefillName || '';
+    const auto = !!location.state?.autoSearch;
+    if (pre) {
+      setName(pre);
+      if (auto) {
+        // let state update commit, then search with the new name
+        setTimeout(() => {
+          refreshTickets({ preserveSelection: false, preserveModal: false });
+        }, 0);
+      }
+    }
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   // prevent double submit per ticket
   const [closingId, setClosingId] = useState(null);
