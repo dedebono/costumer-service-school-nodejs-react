@@ -27,15 +27,17 @@ router.get(
       let { name = '', phone = '', email = '', limit = '20', offset = '0' } = req.query;
 
       name  = String(name).trim();
-      phone = String(phone).trim();
+      // normalize phone to digits-only
+      const phoneRaw = String(phone).trim();
+      const phoneDigits = phoneRaw.replace(/\D/g, '');
       email = String(email).trim().toLowerCase();
 
       // no filters → empty list
-      if (!name && !phone && !email) return res.json([]);
+      if (!name && !phoneDigits && !email) return res.json([]);
 
-      // optional validation (matches your frontend rules)
-      if (phone && !/^\d{12}$/.test(phone)) {
-        return res.status(400).json({ error: 'Phone must be exactly 12 digits.' });
+      // validation (matches your frontend rules: 11–12 digits)
+      if (phoneDigits && !/^\d{11,12}$/.test(phoneDigits)) {
+        return res.status(400).json({ error: 'Phone must be 11–12 digits.' });
       }
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return res.status(400).json({ error: 'Invalid email.' });
@@ -43,7 +45,7 @@ router.get(
 
       const rows = await searchCustomers({
         name,
-        phone,
+        phone: phoneDigits, // pass normalized digits to model
         email,
         limit: Math.min(parseInt(limit, 10) || 20, 100),
         offset: Math.max(parseInt(offset, 10) || 0, 0),
@@ -56,7 +58,6 @@ router.get(
     }
   }
 );
-
 
 // GET /api/customers
 router.get('/', requireRole(['CustomerService', 'Supervisor']), async (_req, res) => {
@@ -94,7 +95,6 @@ router.post('/', requireRole(['CustomerService','Supervisor']), async (req, res)
     res.status(400).json({ error: 'Failed to create customer' });
   }
 });
-
 
 // GET /api/customers/:id
 router.get('/:id', requireRole(['CustomerService', 'Supervisor']), async (req, res) => {

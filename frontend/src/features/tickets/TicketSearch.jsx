@@ -10,11 +10,11 @@ const numberedPrefixRegex = /^Follow\s*up\s*(\d+)\s*[xX]\s*:\s*/i;
 
 // Shared with TicketCreate (keep in sync)
 const DESCRIPTION_OPTIONS = {
-  'Menerima Saran / Kritik': ['Saran', 'Kritik', 'Pertanyaan Umum'],
-  'Pembelian Seragam': ['Ukuran tidak tersedia', 'Stok habis', 'Penukaran ukuran', 'Pembayaran'],
-  'Siswa Pindah Sekolah': ['Permohonan pindah', 'Pengambilan berkas', 'Konfirmasi sekolah tujuan'],
-  'Ketertinggalan Picker Card': ['Lupa bawa kartu', 'Kartu rusak', 'Pengambilan sementara'],
-  'Menerima Tamu': ['Orang tua', 'Tamu resmi', 'Vendor'],
+    'Layanan Kritik dan Saran': ['Saran', 'Kritik', 'Pertanyaan Umum', 'EduCs telah menyampaikan ke pihak terkait', 'Follow up ke konsumen','EduCs mengumpulkan informasi'],
+    'Pembelian Seragam': ['Size terkonfirmasi', 'EduCS sudah menghubungi GA (Stok)', 'Fitting Baju', 'Pembayaran', 'Pengambilan di EduCS'],
+    'Siswa Pindah Sekolah': ['Menyampaikan prosedur pindah Sekolah','Konfirmasi ke pihak terkait','Janji temu principal','Telah bertemu principal','Telah mengisi Formulir pindah sekolah','Formulir telah diserahkan ke admin area','Surat Pindah telah diserahkan kepada orang tua'],
+    'Ketertinggalan Picker Card': ['Mengambil foto penjemput', 'Menerbitkan Kartu sementara', 'Menerbitkan Kartu baru (biaya)', 'Mengalihkan nama siswa ke Dismissal App'],
+    'Menerima Tamu': ['Orang tua', 'Tamu resmi', 'Vendor', 'Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
   // "Lain-lain" intentionally no options → free text
 };
 

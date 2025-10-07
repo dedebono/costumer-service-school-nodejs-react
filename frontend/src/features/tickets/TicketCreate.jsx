@@ -40,7 +40,7 @@ export default function TicketCreate() {
 
   // ---- NEW: Title & Description options ----
   const TITLE_OPTIONS = [
-    'Menerima Saran / Kritik',
+    'Layanan Kritik dan Saran',
     'Pembelian Seragam',
     'Siswa Pindah Sekolah',
     'Ketertinggalan Picker Card',
@@ -49,26 +49,71 @@ export default function TicketCreate() {
   ];
 
   const DESCRIPTION_OPTIONS = {
-    'Layanan Kritik dan Saran': ['Saran', 'Kritik', 'Pertanyaan Umum'],
-    'Pembelian Seragam': ['Ukuran tidak tersedia', 'Stok habis', 'Penukaran ukuran', 'Pembayaran'],
-    'Siswa Pindah Sekolah': ['Permohonan pindah', 'Pengambilan berkas', 'Konfirmasi sekolah tujuan'],
-    'Ketertinggalan Picker Card': ['Lupa bawa kartu', 'Kartu rusak', 'Pengambilan sementara'],
-    'Menerima Tamu': ['Orang tua', 'Tamu resmi', 'Vendor'],
+    'Layanan Kritik dan Saran': [
+      'Saran',
+      'Kritik',
+      'Pertanyaan Umum',
+      'EduCs telah menyampaikan ke pihak terkait',
+      'Follow up ke konsumen',
+      'EduCs mengumpulkan informasi',
+    ],
+    'Pembelian Seragam': [
+      'Size terkonfirmasi',
+      'EduCS sudah menghubungi GA (Stok)',
+      'Fitting Baju',
+      'Pembayaran',
+      'Pengambilan di EduCS',
+    ],
+    'Siswa Pindah Sekolah': [
+      'Menyampaikan prosedur pindah Sekolah',
+      'Konfirmasi ke pihak terkait',
+      'Janji temu principal',
+      'Telah bertemu principal',
+      'Telah mengisi Formulir pindah sekolah',
+      'Formulir telah diserahkan ke admin area',
+      'Surat Pindah telah diserahkan kepada orang tua',
+    ],
+    'Ketertinggalan Picker Card': [
+      'Mengambil foto penjemput',
+      'Menerbitkan Kartu sementara',
+      'Menerbitkan Kartu baru (biaya)',
+      'Mengalihkan nama siswa ke Dismissal App',
+    ],
+    'Menerima Tamu': [
+      'Orang tua',
+      'Tamu resmi',
+      'Vendor',
+      'Tamu telah mengisi buku tamu',
+      'EduCS telah meneruskan informasi ke area',
+      'Area telah menghubungi tamu',
+    ],
   };
 
   const currentDescOptions =
     titleChoice && DESCRIPTION_OPTIONS[titleChoice] ? DESCRIPTION_OPTIONS[titleChoice] : [];
 
+  // NEW: Allow appending extra free text to an option
+  const [allowExtraDesc, setAllowExtraDesc] = useState(false);
+  const [extraDesc, setExtraDesc] = useState('');
+
   useEffect(() => {
     if (titleChoice && currentDescOptions.length > 0) {
       setDescription(currentDescOptions[0] || '');
+      // reset extra text UI whenever we switch to an option-driven title
+      setAllowExtraDesc(false);
+      setExtraDesc('');
     } else if (titleChoice === 'Lain-lain') {
       // keep whatever user typed before, or clear it if coming from a select title
       setDescription((prev) => prev || '');
+      setAllowExtraDesc(false);
+      setExtraDesc('');
     } else {
       setDescription('');
+      setAllowExtraDesc(false);
+      setExtraDesc('');
     }
-  }, [titleChoice]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [titleChoice]);
 
   // Handle pre-filled data from queue
   useEffect(() => {
@@ -167,7 +212,7 @@ export default function TicketCreate() {
       return;
     }
 
-    if (!isValidEmail(modalEmail)) {
+    if (modalEmail && !isValidEmail(modalEmail)) {
       showError('Invalid Email', 'Email format is invalid.');
       return;
     }
@@ -289,7 +334,7 @@ export default function TicketCreate() {
     setIsTicketOpen(false);
   }
 
-  // UPDATE your submit() to compute final title
+  // UPDATE your submit() to compute final title + combined description
   async function submit(e) {
     e.preventDefault();
     setMsg('');
@@ -302,8 +347,6 @@ export default function TicketCreate() {
       return;
     }
 
-    // For non-"Lain-lain" titles, we expect description from select
-    // For "Lain-lain", we expect free-text description
     if (!description?.trim()) {
       showError('Missing Description', 'Please provide a description.');
       return;
@@ -314,10 +357,19 @@ export default function TicketCreate() {
       return;
     }
 
+    // Build finalDescription:
+    // - For option-driven titles: combine selected option + optional extra text
+    // - For "Lain-lain": just free text (no combining needed)
+    let finalDescription = description.trim();
+    if (currentDescOptions.length > 0 && allowExtraDesc && extraDesc.trim()) {
+      // Join with newline so backend receives one field
+      finalDescription = `${finalDescription}\n${extraDesc.trim()}`;
+    }
+
     try {
       const body = {
         title: finalTitle,
-        description: description.trim(),
+        description: finalDescription,
         priority,
         status,
         customerId: selectedCustomer.id,
@@ -358,6 +410,8 @@ export default function TicketCreate() {
       setDescription('');
       setPriority('medium');
       setStatus('open');
+      setAllowExtraDesc(false);
+      setExtraDesc('');
     } catch (e) {
       const err = extractError(e);
       setMsg(`Error creating ticket: ${err}`);
@@ -470,21 +524,41 @@ export default function TicketCreate() {
                 </>
               )}
 
-              {/* ---- NEW: Description as OPTIONS for titles that have options; otherwise textarea ---- */}
+              {/* ---- Description: OPTION + optional extra text, or textarea for Lain-lain ---- */}
               <label>Description</label>
               {titleChoice && currentDescOptions.length > 0 ? (
-                <select
-                  style={inp}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  required
-                >
-                  {currentDescOptions.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <select
+                    style={inp}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    required
+                  >
+                    {currentDescOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={allowExtraDesc}
+                      onChange={(e) => setAllowExtraDesc(e.target.checked)}
+                    />
+                    Add extra text
+                  </label>
+
+                  {allowExtraDesc && (
+                    <textarea
+                      style={{ ...inp, minHeight: 100 }}
+                      value={extraDesc}
+                      onChange={(e) => setExtraDesc(e.target.value)}
+                      placeholder="Type extra details… (optional)"
+                    />
+                  )}
+                </>
               ) : (
                 <textarea
                   style={{ ...inp, minHeight: 120 }}
