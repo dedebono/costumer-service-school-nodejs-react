@@ -3,9 +3,9 @@ const { db } = require('./db');
 function getPipelineById(id) {
   return new Promise((resolve, reject) => {
     const sql = `SELECT id, name, year, created_at, updated_at FROM pipelines WHERE id = ?`;
-    db.get(sql, [id], (err, row) => {
+    db.query(sql, [id], (err, results) => {
       if (err) reject(err);
-      else resolve(row || null);
+      else resolve(results[0] || null);
     });
   });
 }
@@ -13,11 +13,12 @@ function getPipelineById(id) {
 function getPipelineWithSteps(id) {
   return new Promise((resolve, reject) => {
     const pipelineSql = `SELECT id, name, year, created_at, updated_at FROM pipelines WHERE id = ?`;
-    db.get(pipelineSql, [id], (err, pipeline) => {
+    db.query(pipelineSql, [id], (err, results) => {
       if (err) return reject(err);
+      const pipeline = results[0];
       if (!pipeline) return resolve(null);
       const stepsSql = `SELECT id, pipeline_id, title, slug, ord, is_final FROM steps WHERE pipeline_id = ? ORDER BY ord ASC`;
-      db.all(stepsSql, [id], (err2, steps) => {
+      db.query(stepsSql, [id], (err2, steps) => {
         if (err2) reject(err2);
         else resolve({ ...pipeline, steps });
       });
@@ -28,12 +29,12 @@ function getPipelineWithSteps(id) {
 function createPipeline({ name, year }) {
   return new Promise((resolve, reject) => {
     const sql = `INSERT INTO pipelines (name, year) VALUES (?, ?)`;
-    db.run(sql, [name, year], function (err) {
+    db.query(sql, [name, year], (err, result) => {
       if (err) return reject(err);
       const selectSql = `SELECT id, name, year, created_at, updated_at FROM pipelines WHERE id = ?`;
-      db.get(selectSql, [this.lastID], (err2, row) => {
+      db.query(selectSql, [result.insertId], (err2, results) => {
         if (err2) reject(err2);
-        else resolve(row);
+        else resolve(results[0]);
       });
     });
   });
@@ -42,9 +43,9 @@ function createPipeline({ name, year }) {
 function getAllPipelines() {
   return new Promise((resolve, reject) => {
     const sql = `SELECT id, name, year, created_at, updated_at FROM pipelines ORDER BY year DESC, name ASC`;
-    db.all(sql, [], (err, rows) => {
+    db.query(sql, [], (err, results) => {
       if (err) reject(err);
-      else resolve(rows);
+      else resolve(results);
     });
   });
 }
@@ -52,10 +53,10 @@ function getAllPipelines() {
 function deletePipeline(id) {
   return new Promise((resolve, reject) => {
     const sql = `DELETE FROM pipelines WHERE id = ?`;
-    db.run(sql, [id], function (err) {
+    db.query(sql, [id], (err, result) => {
       if (err) reject(err);
-      else if (this.changes === 0) reject(new Error('Pipeline not found'));
-      else resolve({ changes: this.changes });
+      else if (result.affectedRows === 0) reject(new Error('Pipeline not found'));
+      else resolve({ changes: result.affectedRows });
     });
   });
 }

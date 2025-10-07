@@ -7,18 +7,18 @@ function createSupportTicket({ queueTicketId, summary, details, category, attach
     if (!queueTicketId || !createdBy) {
       return reject(new Error('queueTicketId and createdBy are required'));
     }
-    db.run(
+    db.query(
       'INSERT INTO support_tickets (queue_ticket_id, summary, details, category, attachments_json, created_by) VALUES (?, ?, ?, ?, ?, ?)',
       [queueTicketId, summary || null, details || null, category || null, attachmentsJson || null, createdBy],
-      function (err) {
+      (err, result) => {
         if (err) {
           return reject(err);
         }
-        db.get('SELECT * FROM support_tickets WHERE id = ?', [this.lastID], (err, row) => {
+        db.query('SELECT * FROM support_tickets WHERE id = ?', [result.insertId], (err, results) => {
           if (err) {
             return reject(err);
           }
-          resolve(row);
+          resolve(results[0]);
         });
       }
     );
@@ -36,9 +36,9 @@ function getSupportTicketById(id) {
       LEFT JOIN customers c ON c.id = qt.customer_id
       LEFT JOIN users u ON u.id = st.created_by
       WHERE st.id = ?`;
-    db.get(sql, [id], (err, row) => {
+    db.query(sql, [id], (err, results) => {
       if (err) reject(err);
-      else resolve(row || null);
+      else resolve(results[0] || null);
     });
   });
 }
@@ -51,9 +51,9 @@ function getSupportTicketsByQueueTicket(queueTicketId) {
       LEFT JOIN users u ON u.id = st.created_by
       WHERE st.queue_ticket_id = ?
       ORDER BY st.created_at DESC`;
-    db.all(sql, [queueTicketId], (err, rows) => {
+    db.query(sql, [queueTicketId], (err, results) => {
       if (err) reject(err);
-      else resolve(rows);
+      else resolve(results);
     });
   });
 }
@@ -95,11 +95,11 @@ function getAllSupportTickets({ status, category, q, sortBy = 'created_at', sort
       LEFT JOIN customers c ON c.id = qt.customer_id
       ${whereSql}`;
 
-    db.all(sql, [...params, limit, offset], (err, rows) => {
+    db.query(sql, [...params, limit, offset], (err, results) => {
       if (err) return reject(err);
-      db.get(countSql, params, (err2, cnt) => {
+      db.query(countSql, params, (err2, results2) => {
         if (err2) reject(err2);
-        else resolve({ rows, total: cnt.total, limit, offset });
+        else resolve({ rows: results, total: results2[0].total, limit, offset });
       });
     });
   });
@@ -110,7 +110,7 @@ function updateSupportTicket(id, { summary, details, status, category, attachmen
     if (status && !ALLOWED_STATUSES.has(status)) {
       return reject(new Error('Invalid status'));
     }
-    db.run(
+    db.query(
       `UPDATE support_tickets SET
         summary = COALESCE(?, summary),
         details = COALESCE(?, details),
@@ -120,11 +120,11 @@ function updateSupportTicket(id, { summary, details, status, category, attachmen
         resolved_at = COALESCE(?, resolved_at)
        WHERE id = ?`,
       [summary, details, status, category, attachmentsJson, resolvedAt, id],
-      function (err) {
+      (err, result) => {
         if (err) {
           return reject(err);
         }
-        resolve(this.changes);
+        resolve(result.affectedRows);
       }
     );
   });
@@ -132,11 +132,11 @@ function updateSupportTicket(id, { summary, details, status, category, attachmen
 
 function deleteSupportTicket(id) {
   return new Promise((resolve, reject) => {
-    db.run('DELETE FROM support_tickets WHERE id = ?', [id], function (err) {
+    db.query('DELETE FROM support_tickets WHERE id = ?', [id], (err, result) => {
       if (err) {
         return reject(err);
       }
-      resolve(this.changes);
+      resolve(result.affectedRows);
     });
   });
 }

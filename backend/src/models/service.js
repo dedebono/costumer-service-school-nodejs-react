@@ -8,18 +8,18 @@ function createService({ name, codePrefix, isActive = true, slaWarnMinutes = 10,
     if (!['none', 'admission', 'ticket'].includes(connectionType)) {
       return reject(new Error('Invalid connectionType'));
     }
-    db.run(
+    db.query(
       'INSERT INTO services (name, code_prefix, is_active, sla_warn_minutes, connection_type) VALUES (?, ?, ?, ?, ?)',
       [name, codePrefix, isActive ? 1 : 0, slaWarnMinutes, connectionType],
-      function (err) {
+      (err, result) => {
         if (err) {
           return reject(err);
         }
-        db.get('SELECT * FROM services WHERE id = ?', [this.lastID], (err, row) => {
+        db.query('SELECT * FROM services WHERE id = ?', [result.insertId], (err, results) => {
           if (err) {
             return reject(err);
           }
-          resolve(row);
+          resolve(results[0]);
         });
       }
     );
@@ -34,22 +34,22 @@ function getAllServices({ activeOnly = false } = {}) {
       sql += ' WHERE is_active = 1';
     }
     sql += ' ORDER BY name';
-    db.all(sql, params, (err, rows) => {
+    db.query(sql, params, (err, results) => {
       if (err) {
         return reject(err);
       }
-      resolve(rows);
+      resolve(results);
     });
   });
 }
 
 function getServiceById(id) {
   return new Promise((resolve, reject) => {
-    db.get('SELECT * FROM services WHERE id = ?', [id], (err, row) => {
+    db.query('SELECT * FROM services WHERE id = ?', [id], (err, results) => {
       if (err) {
         return reject(err);
       }
-      resolve(row || null);
+      resolve(results[0] || null);
     });
   });
 }
@@ -59,7 +59,7 @@ function updateService(id, { name, codePrefix, isActive, slaWarnMinutes, connect
     if (connectionType && !['none', 'admission', 'ticket'].includes(connectionType)) {
       return reject(new Error('Invalid connectionType'));
     }
-    db.run(
+    db.query(
       `UPDATE services SET
         name = COALESCE(?, name),
         code_prefix = COALESCE(?, code_prefix),
@@ -68,11 +68,11 @@ function updateService(id, { name, codePrefix, isActive, slaWarnMinutes, connect
         connection_type = COALESCE(?, connection_type)
        WHERE id = ?`,
       [name, codePrefix, isActive !== undefined ? (isActive ? 1 : 0) : null, slaWarnMinutes, connectionType, id],
-      function (err) {
+      (err, result) => {
         if (err) {
           return reject(err);
         }
-        resolve(this.changes);
+        resolve(result.affectedRows);
       }
     );
   });
@@ -80,11 +80,11 @@ function updateService(id, { name, codePrefix, isActive, slaWarnMinutes, connect
 
 function deleteService(id) {
   return new Promise((resolve, reject) => {
-    db.run('DELETE FROM services WHERE id = ?', [id], function (err) {
+    db.query('DELETE FROM services WHERE id = ?', [id], (err, result) => {
       if (err) {
         return reject(err);
       }
-      resolve(this.changes);
+      resolve(result.affectedRows);
     });
   });
 }

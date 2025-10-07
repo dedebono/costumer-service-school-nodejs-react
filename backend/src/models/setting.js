@@ -2,9 +2,9 @@ const { db } = require('./db');
 
 function getSetting(key) {
   return new Promise((resolve, reject) => {
-    db.get('SELECT value FROM settings WHERE key = ?', [key], (err, row) => {
+    db.query('SELECT value FROM settings WHERE `key` = ?', [key], (err, results) => {
       if (err) reject(err);
-      else resolve(row ? row.value : null);
+      else resolve(results[0] ? results[0].value : null);
     });
   });
 }
@@ -14,10 +14,10 @@ function setSetting(key, value) {
     if (!key || value === undefined) {
       return reject(new Error('Key and value are required'));
     }
-    db.run(
-      'INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)',
+    db.query(
+      'INSERT INTO settings (`key`, value, updated_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = NOW()',
       [key, String(value)],
-      function (err) {
+      (err, result) => {
         if (err) reject(err);
         else resolve(true);
       }
@@ -27,11 +27,11 @@ function setSetting(key, value) {
 
 function getAllSettings() {
   return new Promise((resolve, reject) => {
-    db.all('SELECT key, value FROM settings ORDER BY key', [], (err, rows) => {
+    db.query('SELECT `key`, value FROM settings ORDER BY `key`', [], (err, results) => {
       if (err) reject(err);
       else {
         const settings = {};
-        rows.forEach(row => {
+        results.forEach(row => {
           settings[row.key] = row.value;
         });
         resolve(settings);
@@ -42,9 +42,9 @@ function getAllSettings() {
 
 function deleteSetting(key) {
   return new Promise((resolve, reject) => {
-    db.run('DELETE FROM settings WHERE key = ?', [key], function (err) {
+    db.query('DELETE FROM settings WHERE `key` = ?', [key], (err, result) => {
       if (err) reject(err);
-      else resolve(this.changes);
+      else resolve(result.affectedRows);
     });
   });
 }

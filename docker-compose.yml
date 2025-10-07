@@ -1,4 +1,16 @@
 services:
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: customer_service
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - mysql_data:/var/lib/mysql
+
   backend:
     build:
       context: ./backend
@@ -12,6 +24,12 @@ services:
       - SUPERVISOR_USERNAME=administrator
       - SUPERVISOR_PASSWORD=admin123
       - SUPERVISOR_EMAIL=email@mail.com
+      - DB_HOST=mysql
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_NAME=customer_service
+    depends_on:
+      - mysql
 
   frontend:
     build:
@@ -26,3 +44,6 @@ services:
       - VITE_API_BASE=http://192.168.1.21:3000
     depends_on:
       - backend
+
+volumes:
+  mysql_data:

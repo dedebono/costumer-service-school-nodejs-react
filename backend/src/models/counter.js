@@ -6,18 +6,18 @@ function createCounter({ name, allowedServiceIds, isActive = true }) {
       return reject(new Error('Name is required'));
     }
     const allowedIdsStr = Array.isArray(allowedServiceIds) ? allowedServiceIds.join(',') : (allowedServiceIds || '');
-    db.run(
+    db.query(
       'INSERT INTO counters (name, allowed_service_ids, is_active) VALUES (?, ?, ?)',
       [name, allowedIdsStr, isActive ? 1 : 0],
-      function (err) {
+      (err, result) => {
         if (err) {
           return reject(err);
         }
-        db.get('SELECT * FROM counters WHERE id = ?', [this.lastID], (err, row) => {
+        db.query('SELECT * FROM counters WHERE id = ?', [result.insertId], (err, results) => {
           if (err) {
             return reject(err);
           }
-          resolve(row);
+          resolve(results[0]);
         });
       }
     );
@@ -32,22 +32,22 @@ function getAllCounters({ activeOnly = false } = {}) {
       sql += ' WHERE is_active = 1';
     }
     sql += ' ORDER BY name';
-    db.all(sql, params, (err, rows) => {
+    db.query(sql, params, (err, results) => {
       if (err) {
         return reject(err);
       }
-      resolve(rows);
+      resolve(results);
     });
   });
 }
 
 function getCounterById(id) {
   return new Promise((resolve, reject) => {
-    db.get('SELECT * FROM counters WHERE id = ?', [id], (err, row) => {
+    db.query('SELECT * FROM counters WHERE id = ?', [id], (err, results) => {
       if (err) {
         return reject(err);
       }
-      resolve(row || null);
+      resolve(results[0] || null);
     });
   });
 }
@@ -55,18 +55,18 @@ function getCounterById(id) {
 function updateCounter(id, { name, allowedServiceIds, isActive }) {
   return new Promise((resolve, reject) => {
     const allowedIdsStr = allowedServiceIds !== undefined ? (Array.isArray(allowedServiceIds) ? allowedServiceIds.join(',') : allowedServiceIds) : null;
-    db.run(
+    db.query(
       `UPDATE counters SET
         name = COALESCE(?, name),
         allowed_service_ids = COALESCE(?, allowed_service_ids),
         is_active = COALESCE(?, is_active)
        WHERE id = ?`,
       [name, allowedIdsStr, isActive !== undefined ? (isActive ? 1 : 0) : null, id],
-      function (err) {
+      (err, result) => {
         if (err) {
           return reject(err);
         }
-        resolve(this.changes);
+        resolve(result.affectedRows);
       }
     );
   });
@@ -74,11 +74,11 @@ function updateCounter(id, { name, allowedServiceIds, isActive }) {
 
 function deleteCounter(id) {
   return new Promise((resolve, reject) => {
-    db.run('DELETE FROM counters WHERE id = ?', [id], function (err) {
+    db.query('DELETE FROM counters WHERE id = ?', [id], (err, result) => {
       if (err) {
         return reject(err);
       }
-      resolve(this.changes);
+      resolve(result.affectedRows);
     });
   });
 }

@@ -3,12 +3,12 @@ const crypto = require('crypto');
 
 function createResetRequest(userId) {
   return new Promise((resolve, reject) => {
-    db.run(
+    db.query(
       'INSERT INTO password_reset_requests (user_id) VALUES (?)',
       [userId],
-      function (err) {
+      (err, result) => {
         if (err) return reject(err);
-        resolve({ id: this.lastID, userId });
+        resolve({ id: result.insertId, userId });
       }
     );
   });
@@ -16,12 +16,12 @@ function createResetRequest(userId) {
 
 function getPendingRequestForUser(userId) {
     return new Promise((resolve, reject) => {
-        db.get(
+        db.query(
             "SELECT * FROM password_reset_requests WHERE user_id = ? AND status = 'pending'",
             [userId],
-            (err, row) => {
+            (err, results) => {
                 if (err) return reject(err);
-                resolve(row || null);
+                resolve(results[0] || null);
             }
         );
     });
@@ -29,12 +29,12 @@ function getPendingRequestForUser(userId) {
 
 function getRequestById(id) {
     return new Promise((resolve, reject) => {
-        db.get(
+        db.query(
             "SELECT * FROM password_reset_requests WHERE id = ?",
             [id],
-            (err, row) => {
+            (err, results) => {
                 if (err) return reject(err);
-                resolve(row || null);
+                resolve(results[0] || null);
             }
         );
     });
@@ -46,18 +46,18 @@ function approveRequest(requestId, supervisorId) {
     const expires = new Date();
     expires.setHours(expires.getHours() + 1); // Token is valid for 1 hour
 
-    db.run(
+    db.query(
       `UPDATE password_reset_requests
        SET status = 'approved',
            approved_by = ?,
-           approved_at = CURRENT_TIMESTAMP,
+           approved_at = NOW(),
            reset_token = ?,
            token_expires_at = ?
        WHERE id = ? AND status = 'pending'`,
       [supervisorId, token, expires.toISOString(), requestId],
-      function (err) {
+      (err, result) => {
         if (err) return reject(err);
-        if (this.changes === 0) {
+        if (result.affectedRows === 0) {
             return reject(new Error('Request not found or not pending'));
         }
         resolve({ token });
@@ -68,12 +68,12 @@ function approveRequest(requestId, supervisorId) {
 
 function getRequestByToken(token) {
     return new Promise((resolve, reject) => {
-        db.get(
-            "SELECT * FROM password_reset_requests WHERE reset_token = ? AND status = 'approved' AND token_expires_at > CURRENT_TIMESTAMP",
+        db.query(
+            "SELECT * FROM password_reset_requests WHERE reset_token = ? AND status = 'approved' AND token_expires_at > NOW()",
             [token],
-            (err, row) => {
+            (err, results) => {
                 if (err) return reject(err);
-                resolve(row || null);
+                resolve(results[0] || null);
             }
         );
     });
@@ -81,12 +81,12 @@ function getRequestByToken(token) {
 
 function markRequestAsCompleted(id) {
     return new Promise((resolve, reject) => {
-        db.run(
+        db.query(
             "UPDATE password_reset_requests SET status = 'completed', reset_token = NULL WHERE id = ?",
             [id],
-            function(err) {
+            (err, result) => {
                 if (err) return reject(err);
-                resolve(this.changes > 0);
+                resolve(result.affectedRows > 0);
             }
         );
     });

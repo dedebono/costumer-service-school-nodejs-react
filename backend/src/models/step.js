@@ -7,9 +7,9 @@ function getStepsByPipelineId(pipelineId) {
       FROM steps
       WHERE pipeline_id = ?
       ORDER BY ord ASC`;
-    db.all(sql, [pipelineId], (err, rows) => {
+    db.query(sql, [pipelineId], (err, results) => {
       if (err) reject(err);
-      else resolve(rows);
+      else resolve(results);
     });
   });
 }
@@ -19,10 +19,10 @@ function updateStep(step) {
     const sql = `
       UPDATE steps SET title = ?, slug = ?, is_final = ?, ord = ?
       WHERE id = ? AND pipeline_id = ?`;
-    db.run(sql, [step.title, step.slug, step.is_final ? 1 : 0, step.ord, step.id, step.pipeline_id], function (err) {
+    db.query(sql, [step.title, step.slug, step.is_final ? 1 : 0, step.ord, step.id, step.pipeline_id], (err, result) => {
       if (err) reject(err);
-      else if (this.changes === 0) reject(new Error('Step not found or mismatched pipeline'));
-      else resolve({ changes: this.changes });
+      else if (result.affectedRows === 0) reject(new Error('Step not found or mismatched pipeline'));
+      else resolve({ changes: result.affectedRows });
     });
   });
 }
@@ -32,9 +32,9 @@ function insertStep(step) {
     const sql = `
       INSERT INTO steps (pipeline_id, title, slug, ord, is_final)
       VALUES (?, ?, ?, ?, ?)`;
-    db.run(sql, [step.pipeline_id, step.title, step.slug, step.ord, step.is_final ? 1 : 0], function (err) {
+    db.query(sql, [step.pipeline_id, step.title, step.slug, step.ord, step.is_final ? 1 : 0], (err, result) => {
       if (err) reject(err);
-      else resolve({ lastID: this.lastID });
+      else resolve({ lastID: result.insertId });
     });
   });
 }
@@ -42,10 +42,10 @@ function insertStep(step) {
 function deleteStep(stepId, pipelineId) {
   return new Promise((resolve, reject) => {
     const sql = `DELETE FROM steps WHERE id = ? AND pipeline_id = ?`;
-    db.run(sql, [stepId, pipelineId], function (err) {
+    db.query(sql, [stepId, pipelineId], (err, result) => {
       if (err) reject(err);
-      else if (this.changes === 0) reject(new Error('Step not found or mismatched pipeline'));
-      else resolve({ changes: this.changes });
+      else if (result.affectedRows === 0) reject(new Error('Step not found or mismatched pipeline'));
+      else resolve({ changes: result.affectedRows });
     });
   });
 }

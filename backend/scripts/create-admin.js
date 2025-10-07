@@ -1,8 +1,13 @@
 require('dotenv').config();
 const bcrypt = require('bcrypt');
-const sqlite3 = require('sqlite3').verbose();
+const mysql = require('mysql2');
 
-const DB_PATH = process.env.DB_PATH || './database.sqlite';
+const dbConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'customer_service'
+};
 
 async function main() {
   const username = 'admin';
@@ -12,24 +17,30 @@ async function main() {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const db = new sqlite3.Database(DB_PATH);
+  const db = mysql.createConnection(dbConfig);
 
-  db.serialize(() => {
-    db.get('SELECT 1 AS x FROM users WHERE email = ? OR username = ?', [email, username], (err, row) => {
-      if (err) { console.error(err); process.exit(1); }
-      if (row) {
+  db.connect((err) => {
+    if (err) {
+      console.error('Error connecting to MySQL:', err);
+      process.exit(1);
+    }
+    console.log('Connected to MySQL');
+
+    db.query('SELECT 1 AS x FROM users WHERE email = ? OR username = ?', [email, username], (err, rows) => {
+      if (err) { console.error(err); db.end(); process.exit(1); }
+      if (rows.length > 0) {
         console.log('Admin already exists. Skipping.');
-        db.close();
+        db.end();
         return;
       }
 
-      db.run(
+      db.query(
         'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)',
         [username, email, passwordHash, role],
-        function (e2) {
-          if (e2) { console.error(e2); process.exit(1); }
+        (err, result) => {
+          if (err) { console.error(err); db.end(); process.exit(1); }
           console.log('✅ Admin created:', { username, email, role });
-          db.close();
+          db.end();
         }
       );
     });

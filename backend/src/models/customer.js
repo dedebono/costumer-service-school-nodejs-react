@@ -5,18 +5,18 @@ function createCustomer({ name, email, phone }) {
     if (!name || !email) {
       return reject(new Error('Name and email are required'));
     }
-    db.run(
+    db.query(
       'INSERT INTO customers (name, email, phone) VALUES (?, ?, ?)',
       [name, email, phone],
-      function (err) {
+      (err, result) => {
         if (err) {
           return reject(err);
         }
-        db.get('SELECT * FROM customers WHERE id = ?', [this.lastID], (err, row) => {
+        db.query('SELECT * FROM customers WHERE id = ?', [result.insertId], (err, results) => {
           if (err) {
             return reject(err);
           }
-          resolve(row);
+          resolve(results[0]);
         });
       }
     );
@@ -37,7 +37,7 @@ function searchCustomers({ name, phone, email, limit = 20, offset = 0 } = {}) {
     // Build OR filters
     if (nameQ)  { clauses.push('LOWER(c.name) LIKE ?');          params.push(`%${nameQ.toLowerCase()}%`); }
     if (phoneQ) { clauses.push('c.phone = ?');                    params.push(phoneQ); } // exact
-    if (emailQ) { clauses.push('c.email = ? COLLATE NOCASE');     params.push(emailQ); } // case-insensitive
+    if (emailQ) { clauses.push('LOWER(c.email) = ?');             params.push(emailQ); } // case-insensitive
 
     if (!clauses.length) return resolve([]); // require at least one filter
 
@@ -54,7 +54,7 @@ function searchCustomers({ name, phone, email, limit = 20, offset = 0 } = {}) {
       LIMIT ? OFFSET ?`;
     const listParams = [...params, lim, off];
 
-    db.all(sql, listParams, (err, rows) => (err ? reject(err) : resolve(rows)));
+    db.query(sql, listParams, (err, results) => (err ? reject(err) : resolve(results)));
   });
 }
 
@@ -65,8 +65,9 @@ function findOrCreateCustomerByPhone({ name, email, phone }) {
     }
 
     // First, try to find existing customer by phone
-    db.get('SELECT * FROM customers WHERE phone = ?', [phone], (err, existing) => {
+    db.query('SELECT * FROM customers WHERE phone = ?', [phone], (err, results) => {
       if (err) return reject(err);
+      const existing = results[0];
       if (existing) {
         return resolve(existing);
       }
@@ -85,36 +86,36 @@ function findOrCreateCustomerByPhone({ name, email, phone }) {
 
 function getAllCustomers() {
   return new Promise((resolve, reject) => {
-    db.all('SELECT * FROM customers ORDER BY name', [], (err, rows) => {
+    db.query('SELECT * FROM customers ORDER BY name', [], (err, results) => {
       if (err) {
         return reject(err);
       }
-      resolve(rows);
+      resolve(results);
     });
   });
 }
 
 function getCustomerById(id) {
   return new Promise((resolve, reject) => {
-    db.get('SELECT * FROM customers WHERE id = ?', [id], (err, row) => {
+    db.query('SELECT * FROM customers WHERE id = ?', [id], (err, results) => {
       if (err) {
         return reject(err);
       }
-      resolve(row || null);
+      resolve(results[0] || null);
     });
   });
 }
 
 function updateCustomer(id, { name, email, phone }) {
     return new Promise((resolve, reject) => {
-        db.run(
+        db.query(
             `UPDATE customers SET name = COALESCE(?, name), email = COALESCE(?, email), phone = COALESCE(?, phone) WHERE id = ?`,
             [name, email, phone, id],
-            function (err) {
+            (err, result) => {
                 if (err) {
                     return reject(err);
                 }
-                resolve(this.changes);
+                resolve(result.affectedRows);
             }
         );
     });
@@ -122,11 +123,11 @@ function updateCustomer(id, { name, email, phone }) {
 
 function deleteCustomer(id) {
     return new Promise((resolve, reject) => {
-        db.run('DELETE FROM customers WHERE id = ?', [id], function (err) {
+        db.query('DELETE FROM customers WHERE id = ?', [id], (err, result) => {
             if (err) {
                 return reject(err);
             }
-            resolve(this.changes);
+            resolve(result.affectedRows);
         });
     });
 }

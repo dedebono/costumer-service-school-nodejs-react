@@ -1,24 +1,27 @@
 // src/models/db.js
-const fs = require('fs');
-const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
+const mysql = require('mysql2');
 
-const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'database.sqlite');
-console.log('[DB] Using SQLite at:', path.resolve(DB_PATH));
+const dbConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'customer_service',
+  multipleStatements: true
+};
 
-const db = new sqlite3.Database(DB_PATH);
+console.log('[DB] Connecting to MySQL at:', dbConfig.host, dbConfig.database);
 
-// If you load schema.sql, keep it
-const schemaPath = path.join(process.cwd(), 'schema.sql');
-if (fs.existsSync(schemaPath)) {
-  const sql = fs.readFileSync(schemaPath, 'utf8');
-  db.exec(sql, (err) => {
-    if (err) {
-      console.error('Error executing schema:', err);
-    } else {
-      console.log('Schema loaded successfully');
-    }
-  });
-}
+const db = mysql.createConnection(dbConfig);
+
+db.connect((err) => {
+  if (err) {
+    console.error('Error connecting to MySQL:', err);
+    process.exit(1);
+  } else {
+    console.log('Connected to MySQL successfully');
+  }
+});
+
+// Note: Schema loading is handled separately, e.g., via scripts or manual execution
 
 module.exports = { db };

@@ -5,18 +5,18 @@ function createQueueCustomer({ name, email, phone }) {
     if (!phone) {
       return reject(new Error('Phone is required'));
     }
-    db.run(
+    db.query(
       'INSERT INTO queue_customers (name, email, phone) VALUES (?, ?, ?)',
       [name || null, email || null, phone],
-      function (err) {
+      (err, result) => {
         if (err) {
           return reject(err);
         }
-        db.get('SELECT * FROM queue_customers WHERE id = ?', [this.lastID], (err, row) => {
+        db.query('SELECT * FROM queue_customers WHERE id = ?', [result.insertId], (err, results) => {
           if (err) {
             return reject(err);
           }
-          resolve(row);
+          resolve(results[0]);
         });
       }
     );
@@ -30,18 +30,19 @@ function findOrCreateQueueCustomerByPhone({ name, email, phone }) {
     }
 
     // First, try to find existing queue customer by phone
-    db.get('SELECT * FROM queue_customers WHERE phone = ?', [phone], (err, existing) => {
+    db.query('SELECT * FROM queue_customers WHERE phone = ?', [phone], (err, results) => {
       if (err) return reject(err);
+      const existing = results[0];
       if (existing) {
         // Update existing customer with new info if provided
         if (name || email) {
           const updateSql = 'UPDATE queue_customers SET name = COALESCE(?, name), email = COALESCE(?, email) WHERE id = ?';
-          db.run(updateSql, [name || null, email || null, existing.id], (updateErr) => {
+          db.query(updateSql, [name || null, email || null, existing.id], (updateErr, updateResult) => {
             if (updateErr) return reject(updateErr);
             // Return updated customer
-            db.get('SELECT * FROM queue_customers WHERE id = ?', [existing.id], (getErr, updated) => {
+            db.query('SELECT * FROM queue_customers WHERE id = ?', [existing.id], (getErr, getResults) => {
               if (getErr) return reject(getErr);
-              resolve(updated);
+              resolve(getResults[0]);
             });
           });
         } else {
@@ -59,36 +60,36 @@ function findOrCreateQueueCustomerByPhone({ name, email, phone }) {
 
 function getAllQueueCustomers() {
   return new Promise((resolve, reject) => {
-    db.all('SELECT * FROM queue_customers ORDER BY name', [], (err, rows) => {
+    db.query('SELECT * FROM queue_customers ORDER BY name', [], (err, results) => {
       if (err) {
         return reject(err);
       }
-      resolve(rows);
+      resolve(results);
     });
   });
 }
 
 function getQueueCustomerById(id) {
   return new Promise((resolve, reject) => {
-    db.get('SELECT * FROM queue_customers WHERE id = ?', [id], (err, row) => {
+    db.query('SELECT * FROM queue_customers WHERE id = ?', [id], (err, results) => {
       if (err) {
         return reject(err);
       }
-      resolve(row || null);
+      resolve(results[0] || null);
     });
   });
 }
 
 function updateQueueCustomer(id, { name, email, phone }) {
   return new Promise((resolve, reject) => {
-    db.run(
+    db.query(
       `UPDATE queue_customers SET name = COALESCE(?, name), email = COALESCE(?, email), phone = COALESCE(?, phone) WHERE id = ?`,
       [name, email, phone, id],
-      function (err) {
+      (err, result) => {
         if (err) {
           return reject(err);
         }
-        resolve(this.changes);
+        resolve(result.affectedRows);
       }
     );
   });
@@ -96,11 +97,11 @@ function updateQueueCustomer(id, { name, email, phone }) {
 
 function deleteQueueCustomer(id) {
   return new Promise((resolve, reject) => {
-    db.run('DELETE FROM queue_customers WHERE id = ?', [id], function (err) {
+    db.query('DELETE FROM queue_customers WHERE id = ?', [id], (err, result) => {
       if (err) {
         return reject(err);
       }
-      resolve(this.changes);
+      resolve(result.affectedRows);
     });
   });
 }
@@ -118,7 +119,7 @@ function searchQueueCustomers({ name, phone, email, limit = 20, offset = 0 } = {
     // Build OR filters
     if (nameQ)  { clauses.push('LOWER(qc.name) LIKE ?');          params.push(`%${nameQ.toLowerCase()}%`); }
     if (phoneQ) { clauses.push('qc.phone = ?');                   params.push(phoneQ); } // exact
-    if (emailQ) { clauses.push('qc.email = ? COLLATE NOCASE');    params.push(emailQ); } // case-insensitive
+    if (emailQ) { clauses.push('LOWER(qc.email) = ?');            params.push(emailQ); } // case-insensitive
 
     if (!clauses.length) return resolve([]); // require at least one filter
 
@@ -135,7 +136,7 @@ function searchQueueCustomers({ name, phone, email, limit = 20, offset = 0 } = {
       LIMIT ? OFFSET ?`;
     const listParams = [...params, lim, off];
 
-    db.all(sql, listParams, (err, rows) => (err ? reject(err) : resolve(rows)));
+    db.query(sql, listParams, (err, results) => (err ? reject(err) : resolve(results)));
   });
 }
 

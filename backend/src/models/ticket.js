@@ -16,13 +16,13 @@ function createTicket({ title, description, priority = 'medium', status = 'open'
 
     const sql = `INSERT INTO tickets (id, title, description, priority, status, customer_id, created_by, created_at)
          VALUES (?,  ?,     ?,           ?,        ?,      ?,           ?,          CURRENT_TIMESTAMP)`;
-    db.run(sql, [id, title, description ?? null, priority, status, customerId, createdBy], function (err) {
+    db.query(sql, [id, title, description ?? null, priority, status, customerId, createdBy], (err, result) => {
       if (err) return reject(err);
       const selectSql = `SELECT id, title, description, priority, status, customer_id, created_by, created_at
                  FROM tickets WHERE id = ?`;
-      db.get(selectSql, [id], (err2, row) => {
+      db.query(selectSql, [id], (err2, rows) => {
         if (err2) reject(err2);
-        else resolve(row);
+        else resolve(rows[0]);
       });
     });
   });
@@ -40,9 +40,9 @@ function getTicketById(id) {
       LEFT JOIN users u     ON u.id = t.created_by
       LEFT JOIN customers c ON c.id = t.customer_id
       WHERE t.id = ?`;
-    db.get(sql, [id], (err, row) => {
+    db.query(sql, [id], (err, rows) => {
       if (err) reject(err);
-      else resolve(row || null);
+      else resolve(rows[0] || null);
     });
   });
 }
@@ -86,11 +86,11 @@ function getAllTickets({ status, priority, q, sortBy = 'created_at', sortDir = '
       LEFT JOIN customers c ON c.id = t.customer_id
       ${whereSql}`;
 
-    db.all(sql, [...params, limit, offset], (err, rows) => {
+    db.query(sql, [...params, limit, offset], (err, rows) => {
       if (err) return reject(err);
-      db.get(countSql, params, (err2, cnt) => {
+      db.query(countSql, params, (err2, cntResults) => {
         if (err2) reject(err2);
-        else resolve({ rows, total: cnt.total, limit, offset });
+        else resolve({ rows, total: cntResults[0].total, limit, offset });
       });
     });
   });
@@ -100,14 +100,15 @@ function updateTicketStatus(id, status, changedBy) {
   return new Promise((resolve, reject) => {
     if (!ALLOWED_STATUS.has(status)) return reject(new Error('invalid status'));
     const selectSql = 'SELECT status FROM tickets WHERE id = ?';
-    db.get(selectSql, [id], (err, current) => {
+    db.query(selectSql, [id], (err, results) => {
       if (err) return reject(err);
+      const current = results[0];
       if (!current) return reject(new Error('ticket not found'));
       const updateSql = 'UPDATE tickets SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
-      db.run(updateSql, [status, id], (err2) => {
+      db.query(updateSql, [status, id], (err2, result) => {
         if (err2) return reject(err2);
         const historySql = 'INSERT INTO ticket_history (ticket_id, action, old_value, new_value, changed_by, changed_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)';
-        db.run(historySql, [id, 'status_change', current.status, status, changedBy], (err3) => {
+        db.query(historySql, [id, 'status_change', current.status, status, changedBy], (err3, result3) => {
           if (err3) reject(err3);
           else resolve(true);
         });
@@ -121,7 +122,7 @@ function deleteTicket(id) {
     // Note: queue_tickets table doesn't have ticket_id field, it's for queue system
     // Just delete the ticket directly since tickets and queue_tickets are separate systems
     const deleteTicketSql = 'DELETE FROM tickets WHERE id = ?';
-    db.run(deleteTicketSql, [id], (err) => {
+    db.query(deleteTicketSql, [id], (err, result) => {
       if (err) reject(err);
       else resolve(true);
     });
