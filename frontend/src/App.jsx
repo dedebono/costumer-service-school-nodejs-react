@@ -5,6 +5,9 @@ import Supervisor from './pages/Supervisor.jsx';
 import CustomerService from './pages/CustomerService.jsx';
 import Login from './features/auth/login.jsx';
 import Kiosk from './pages/Kiosk.jsx';
+import OptionKiosk from './pages/OptionKiosk.jsx';
+import FormKiosk from './pages/FormKiosk.jsx';
+import QueueKiosk from './pages/QueueKiosk.jsx';
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -35,7 +38,11 @@ export default function App() {
               </Protected>
             }
           />
-          <Route path="/kiosk" element={<Kiosk />} />
+          <Route path="/kiosk" element={<Kiosk />}>
+            <Route index element={<OptionKiosk />} />
+            <Route path="form" element={<FormKiosk />} />
+            <Route path="queue" element={<QueueKiosk />} />
+          </Route>
           <Route
             path="/*"
             element={

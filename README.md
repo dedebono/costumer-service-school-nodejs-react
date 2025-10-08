@@ -1,6 +1,6 @@
 # Customer Service School - Node.js React
 
-A full-stack customer service application for schools, built with Node.js, Express, React, and SQLite. This application provides a platform for managing customer service tickets, with different roles for customer service staff and supervisors.
+A full-stack customer service application for schools, built with Node.js, Express, React, and MySQL. This application provides a platform for managing customer service tickets, with different roles for customer service staff and supervisors.
 
 ## Technologies Used
 
@@ -66,7 +66,22 @@ This application now includes a full queue management feature for customer servi
 - Support Tickets: Linked support tickets for queue tickets.
 - Settings: Configurable settings for SLAs and business hours.
 - Role-based access control for CustomerService and Supervisor roles.
-- Real-time updates planned via websockets.
+
+## Admission Feature
+
+This application includes a student admission pipeline feature:
+
+- **Pipelines**: Define admission pipelines with multiple steps.
+- **Applicants**: Manage applicants and their progress through the pipeline.
+- **Dynamic Steps**: Create, update, and delete steps within a pipeline.
+- **Drag & Drop**: Easily move applicants between steps.
+
+## Real-time Updates
+
+The application uses **Socket.IO** for real-time communication between the frontend and backend. This is used for:
+
+- **Queue Updates**: Notifying clients when the queue changes.
+- **Notifications**: Sending real-time notifications to users.
 
 ## Frontend Flow
 
