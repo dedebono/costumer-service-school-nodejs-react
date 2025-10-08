@@ -59,6 +59,7 @@ function getQueueTicketById(id) {
              c.name AS customer_name, c.phone AS customer_phone,
              qc.name AS queue_customer_name, qc.phone AS queue_customer_phone,
              u.username AS claimed_by_username,
+             cs.username AS customer_service_username,
              (SELECT COUNT(*) + 1
               FROM queue_tickets qt2
               WHERE qt2.service_id = qt.service_id
@@ -69,6 +70,7 @@ function getQueueTicketById(id) {
       LEFT JOIN customers c ON c.id = qt.customer_id
       LEFT JOIN queue_customers qc ON qc.id = qt.queue_customer_id
       LEFT JOIN users u ON u.id = qt.claimed_by
+      LEFT JOIN users cs ON cs.id = qt.customer_service_id
       WHERE qt.id = ?`;
     db.query(sql, [id], (err, results) => {
       if (err) reject(err);
@@ -83,12 +85,14 @@ function getQueueByService(serviceId, { status, limit = 50 } = {}) {
       SELECT qt.*, s.name AS service_name, s.code_prefix,
              c.name AS customer_name, c.phone AS customer_phone,
              qc.name AS queue_customer_name, qc.phone AS queue_customer_phone,
-             u.username AS claimed_by_username
+             u.username AS claimed_by_username,
+             cs.username AS customer_service_username
       FROM queue_tickets qt
       LEFT JOIN services s ON s.id = qt.service_id
       LEFT JOIN customers c ON c.id = qt.customer_id
       LEFT JOIN queue_customers qc ON qc.id = qt.queue_customer_id
       LEFT JOIN users u ON u.id = qt.claimed_by
+      LEFT JOIN users cs ON cs.id = qt.customer_service_id
       WHERE qt.service_id = ?`;
     const params = [serviceId];
     if (status) {
@@ -112,8 +116,8 @@ function claimTicket(id, claimedBy) {
       if (!ticket) return reject(new Error('Ticket not found'));
       if (ticket.status !== 'WAITING') return reject(new Error('Ticket not available for claiming'));
 
-      const sql = 'UPDATE queue_tickets SET status = ?, claimed_by = ?, called_at = NOW() WHERE id = ?';
-      db.query(sql, ['CALLED', claimedBy, id], (err2, result) => {
+      const sql = 'UPDATE queue_tickets SET status = ?, claimed_by = ?, customer_service_id = ?, called_at = NOW(), timer_start = NOW() WHERE id = ?';
+      db.query(sql, ['CALLED', claimedBy, claimedBy, id], (err2, result) => {
         if (err2) reject(err2);
         else {
           // Emit queue update with delay for robustness
@@ -166,7 +170,7 @@ function resolveTicket(id, notes) {
       if (!ticket) return reject(new Error('Ticket not found'));
       if (!['CALLED', 'IN_SERVICE'].includes(ticket.status)) return reject(new Error('Ticket not in service'));
 
-      const sql = 'UPDATE queue_tickets SET status = ?, finished_at = NOW(), notes = COALESCE(?, notes) WHERE id = ?';
+      const sql = 'UPDATE queue_tickets SET status = ?, finished_at = NOW(), timer_end = NOW(), notes = COALESCE(?, notes) WHERE id = ?';
       db.query(sql, ['DONE', notes, id], (err2, result) => {
         if (err2) reject(err2);
         else {
@@ -191,7 +195,7 @@ function requeueTicket(id, notes) {
       if (!ticket) return reject(new Error('Ticket not found'));
       if (!['CALLED', 'IN_SERVICE'].includes(ticket.status)) return reject(new Error('Ticket not in service'));
 
-      const sql = 'UPDATE queue_tickets SET status = ?, claimed_by = NULL, called_at = NULL, started_at = NULL, notes = COALESCE(?, notes) WHERE id = ?';
+      const sql = 'UPDATE queue_tickets SET status = ?, claimed_by = NULL, customer_service_id = NULL, called_at = NULL, started_at = NULL, notes = COALESCE(?, notes) WHERE id = ?';
       db.query(sql, ['WAITING', notes, id], (err2, result) => {
         if (err2) reject(err2);
         else {
@@ -216,7 +220,7 @@ function markNoShow(id) {
       if (!ticket) return reject(new Error('Ticket not found'));
       if (ticket.status !== 'CALLED') return reject(new Error('Only called tickets can be marked as no-show'));
 
-      const sql = 'UPDATE queue_tickets SET status = ?, no_show_at = NOW() WHERE id = ?';
+      const sql = 'UPDATE queue_tickets SET status = ?, no_show_at = NOW(), timer_end = NOW() WHERE id = ?';
       db.query(sql, ['NO_SHOW', id], (err2, result) => {
         if (err2) reject(err2);
         else {

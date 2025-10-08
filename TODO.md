@@ -1,4 +1,7 @@
-- [x] Create OptionKiosk.jsx: Extract service selection logic, load services, handle selection and navigation to form.
-- [x] Create FormKiosk.jsx: Extract form logic, receive selectedService from location state, handle form submission and navigation to queue.
-- [x] Create QueueKiosk.jsx: Extract ticket display logic, receive ticket from location state, handle socket updates and reset navigation.
-- [x] Edit Kiosk.jsx: Update to use Routes for sub-paths, import and route the three components.
+# TODO: Modify CSDashboard for Admission Flow
+
+## Tasks
+- [x] Modify handleStartService function in frontend/src/pages/CSDashboard.jsx for connectionType === 'admission'
+  - Replace `await api.queue.resolveTicket(ticketId, \`Converted to admission applicant in pipeline\`)` with `await api.queue.startService(ticketId)`
+  - Update success message to 'Applicant created successfully. Please resolve the ticket when done.'
+- [ ] Test the admission flow: Start Service -> Select Pipeline -> Create Applicant -> Resolve Ticket button appears -> Click to end queue ticket

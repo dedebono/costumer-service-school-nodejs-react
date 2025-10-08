@@ -121,10 +121,13 @@ CREATE TABLE IF NOT EXISTS queue_tickets (
   queue_customer_id BIGINT UNSIGNED NULL,
   status            ENUM('WAITING','CALLED','IN_SERVICE','DONE','NO_SHOW','CANCELED') NOT NULL DEFAULT 'WAITING',
   claimed_by        BIGINT UNSIGNED NULL,
+  customer_service_id BIGINT UNSIGNED NULL,
   called_at         DATETIME NULL,
   started_at        DATETIME NULL,
   finished_at       DATETIME NULL,
   no_show_at        DATETIME NULL,
+  timer_start       DATETIME NULL,
+  timer_end         DATETIME NULL,
   notes             TEXT,
   created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -132,6 +135,7 @@ CREATE TABLE IF NOT EXISTS queue_tickets (
   KEY idx_queue_tickets_service (service_id),
   KEY idx_queue_tickets_customer (customer_id),
   KEY idx_queue_tickets_queue_customer (queue_customer_id),
+  KEY idx_queue_tickets_customer_service (customer_service_id),
   CONSTRAINT fk_qt_service
     FOREIGN KEY (service_id) REFERENCES services(id)
     ON UPDATE CASCADE ON DELETE RESTRICT,
@@ -143,6 +147,9 @@ CREATE TABLE IF NOT EXISTS queue_tickets (
     ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT fk_qt_claimed_by
     FOREIGN KEY (claimed_by) REFERENCES users(id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_qt_customer_service
+    FOREIGN KEY (customer_service_id) REFERENCES users(id)
     ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 

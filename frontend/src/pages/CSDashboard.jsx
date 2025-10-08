@@ -23,6 +23,7 @@ export default function CSDashboard() {
   const [error, setError] = useState('')
   const [supportNotes, setSupportNotes] = useState('')
   const [pipelines, setPipelines] = useState([])
+  const [timer, setTimer] = useState('00:00')
 
   // Socket + freshness refs
   const socketRef = useRef(null)
@@ -58,6 +59,29 @@ export default function CSDashboard() {
     prevServiceIdRef.current = nextId
     loadQueue()
   }, [selectedService])
+
+  useEffect(() => {
+    if (!activeTicket) {
+      setTimer('00:00')
+      return
+    }
+    const start = new Date(activeTicket.called_at)
+    const end = activeTicket.status === 'DONE' ? new Date(activeTicket.finished_at) : activeTicket.status === 'NO_SHOW' ? new Date(activeTicket.no_show_at) : new Date()
+    const diff = end - start
+    const minutes = Math.floor(diff / 60000)
+    const seconds = Math.floor((diff % 60000) / 1000)
+    setTimer(`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`)
+    if (activeTicket.status === 'CALLED' || activeTicket.status === 'IN_SERVICE') {
+      const interval = setInterval(() => {
+        const now = new Date()
+        const diff = now - start
+        const minutes = Math.floor(diff / 60000)
+        const seconds = Math.floor((diff % 60000) / 1000)
+        setTimer(`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`)
+      }, 1000)
+      return () => clearInterval(interval)
+    }
+  }, [activeTicket])
 
   const setupSocket = () => {
     const s = io(import.meta.env.VITE_SOCKET_URL, { transports: ['websocket', 'polling'] })
@@ -174,8 +198,8 @@ export default function CSDashboard() {
               customerEmail: activeTicket.customer_email || activeTicket.queue_customer_email || '',
             }
             await api.admission.autoCreateApplicant(applicantData)
-            await api.queue.resolveTicket(ticketId, `Converted to admission applicant in pipeline`)
-            Swal.fire({ icon: 'success', title: 'Applicant Created', text: 'Queue customer has been converted to admission applicant successfully.' })
+            await api.queue.startService(ticketId)
+            Swal.fire({ icon: 'success', title: 'Applicant Created', text: 'Applicant created successfully. Please resolve the ticket when done.' })
             await loadQueue()
           } catch (err) {
             setError(err.message || 'Failed to create applicant')
@@ -203,11 +227,32 @@ export default function CSDashboard() {
 
   const handleResolveTicket = async (ticketId) => {
     if (!supportNotes.trim()) { setError('Please enter resolution notes'); return }
+
     setLoading(true)
     try {
       await api.queue.resolveTicket(ticketId, supportNotes)
       setSupportNotes('')
       await loadQueue()
+
+      const ticket = activeTicket
+      const totalTime = ticket.timer_end && ticket.timer_start ? ((new Date(ticket.timer_end) - new Date(ticket.timer_start)) / 1000 / 60).toFixed(1) + ' min' : 'N/A'
+
+      await Swal.fire({
+        title: 'Ticket Resolved',
+        html: `
+          <div style="text-align: left; font-size: 14px;">
+            <p><strong>Name:</strong> ${ticket.customer_name || ticket.queue_customer_name || 'Anonymous'}</p>
+            <p><strong>Queue Number:</strong> ${ticket.number}</p>
+            <p><strong>Date:</strong> ${new Date(ticket.created_at).toLocaleDateString()}</p>
+            <p><strong>Time:</strong> ${new Date(ticket.created_at).toLocaleTimeString()}</p>
+            <p><strong>Total Timer:</strong> ${totalTime}</p>
+            <p><strong>Notes:</strong> ${supportNotes}</p>
+          </div>
+        `,
+        timer: 3000,
+        showConfirmButton: false,
+        icon: 'success',
+      })
     } catch (err) {
       setError(err.message || 'Failed to resolve ticket')
     } finally {
@@ -232,6 +277,25 @@ export default function CSDashboard() {
     try {
       await api.queue.markNoShow(ticketId)
       await loadQueue()
+
+      const ticket = activeTicket
+      const totalTime = ticket.timer_end && ticket.timer_start ? ((new Date(ticket.timer_end) - new Date(ticket.timer_start)) / 1000 / 60).toFixed(1) + ' min' : 'N/A'
+
+      await Swal.fire({
+        title: 'Marked as No Show',
+        html: `
+          <div style="text-align: left; font-size: 14px;">
+            <p><strong>Name:</strong> ${ticket.customer_name || ticket.queue_customer_name || 'Anonymous'}</p>
+            <p><strong>Queue Number:</strong> ${ticket.number}</p>
+            <p><strong>Date:</strong> ${new Date(ticket.created_at).toLocaleDateString()}</p>
+            <p><strong>Time:</strong> ${new Date(ticket.created_at).toLocaleTimeString()}</p>
+            <p><strong>Total Timer:</strong> ${totalTime}</p>
+          </div>
+        `,
+        timer: 3000,
+        showConfirmButton: false,
+        icon: 'warning',
+      })
     } catch (err) {
       setError(err.message || 'Failed to mark as no-show')
     } finally {
@@ -239,17 +303,7 @@ export default function CSDashboard() {
     }
   }
 
-  const handleCancelTicket = async (ticketId) => {
-    setLoading(true)
-    try {
-      await api.queue.cancelTicket(ticketId, 'Canceled by CS')
-      await loadQueue()
-    } catch (err) {
-      setError(err.message || 'Failed to cancel ticket')
-    } finally {
-      setLoading(false)
-    }
-  }
+
 
   // CSV Export
   const safe = (v) => String(v ?? '').replace(/"/g, '""')
@@ -386,11 +440,19 @@ export default function CSDashboard() {
                       </span>
                     </div>
                     <div>
+                      <strong>Timer:</strong> {timer}
+                    </div>
+                    <div>
                       <strong>Phone:</strong> {activeTicket.customer_phone || activeTicket.queue_customer_phone || '-'}
                     </div>
                     <div>
                       <strong>Created:</strong> {toLocalTime(activeTicket.created_at)}
                     </div>
+                    {activeTicket.customer_service_username && (
+                      <div>
+                        <strong>Handled by:</strong> {activeTicket.customer_service_username}
+                      </div>
+                    )}
                     {activeTicket.notes && (
                       <div>
                         <strong>Notes:</strong> {activeTicket.notes}
@@ -533,15 +595,7 @@ export default function CSDashboard() {
                                     Claim
                                   </button>
                                 )}
-                                {ticket.status === 'CALLED' && (
-                                  <button
-                                    onClick={() => handleCancelTicket(ticket.id)}
-                                    disabled={loading}
-                                    className="btn btn--outline btn--sm"
-                                  >
-                                    Cancel
-                                  </button>
-                                )}
+
                               </div>
                             </div>
 

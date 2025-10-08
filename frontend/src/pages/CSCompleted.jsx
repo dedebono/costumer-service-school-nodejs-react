@@ -68,6 +68,11 @@ export default function CSCompleted() {
   // CSV helpers
   const safe = (v) => String(v ?? '').replace(/"/g, '""')
   const formatISO = (v) => { if (!v) return ''; try { return new Date(v).toISOString() } catch { return String(v) } }
+  const formatTotalTime = (start, end) => {
+    if (!start || !end) return '';
+    const diff = (new Date(end) - new Date(start)) / 1000 / 60;
+    return diff.toFixed(1) + ' min';
+  }
   const toCSV = (rows) => {
     if (!rows.length) return ''
     const headers = Object.keys(rows[0])
@@ -95,6 +100,7 @@ export default function CSCompleted() {
         'Customer Phone': t.customer_phone || t.queue_customer_phone || '',
         'Customer Email': t.customer_email || '',
         'Created At (ISO)': formatISO(t.created_at),
+        'Total Timer (min)': formatTotalTime(t.timer_start, t.timer_end),
         Notes: t.notes || ''
       }))
       const csv = toCSV(rows)
@@ -237,6 +243,12 @@ export default function CSCompleted() {
                           <div>
                             <div style={{ fontWeight: 500, fontSize: 'var(--fs-300)' }}>{t.customer_name || t.queue_customer_name || 'Anonymous'}</div>
                             <div style={{ fontSize: 'var(--fs-300)', opacity: 0.6 }}>{toLocalTime(t.created_at)}</div>
+                            <div style={{ fontSize: 'var(--fs-300)', opacity: 0.6 }}>{formatTotalTime(t.timer_start, t.timer_end)}</div>
+                            {t.customer_service_username && (
+                              <div style={{ fontSize: 'var(--fs-300)', opacity: 0.8 }}>
+                                <strong>Handled by:</strong> {t.customer_service_username}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <span style={{ ...badgeBase, ...(STATUS_BADGE_STYLES[t.status] || {}) }}>

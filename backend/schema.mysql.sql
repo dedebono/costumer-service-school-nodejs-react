@@ -125,6 +125,8 @@ CREATE TABLE IF NOT EXISTS queue_tickets (
   started_at        DATETIME NULL,
   finished_at       DATETIME NULL,
   no_show_at        DATETIME NULL,
+  timer_start       DATETIME NULL,
+  timer_end         DATETIME NULL,
   notes             TEXT,
   created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
