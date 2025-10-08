@@ -22,6 +22,6 @@ export default defineConfig(({ mode }) => {
         }
       }
     },
-    build: { sourcemap: true }
+    build: { sourcemap: false }
   };
 });
