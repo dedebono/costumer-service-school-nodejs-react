@@ -6,7 +6,7 @@ import Swal from 'sweetalert2'
 export default function FormKiosk() {
   const location = useLocation()
   const navigate = useNavigate()
-  const selectedService = location.state?.selectedService
+  const { selectedBuilding, selectedQueueGroup, selectedService } = location.state || {}
 
   const [formData, setFormData] = useState({
     name: '',
@@ -175,10 +175,20 @@ export default function FormKiosk() {
             border: '1px solid color-mix(in oklab, var(--clr-primary) 20%, transparent)'
           }}>
             <div style={{ fontWeight: '600', color: 'var(--clr-primary)', marginBottom: 'var(--space-1)' }}>
-              Layanan Terpilih
+              Pilihan Terpilih
             </div>
+            {selectedBuilding && (
+              <div style={{ color: 'var(--clr-primary)', fontSize: 'var(--fs-400)', marginBottom: 'var(--space-1)' }}>
+                Gedung: {selectedBuilding.name}
+              </div>
+            )}
+            {selectedQueueGroup && (
+              <div style={{ color: 'var(--clr-primary)', fontSize: 'var(--fs-400)', marginBottom: 'var(--space-1)' }}>
+                Grup Antrian: {selectedQueueGroup.name}
+              </div>
+            )}
             <div style={{ color: 'var(--clr-primary)', fontSize: 'var(--fs-500)' }}>
-              {selectedService.name}
+              Layanan: {selectedService.name}
             </div>
           </div>
 

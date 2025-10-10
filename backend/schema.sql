@@ -369,3 +369,53 @@ CREATE TABLE IF NOT EXISTS password_reset_requests (
     FOREIGN KEY (approved_by) REFERENCES users(id)
     ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- =====================
+-- 20) BUILDINGS
+-- =====================
+CREATE TABLE IF NOT EXISTS buildings (
+  id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  code              VARCHAR(64) NOT NULL UNIQUE,
+  name              VARCHAR(255) NOT NULL,
+  location          VARCHAR(255),
+  description       TEXT,
+  is_active         TINYINT(1) NOT NULL DEFAULT 1,
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_buildings_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- =====================
+-- 21) QUEUE_GROUPS
+-- =====================
+CREATE TABLE IF NOT EXISTS queue_groups (
+  id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  code              VARCHAR(64) NOT NULL UNIQUE,
+  name              VARCHAR(255) NOT NULL,
+  building_id       BIGINT UNSIGNED NOT NULL,
+  allowed_service_ids TEXT, -- comma-separated IDs
+  is_active         TINYINT(1) NOT NULL DEFAULT 1,
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_queue_groups_building (building_id),
+  KEY idx_queue_groups_active (is_active),
+  CONSTRAINT fk_queue_groups_building
+    FOREIGN KEY (building_id) REFERENCES buildings(id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Add new columns to existing tables
+ALTER TABLE users ADD COLUMN IF NOT EXISTS assigned_building_id BIGINT UNSIGNED NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS assigned_queuegroup_ids TEXT NULL;
+ALTER TABLE queue_customers ADD COLUMN IF NOT EXISTS queuegroup_id BIGINT UNSIGNED NULL;
+ALTER TABLE queue_tickets ADD COLUMN IF NOT EXISTS building_code VARCHAR(64) NULL;
+ALTER TABLE queue_tickets ADD COLUMN IF NOT EXISTS queuegroup_code VARCHAR(64) NULL;
+
+-- Add FKs for new columns
+ALTER TABLE users ADD CONSTRAINT IF NOT EXISTS fk_users_building
+  FOREIGN KEY (assigned_building_id) REFERENCES buildings(id)
+  ON UPDATE CASCADE ON DELETE SET NULL;
+
+ALTER TABLE queue_customers ADD CONSTRAINT IF NOT EXISTS fk_queue_customers_queuegroup
+  FOREIGN KEY (queuegroup_id) REFERENCES queue_groups(id)
+  ON UPDATE CASCADE ON DELETE SET NULL;

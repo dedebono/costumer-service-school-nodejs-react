@@ -23,9 +23,9 @@ router.use(verifyToken);
 router.get('/:serviceId', requireRole(['CustomerService', 'Supervisor']), async (req, res) => {
   try {
     const { serviceId } = req.params;
-    const { status, limit = 50 } = req.query;
+    const { status, limit = 50, buildingCode, queuegroupCode } = req.query;
 
-    const tickets = await getQueueByService(serviceId, { status, limit: parseInt(limit) });
+    const tickets = await getQueueByService(serviceId, { status, limit: parseInt(limit), buildingCode, queuegroupCode });
     res.json(tickets);
   } catch (e) {
     console.error(e);

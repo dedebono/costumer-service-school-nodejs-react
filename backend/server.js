@@ -16,6 +16,8 @@ const serviceRoutes = require('./src/routes/serviceRoutes');
 const counterRoutes = require('./src/routes/counterRoutes');
 const kioskRoutes = require('./src/routes/kioskRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
+const buildingRoutes = require('./src/routes/buildingRoutes');
+const queueGroupRoutes = require('./src/routes/queueGroupRoutes');
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -48,6 +50,8 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/counters', counterRoutes);
 app.use('/api/kiosk', kioskRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/buildings', buildingRoutes);
+app.use('/api/queue-groups', queueGroupRoutes);
 
 
 // Health check

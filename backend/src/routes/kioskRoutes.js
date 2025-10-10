@@ -4,21 +4,66 @@ const {
 } = require('../models/queueTicket');
 const {
   findOrCreateQueueCustomerByPhone,
+  updateQueueCustomer,
 } = require('../models/queueCustomer');
 const {
   getAllServices,
 } = require('../models/service');
+const {
+  getAllQueueGroups,
+} = require('../models/queueGroup');
+const {
+  getAllBuildings,
+} = require('../models/building');
 
 // Kiosk routes are public (no auth required for customer intake)
 
 // GET /api/kiosk/services - Get active services for kiosk
 router.get('/services', async (req, res) => {
   try {
-    const services = await getAllServices({ activeOnly: true });
+    const { queueGroupId } = req.query;
+    let services = await getAllServices({ activeOnly: true });
+
+    if (queueGroupId) {
+      // Get queue group to filter services
+      const queueGroup = await getAllQueueGroups({ activeOnly: true });
+      const group = queueGroup.find(g => g.id == queueGroupId);
+      if (group && group.allowed_service_ids) {
+        const allowedIds = group.allowed_service_ids.split(',').map(id => parseInt(id));
+        services = services.filter(s => allowedIds.includes(s.id));
+      }
+    }
+
     res.json(services);
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to fetch services' });
+  }
+});
+
+// GET /api/kiosk/buildings - Get active buildings for kiosk
+router.get('/buildings', async (req, res) => {
+  try {
+    const buildings = await getAllBuildings({ activeOnly: true });
+    res.json(buildings);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch buildings' });
+  }
+});
+
+// GET /api/kiosk/queue-groups - Get active queue groups for kiosk
+router.get('/queue-groups', async (req, res) => {
+  try {
+    const { buildingId } = req.query;
+    const queueGroups = await getAllQueueGroups({
+      activeOnly: true,
+      buildingId: buildingId ? parseInt(buildingId) : undefined
+    });
+    res.json(queueGroups);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch queue groups' });
   }
 });
 
@@ -40,6 +85,11 @@ router.post('/ticket', async (req, res) => {
       queueCustomerId: queueCustomer.id,
       notes,
     });
+
+    // Update queue customer with queuegroup_id if available
+    if (queueTicket.queuegroup_id) {
+      await updateQueueCustomer(queueCustomer.id, { queuegroupId: queueTicket.queuegroup_id });
+    }
 
     // Emit queue update to specific service room and notifications room with delay for robustness
     setTimeout(() => {

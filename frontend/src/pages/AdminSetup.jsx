@@ -6,6 +6,8 @@ export default function AdminSetup() {
   const [activeTab, setActiveTab] = useState('services')
   const [services, setServices] = useState([])
   const [counters, setCounters] = useState([])
+  const [buildings, setBuildings] = useState([])
+  const [queueGroups, setQueueGroups] = useState([])
   const [settings, setSettings] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -18,18 +20,25 @@ export default function AdminSetup() {
   }, [])
 
   const loadData = async () => {
+    setLoading(true)
     try {
-      const [servicesData, countersData, settingsData] = await Promise.all([
+      const [servicesData, countersData, buildingsData, queueGroupsData, settingsData] = await Promise.all([
         api.services.getAll(false),
         api.counters.getAll(false),
+        api.buildings.getAll(false),
+        api.queueGroups.getAll(false),
         api.admin.getSettings()
       ])
       setServices(servicesData)
       setCounters(countersData)
+      setBuildings(buildingsData)
+      setQueueGroups(queueGroupsData)
       setSettings(settingsData)
     } catch (err) {
       setError('Failed to load data')
       console.error(err)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -396,6 +405,383 @@ export default function AdminSetup() {
 
 
 
+  // Building handlers
+  const handleCreateBuilding = async () => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Add New Building',
+      html: `
+        <div style="text-align: left;">
+          <label for="building-code" style="display: block; margin-bottom: 8px; font-weight: bold;">Code *</label>
+          <input id="building-code" type="text" placeholder="e.g., MAIN" maxlength="10" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; text-transform: uppercase;">
+
+          <label for="building-name" style="display: block; margin-bottom: 8px; font-weight: bold;">Name *</label>
+          <input id="building-name" type="text" placeholder="e.g., Main Building" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+
+          <label for="building-location" style="display: block; margin-bottom: 8px; font-weight: bold;">Location</label>
+          <input id="building-location" type="text" placeholder="e.g., Downtown" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+
+          <label for="building-description" style="display: block; margin-bottom: 8px; font-weight: bold;">Description</label>
+          <textarea id="building-description" placeholder="Optional description" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; resize: vertical;"></textarea>
+
+          <label style="display: flex; align-items: center;">
+            <input type="checkbox" id="building-active" checked style="margin-right: 8px;">
+            Active
+          </label>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Create Building',
+      cancelButtonText: 'Cancel',
+      preConfirm: () => {
+        const code = document.getElementById('building-code').value.trim().toUpperCase()
+        const name = document.getElementById('building-name').value.trim()
+        const location = document.getElementById('building-location').value.trim()
+        const description = document.getElementById('building-description').value.trim()
+        const isActive = document.getElementById('building-active').checked
+
+        if (!code) {
+          Swal.showValidationMessage('Building code is required')
+          return false
+        }
+        if (!name) {
+          Swal.showValidationMessage('Building name is required')
+          return false
+        }
+
+        return { code, name, location, description, isActive }
+      }
+    })
+
+    if (formValues) {
+      try {
+        await api.buildings.create(formValues)
+        Swal.fire({
+          icon: 'success',
+          title: 'Building created successfully',
+          text: 'The building has been added.',
+        })
+        await loadData()
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed to create building',
+          text: err.message || 'An error occurred while creating the building.',
+        })
+      }
+    }
+  }
+
+  const handleEditBuilding = async (building) => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Edit Building',
+      html: `
+        <div style="text-align: left;">
+          <label for="building-code" style="display: block; margin-bottom: 8px; font-weight: bold;">Code *</label>
+          <input id="building-code" type="text" value="${building.code}" maxlength="10" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; text-transform: uppercase;">
+
+          <label for="building-name" style="display: block; margin-bottom: 8px; font-weight: bold;">Name *</label>
+          <input id="building-name" type="text" value="${building.name}" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+
+          <label for="building-location" style="display: block; margin-bottom: 8px; font-weight: bold;">Location</label>
+          <input id="building-location" type="text" value="${building.location || ''}" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+
+          <label for="building-description" style="display: block; margin-bottom: 8px; font-weight: bold;">Description</label>
+          <textarea id="building-description" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; resize: vertical;">${building.description || ''}</textarea>
+
+          <label style="display: flex; align-items: center;">
+            <input type="checkbox" id="building-active" ${building.is_active ? 'checked' : ''} style="margin-right: 8px;">
+            Active
+          </label>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Update Building',
+      cancelButtonText: 'Cancel',
+      preConfirm: () => {
+        const code = document.getElementById('building-code').value.trim().toUpperCase()
+        const name = document.getElementById('building-name').value.trim()
+        const location = document.getElementById('building-location').value.trim()
+        const description = document.getElementById('building-description').value.trim()
+        const isActive = document.getElementById('building-active').checked
+
+        if (!code) {
+          Swal.showValidationMessage('Building code is required')
+          return false
+        }
+        if (!name) {
+          Swal.showValidationMessage('Building name is required')
+          return false
+        }
+
+        return { code, name, location, description, isActive }
+      }
+    })
+
+    if (formValues) {
+      try {
+        await api.buildings.update(building.id, formValues)
+        Swal.fire({
+          icon: 'success',
+          title: 'Building updated successfully',
+          text: 'The building has been updated.',
+        })
+        await loadData()
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed to update building',
+          text: err.message || 'An error occurred while updating the building.',
+        })
+      }
+    }
+  }
+
+  const handleDeleteBuilding = async (buildingId) => {
+    const result = await Swal.fire({
+      title: 'Delete Building',
+      text: 'Are you sure you want to delete this building? This action cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
+    })
+
+    if (result.isConfirmed) {
+      try {
+        await api.buildings.delete(buildingId)
+        Swal.fire({
+          icon: 'success',
+          title: 'Building deleted successfully',
+          text: 'The building has been removed.',
+        })
+        await loadData()
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed to delete building',
+          text: err.message || 'An error occurred while deleting the building.',
+        })
+      }
+    }
+  }
+
+  // Queue Group handlers
+  const handleCreateQueueGroup = async () => {
+    const buildingsHtml = buildings.map(building => `
+      <option value="${building.id}">${building.name} (${building.code})</option>
+    `).join('')
+
+    const servicesHtml = services.map(service => `
+      <label style="display: block; margin-bottom: 5px;">
+        <input type="checkbox" id="service-${service.id}" value="${service.id}" style="margin-right: 8px;">
+        ${service.name} (${service.code_prefix})
+      </label>
+    `).join('')
+
+    const { value: formValues } = await Swal.fire({
+      title: 'Add New Queue Group',
+      html: `
+        <div style="text-align: left;">
+          <label for="queue-group-code" style="display: block; margin-bottom: 8px; font-weight: bold;">Code *</label>
+          <input id="queue-group-code" type="text" placeholder="e.g., MAIN" maxlength="10" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; text-transform: uppercase;">
+
+          <label for="queue-group-name" style="display: block; margin-bottom: 8px; font-weight: bold;">Name *</label>
+          <input id="queue-group-name" type="text" placeholder="e.g., Main Queue" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+
+          <label for="queue-group-building" style="display: block; margin-bottom: 8px; font-weight: bold;">Building *</label>
+          <select id="queue-group-building" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+            <option value="">Select Building</option>
+            ${buildingsHtml}
+          </select>
+
+          <label style="display: block; margin-bottom: 8px; font-weight: bold;">Allowed Services</label>
+          <div style="max-height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; margin-bottom: 16px; border-radius: 4px;">
+            ${servicesHtml}
+          </div>
+
+          <label style="display: flex; align-items: center;">
+            <input type="checkbox" id="queue-group-active" checked style="margin-right: 8px;">
+            Active
+          </label>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Create Queue Group',
+      cancelButtonText: 'Cancel',
+      preConfirm: () => {
+        const code = document.getElementById('queue-group-code').value.trim().toUpperCase()
+        const name = document.getElementById('queue-group-name').value.trim()
+        const buildingId = parseInt(document.getElementById('queue-group-building').value)
+        const isActive = document.getElementById('queue-group-active').checked
+
+        if (!code) {
+          Swal.showValidationMessage('Queue group code is required')
+          return false
+        }
+        if (!name) {
+          Swal.showValidationMessage('Queue group name is required')
+          return false
+        }
+        if (!buildingId) {
+          Swal.showValidationMessage('Building selection is required')
+          return false
+        }
+
+        const allowedServiceIds = services
+          .filter(service => document.getElementById(`service-${service.id}`).checked)
+          .map(service => service.id)
+
+        return { code, name, buildingId, allowedServiceIds, isActive }
+      }
+    })
+
+    if (formValues) {
+      try {
+        await api.queueGroups.create(formValues)
+        Swal.fire({
+          icon: 'success',
+          title: 'Queue group created successfully',
+          text: 'The queue group has been added.',
+        })
+        await loadData()
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed to create queue group',
+          text: err.message || 'An error occurred while creating the queue group.',
+        })
+      }
+    }
+  }
+
+  const handleEditQueueGroup = async (queueGroup) => {
+    const buildingsHtml = buildings.map(building => `
+      <option value="${building.id}" ${building.id === queueGroup.building_id ? 'selected' : ''}>${building.name} (${building.code})</option>
+    `).join('')
+
+    const servicesHtml = services.map(service => {
+      const isChecked = (queueGroup.allowed_service_ids || []).includes(service.id) ? 'checked' : ''
+      return `
+        <label style="display: block; margin-bottom: 5px;">
+          <input type="checkbox" id="service-${service.id}" value="${service.id}" ${isChecked} style="margin-right: 8px;">
+          ${service.name} (${service.code_prefix})
+        </label>
+      `
+    }).join('')
+
+    const { value: formValues } = await Swal.fire({
+      title: 'Edit Queue Group',
+      html: `
+        <div style="text-align: left;">
+          <label for="queue-group-code" style="display: block; margin-bottom: 8px; font-weight: bold;">Code *</label>
+          <input id="queue-group-code" type="text" value="${queueGroup.code}" maxlength="10" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; text-transform: uppercase;">
+
+          <label for="queue-group-name" style="display: block; margin-bottom: 8px; font-weight: bold;">Name *</label>
+          <input id="queue-group-name" type="text" value="${queueGroup.name}" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+
+          <label for="queue-group-building" style="display: block; margin-bottom: 8px; font-weight: bold;">Building *</label>
+          <select id="queue-group-building" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+            <option value="">Select Building</option>
+            ${buildingsHtml}
+          </select>
+
+          <label style="display: block; margin-bottom: 8px; font-weight: bold;">Allowed Services</label>
+          <div style="max-height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; margin-bottom: 16px; border-radius: 4px;">
+            ${servicesHtml}
+          </div>
+
+          <label style="display: flex; align-items: center;">
+            <input type="checkbox" id="queue-group-active" ${queueGroup.is_active ? 'checked' : ''} style="margin-right: 8px;">
+            Active
+          </label>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Update Queue Group',
+      cancelButtonText: 'Cancel',
+      preConfirm: () => {
+        const code = document.getElementById('queue-group-code').value.trim().toUpperCase()
+        const name = document.getElementById('queue-group-name').value.trim()
+        const buildingId = parseInt(document.getElementById('queue-group-building').value)
+        const isActive = document.getElementById('queue-group-active').checked
+
+        if (!code) {
+          Swal.showValidationMessage('Queue group code is required')
+          return false
+        }
+        if (!name) {
+          Swal.showValidationMessage('Queue group name is required')
+          return false
+        }
+        if (!buildingId) {
+          Swal.showValidationMessage('Building selection is required')
+          return false
+        }
+
+        const allowedServiceIds = services
+          .filter(service => document.getElementById(`service-${service.id}`).checked)
+          .map(service => service.id)
+
+        return { code, name, buildingId, allowedServiceIds, isActive }
+      }
+    })
+
+    if (formValues) {
+      try {
+        await api.queueGroups.update(queueGroup.id, formValues)
+        Swal.fire({
+          icon: 'success',
+          title: 'Queue group updated successfully',
+          text: 'The queue group has been updated.',
+        })
+        await loadData()
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed to update queue group',
+          text: err.message || 'An error occurred while updating the queue group.',
+        })
+      }
+    }
+  }
+
+  const handleDeleteQueueGroup = async (queueGroupId) => {
+    const result = await Swal.fire({
+      title: 'Delete Queue Group',
+      text: 'Are you sure you want to delete this queue group? This action cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
+    })
+
+    if (result.isConfirmed) {
+      try {
+        await api.queueGroups.delete(queueGroupId)
+        Swal.fire({
+          icon: 'success',
+          title: 'Queue group deleted successfully',
+          text: 'The queue group has been removed.',
+        })
+        await loadData()
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed to delete queue group',
+          text: err.message || 'An error occurred while deleting the queue group.',
+        })
+      }
+    }
+  }
+
   // Settings handlers
   const handleSettingChange = async (key, value) => {
     try {
@@ -410,6 +796,8 @@ export default function AdminSetup() {
   const tabs = [
     { id: 'services', label: 'Services', count: services.length },
     { id: 'counters', label: 'Counters', count: counters.length },
+    { id: 'buildings', label: 'Buildings', count: buildings.length },
+    { id: 'queueGroups', label: 'Queue Groups', count: queueGroups.length },
     { id: 'settings', label: 'Settings' }
   ]
 
@@ -592,6 +980,145 @@ export default function AdminSetup() {
                         </td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Buildings Tab */}
+          {activeTab === 'buildings' && (
+            <div>
+              <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-6)' }}>
+                <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', margin: 0 }}>Buildings</h2>
+                <button
+                  onClick={handleCreateBuilding}
+                  className="btn btn--primary"
+                >
+                  Add Building
+                </button>
+              </div>
+
+              <div className="surface" style={{ overflow: 'hidden' }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Name</th>
+                      <th>Location</th>
+                      <th>Description</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {buildings.map(building => (
+                      <tr key={building.id}>
+                        <td style={{ fontWeight: '600' }}>
+                          {building.code}
+                        </td>
+                        <td>
+                          {building.name}
+                        </td>
+                        <td>
+                          {building.location || '-'}
+                        </td>
+                        <td>
+                          {building.description || '-'}
+                        </td>
+                        <td>
+                          <span className={building.is_active ? 'badge tag-primary' : 'badge'}>
+                            {building.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button
+                            onClick={() => handleEditBuilding(building)}
+                            className="btn btn--ghost btn--sm"
+                            style={{ marginRight: 'var(--space-2)' }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteBuilding(building.id)}
+                            className="btn btn--outline btn--sm"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Queue Groups Tab */}
+          {activeTab === 'queueGroups' && (
+            <div>
+              <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-6)' }}>
+                <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', margin: 0 }}>Queue Groups</h2>
+                <button
+                  onClick={handleCreateQueueGroup}
+                  className="btn btn--primary"
+                >
+                  Add Queue Group
+                </button>
+              </div>
+
+              <div className="surface" style={{ overflow: 'hidden' }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Name</th>
+                      <th>Building</th>
+                      <th>Allowed Services</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {queueGroups.map(queueGroup => {
+                      const building = buildings.find(b => b.id === queueGroup.building_id)
+                      return (
+                        <tr key={queueGroup.id}>
+                          <td style={{ fontWeight: '600' }}>
+                            {queueGroup.code}
+                          </td>
+                          <td>
+                            {queueGroup.name}
+                          </td>
+                          <td>
+                            {building ? `${building.name} (${building.code})` : '-'}
+                          </td>
+                          <td>
+                            {queueGroup.allowed_service_ids?.length || 0} services
+                          </td>
+                          <td>
+                            <span className={queueGroup.is_active ? 'badge tag-primary' : 'badge'}>
+                              {queueGroup.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              onClick={() => handleEditQueueGroup(queueGroup)}
+                              className="btn btn--ghost btn--sm"
+                              style={{ marginRight: 'var(--space-2)' }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteQueueGroup(queueGroup.id)}
+                              className="btn btn--outline btn--sm"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

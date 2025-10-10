@@ -146,8 +146,20 @@ export const api = {
 
   // Kiosk API endpoints (public)
   kiosk: {
-    getServices: async () => {
-      return apiHelper('/kiosk/services');
+    getBuildings: async () => {
+      return apiHelper('/kiosk/buildings');
+    },
+
+    getQueueGroups: async (buildingId) => {
+      const params = new URLSearchParams();
+      if (buildingId) params.append('buildingId', buildingId);
+      return apiHelper(`/kiosk/queue-groups?${params}`);
+    },
+
+    getServices: async (queueGroupId) => {
+      const params = new URLSearchParams();
+      if (queueGroupId) params.append('queueGroupId', queueGroupId);
+      return apiHelper(`/kiosk/services?${params}`);
     },
 
     createQueueTicket: async (ticketData) => {
@@ -205,6 +217,56 @@ export const api = {
 
     getQueueStats: async () => {
       return apiHelper('/admin/reports/queue-stats');
+    },
+  },
+
+  // Buildings API endpoints
+  buildings: {
+    getAll: async (activeOnly = true) => {
+      const params = new URLSearchParams();
+      params.append('activeOnly', activeOnly);
+      return apiHelper(`/buildings?${params}`);
+    },
+
+    getById: async (id) => {
+      return apiHelper(`/buildings/${id}`);
+    },
+
+    create: async (buildingData) => {
+      return apiHelper('/buildings', { method: 'POST', body: buildingData });
+    },
+
+    update: async (id, buildingData) => {
+      return apiHelper(`/buildings/${id}`, { method: 'PUT', body: buildingData });
+    },
+
+    delete: async (id) => {
+      return apiHelper(`/buildings/${id}`, { method: 'DELETE' });
+    },
+  },
+
+  // Queue Groups API endpoints
+  queueGroups: {
+    getAll: async (activeOnly = true) => {
+      const params = new URLSearchParams();
+      params.append('activeOnly', activeOnly);
+      return apiHelper(`/queue-groups?${params}`);
+    },
+
+    getById: async (id) => {
+      return apiHelper(`/queue-groups/${id}`);
+    },
+
+    create: async (queueGroupData) => {
+      return apiHelper('/queue-groups', { method: 'POST', body: queueGroupData });
+    },
+
+    update: async (id, queueGroupData) => {
+      return apiHelper(`/queue-groups/${id}`, { method: 'PUT', body: queueGroupData });
+    },
+
+    delete: async (id) => {
+      return apiHelper(`/queue-groups/${id}`, { method: 'DELETE' });
     },
   },
 }

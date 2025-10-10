@@ -17,6 +17,8 @@ const STATUS_COLORS = {
 export default function CSDashboard() {
   const [services, setServices] = useState([])
   const [selectedService, setSelectedService] = useState(null)
+  const [buildings, setBuildings] = useState([])
+  const [selectedBuilding, setSelectedBuilding] = useState(null)
   const [queue, setQueue] = useState([])
   const [activeTicket, setActiveTicket] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -34,6 +36,7 @@ export default function CSDashboard() {
 
   useEffect(() => {
     loadServices()
+    loadBuildings()
     setupSocket()
     return () => {
       if (queueUpdateTimeoutRef.current) clearTimeout(queueUpdateTimeoutRef.current)
@@ -59,6 +62,10 @@ export default function CSDashboard() {
     prevServiceIdRef.current = nextId
     loadQueue()
   }, [selectedService])
+
+  useEffect(() => {
+    // Filter queue based on selected building
+  }, [selectedBuilding, queue])
 
   useEffect(() => {
     if (!activeTicket) {
@@ -110,6 +117,18 @@ export default function CSDashboard() {
       console.error(err)
     }
   }
+
+  const loadBuildings = async () => {
+    try {
+      const data = await api.buildings.getAll()
+      setBuildings(data)
+    } catch (err) {
+      setError('Failed to load buildings')
+      console.error(err)
+    }
+  }
+
+
 
   const loadQueue = async () => {
     if (!selectedService) return
@@ -358,20 +377,38 @@ export default function CSDashboard() {
         <header>
           <div className="container-antrian">
             <h1>ANTRIAN</h1>
-            <select
-              value={selectedService?.id || ''}
-              onChange={(e) => {
-                const service = services.find(s => s.id === parseInt(e.target.value, 10))
-                setSelectedService(service || null)
-              }}
-              className="select"
-            >
-              {services.map(service => (
-                <option key={service.id} value={service.id}>
-                  {service.name} ({service.code_prefix})
-                </option>
-              ))}
-            </select>
+            <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
+              <select
+                value={selectedService?.id || ''}
+                onChange={(e) => {
+                  const service = services.find(s => s.id === parseInt(e.target.value, 10))
+                  setSelectedService(service || null)
+                }}
+                className="select"
+              >
+                {services.map(service => (
+                  <option key={service.id} value={service.id}>
+                    {service.name} ({service.code_prefix})
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedBuilding?.id || ''}
+                onChange={(e) => {
+                  const building = buildings.find(b => b.id === parseInt(e.target.value, 10))
+                  setSelectedBuilding(building || null)
+                }}
+                className="select"
+                style={{ minWidth: '150px' }}
+              >
+                <option value="">All Buildings</option>
+                {buildings.map(building => (
+                  <option key={building.id} value={building.id}>
+                    {building.code}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </header>
 
@@ -531,7 +568,10 @@ export default function CSDashboard() {
               <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
                 {/* Active Queue as a LIST (WAITING and CALLED) */}
                 {(() => {
-                  const activeTickets = queue.filter(t => t.status === 'WAITING' || t.status === 'CALLED')
+                  let activeTickets = queue.filter(t => t.status === 'WAITING' || t.status === 'CALLED')
+                  if (selectedBuilding) {
+                    activeTickets = activeTickets.filter(t => t.building_code === selectedBuilding.code)
+                  }
                   if (activeTickets.length === 0) return null
 
                   return (

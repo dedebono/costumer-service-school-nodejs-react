@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt'); // boleh tetap di sini walau hashing utama di 
 function authenticateUser(email, password) {
   return new Promise((resolve, reject) => {
     db.query(
-      'SELECT id, username, email, password_hash AS passwordHash, role, assigned_counter_id FROM users WHERE email = ?',
+      'SELECT id, username, email, password_hash AS passwordHash, role, assigned_counter_id, assigned_building_id, assigned_queuegroup_ids FROM users WHERE email = ?',
       [email],
       async (err, rows) => {
         if (err) return reject(err);
@@ -13,7 +13,15 @@ function authenticateUser(email, password) {
         try {
           const ok = await bcrypt.compare(password, row.passwordHash);
           if (!ok) return resolve(null);
-          resolve({ id: row.id, username: row.username, email: row.email, role: row.role, assignedCounterId: row.assigned_counter_id });
+          resolve({
+            id: row.id,
+            username: row.username,
+            email: row.email,
+            role: row.role,
+            assignedCounterId: row.assigned_counter_id,
+            assignedBuildingId: row.assigned_building_id,
+            assignedQueuegroupIds: row.assigned_queuegroup_ids
+          });
         } catch (e) {
           reject(e);
         }
@@ -22,7 +30,7 @@ function authenticateUser(email, password) {
   });
 }
 
-function createUser({ username, email, passwordHash, role = 'CustomerService', assignedCounterId }) {
+function createUser({ username, email, passwordHash, role = 'CustomerService', assignedCounterId, assignedBuildingId, assignedQueuegroupIds }) {
   return new Promise((resolve, reject) => {
     if (!username || !email || !passwordHash) {
       return reject(new Error('username, email, passwordHash required'));
@@ -34,12 +42,12 @@ function createUser({ username, email, passwordHash, role = 'CustomerService', a
 
       // ID bisa UUID-string atau AUTOINCREMENT, sesuaikan dengan schema.sql kamu
       db.query(
-        'INSERT INTO users (username, email, password_hash, role, assigned_counter_id, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
-        [username, email, passwordHash, role, assignedCounterId || null],
+        'INSERT INTO users (username, email, password_hash, role, assigned_counter_id, assigned_building_id, assigned_queuegroup_ids, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+        [username, email, passwordHash, role, assignedCounterId || null, assignedBuildingId || null, assignedQueuegroupIds || null],
         (err2, result) => {
           if (err2) return reject(err2);
           // result.insertId berisi id jika AUTO_INCREMENT
-          db.query('SELECT id, username, email, role, assigned_counter_id FROM users WHERE id = ?', [result.insertId], (e3, rows) => {
+          db.query('SELECT id, username, email, role, assigned_counter_id, assigned_building_id, assigned_queuegroup_ids FROM users WHERE id = ?', [result.insertId], (e3, rows) => {
             if (e3) return reject(e3);
             resolve(rows[0]);
           });
@@ -51,7 +59,7 @@ function createUser({ username, email, passwordHash, role = 'CustomerService', a
 
 function getAllUsers() {
   return new Promise((resolve, reject) => {
-    db.query('SELECT id, username, email, role, assigned_counter_id FROM users ORDER BY username', [], (err, rows) => {
+    db.query('SELECT id, username, email, role, assigned_counter_id, assigned_building_id, assigned_queuegroup_ids FROM users ORDER BY username', [], (err, rows) => {
       if (err) return reject(err);
       resolve(rows);
     });
@@ -60,14 +68,14 @@ function getAllUsers() {
 
 function getUserById(id) {
   return new Promise((resolve, reject) => {
-    db.query('SELECT id, username, email, role, assigned_counter_id FROM users WHERE id = ?', [id], (err, rows) => {
+    db.query('SELECT id, username, email, role, assigned_counter_id, assigned_building_id, assigned_queuegroup_ids FROM users WHERE id = ?', [id], (err, rows) => {
       if (err) return reject(err);
       resolve(rows[0] || null);
     });
   });
 }
 
-function updateUser(id, { username, email, role, passwordHash, assignedCounterId }) {
+function updateUser(id, { username, email, role, passwordHash, assignedCounterId, assignedBuildingId, assignedQueuegroupIds }) {
   return new Promise((resolve, reject) => {
     // Ambil user lama dulu
     db.query('SELECT id, username, email FROM users WHERE id = ?', [id], (err, rows) => {
@@ -99,9 +107,11 @@ function updateUser(id, { username, email, role, passwordHash, assignedCounterId
                  role     = COALESCE(?, role),
                  password_hash = COALESCE(?, password_hash),
                  assigned_counter_id = COALESCE(?, assigned_counter_id),
+                 assigned_building_id = COALESCE(?, assigned_building_id),
+                 assigned_queuegroup_ids = COALESCE(?, assigned_queuegroup_ids),
                  updated_at = CURRENT_TIMESTAMP
            WHERE id = ?`,
-          [username ?? null, email ?? null, role ?? null, passwordHash ?? null, assignedCounterId ?? null, id],
+          [username ?? null, email ?? null, role ?? null, passwordHash ?? null, assignedCounterId ?? null, assignedBuildingId ?? null, assignedQueuegroupIds ?? null, id],
           (e3, result) => {
             if (e3) return reject(e3);
             resolve(result.affectedRows); // 1 jika berhasil

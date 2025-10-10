@@ -29,12 +29,19 @@ router.get('/', requireRole('Supervisor'), async (_req, res) => {
 // POST /api/users  (Create)
 router.post('/',  async (req, res) => {
   try {
-    const { username, email, password, role } = req.body;
+    const { username, email, password, role, assignedBuildingId, assignedQueuegroupIds } = req.body;
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'username, email, password are required' });
     }
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await createUser({ username, email, passwordHash, role: role || 'CustomerService' });
+    const user = await createUser({
+      username,
+      email,
+      passwordHash,
+      role: role || 'CustomerService',
+      assignedBuildingId,
+      assignedQueuegroupIds
+    });
     return res.status(201).json({ message: 'User created', user });
   } catch (e) {
     return res.status(400).json({ error: e.message });
@@ -55,14 +62,21 @@ router.get('/:id', requireRole('Supervisor'), async (req, res) => {
 // PATCH /api/users/:id  (Update)
 router.patch('/:id', requireRole('Supervisor'), async (req, res) => {
   try {
-    const { username, email, password, role } = req.body;
+    const { username, email, password, role, assignedBuildingId, assignedQueuegroupIds } = req.body;
 
     let passwordHash;
     if (password) {
       passwordHash = await bcrypt.hash(password, 10);
     }
 
-    const updated = await updateUser(req.params.id, { username, email, role, passwordHash });
+    const updated = await updateUser(req.params.id, {
+      username,
+      email,
+      role,
+      passwordHash,
+      assignedBuildingId,
+      assignedQueuegroupIds
+    });
     if (!updated) return res.status(404).json({ error: 'User not found' });
     res.json({ message: 'User updated' });
   } catch (e) {
@@ -91,13 +105,20 @@ router.post('/bulk', requireRole('Supervisor'), upload.single('file'), async (re
     .on('end', async () => {
       for (const user of results) {
         try {
-          const { username, email, password, role } = user;
+          const { username, email, password, role, assignedBuildingId, assignedQueuegroupIds } = user;
           if (!username || !email || !password) {
             errors.push({ user, error: 'Missing required fields' });
             continue;
           }
           const passwordHash = await bcrypt.hash(password, 10);
-          await createUser({ username, email, passwordHash, role: role || 'CustomerService' });
+          await createUser({
+            username,
+            email,
+            passwordHash,
+            role: role || 'CustomerService',
+            assignedBuildingId,
+            assignedQueuegroupIds
+          });
         } catch (error) {
           errors.push({ user, error: error.message });
         }

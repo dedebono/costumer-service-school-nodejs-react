@@ -12,13 +12,22 @@ function createQueueTicket({ serviceId, customerId, queueCustomerId, notes }) {
       return reject(new Error('Cannot specify both customerId and queueCustomerId'));
     }
 
-    // Get service code_prefix for number generation
-    db.query('SELECT code_prefix FROM services WHERE id = ? AND is_active = 1', [serviceId], (err, results) => {
+    // Get service and find queuegroup that allows this service
+    db.query(`
+      SELECT s.code_prefix, qg.code AS queuegroup_code, b.code AS building_code
+      FROM services s
+      LEFT JOIN queue_groups qg ON FIND_IN_SET(s.id, qg.allowed_service_ids) > 0 AND qg.is_active = 1
+      LEFT JOIN buildings b ON b.id = qg.building_id AND b.is_active = 1
+      WHERE s.id = ? AND s.is_active = 1
+      LIMIT 1
+    `, [serviceId], (err, results) => {
       if (err) return reject(err);
-      const service = results[0];
-      if (!service) return reject(new Error('Service not found or inactive'));
+      const data = results[0];
+      if (!data) return reject(new Error('Service not found or inactive, or no active queuegroup allows this service'));
 
-      // Generate number: prefix + sequential number for today
+      const { code_prefix, queuegroup_code, building_code } = data;
+
+      // Generate number: building_code/queuegroup_code/service_code/sequential number for today
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       const sql = `
         SELECT COUNT(*) + 1 AS next_num
@@ -26,21 +35,24 @@ function createQueueTicket({ serviceId, customerId, queueCustomerId, notes }) {
         WHERE service_id = ? AND DATE(created_at) = ?`;
       db.query(sql, [serviceId, today], (err2, results2) => {
         if (err2) return reject(err2);
-        const number = `${service.code_prefix}${String(results2[0].next_num).padStart(3, '0')}`;
+        const sequential = String(results2[0].next_num).padStart(3, '0');
+        const number = `${building_code}/${queuegroup_code}/${code_prefix}/${sequential}`;
 
         const insertSql = `
-          INSERT INTO queue_tickets (service_id, number, customer_id, queue_customer_id, status, notes, created_at)
-          VALUES (?, ?, ?, ?, 'WAITING', ?, NOW())`;
-        db.query(insertSql, [serviceId, number, customerId || null, queueCustomerId || null, notes || null], (err3, result) => {
+          INSERT INTO queue_tickets (service_id, number, building_code, queuegroup_code, customer_id, queue_customer_id, status, notes, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, 'WAITING', ?, NOW())`;
+        db.query(insertSql, [serviceId, number, building_code, queuegroup_code, customerId || null, queueCustomerId || null, notes || null], (err3, result) => {
           if (err3) return reject(err3);
           db.query(`
             SELECT qt.*, s.name AS service_name, s.code_prefix,
                    c.name AS customer_name, c.phone AS customer_phone,
-                   qc.name AS queue_customer_name, qc.phone AS queue_customer_phone
+                   qc.name AS queue_customer_name, qc.phone AS queue_customer_phone,
+                   qg.id AS queuegroup_id
             FROM queue_tickets qt
             LEFT JOIN services s ON s.id = qt.service_id
             LEFT JOIN customers c ON c.id = qt.customer_id
             LEFT JOIN queue_customers qc ON qc.id = qt.queue_customer_id
+            LEFT JOIN queue_groups qg ON qg.code = qt.queuegroup_code AND qg.building_id = (SELECT id FROM buildings WHERE code = qt.building_code)
             WHERE qt.id = ?
           `, [result.insertId], (err4, results4) => {
             if (err4) reject(err4);
@@ -79,7 +91,7 @@ function getQueueTicketById(id) {
   });
 }
 
-function getQueueByService(serviceId, { status, limit = 50 } = {}) {
+function getQueueByService(serviceId, { status, limit = 50, buildingCode, queuegroupCode } = {}) {
   return new Promise((resolve, reject) => {
     let sql = `
       SELECT qt.*, s.name AS service_name, s.code_prefix,
@@ -98,6 +110,14 @@ function getQueueByService(serviceId, { status, limit = 50 } = {}) {
     if (status) {
       sql += ' AND qt.status = ?';
       params.push(status);
+    }
+    if (buildingCode) {
+      sql += ' AND qt.building_code = ?';
+      params.push(buildingCode);
+    }
+    if (queuegroupCode) {
+      sql += ' AND qt.queuegroup_code = ?';
+      params.push(queuegroupCode);
     }
     sql += ' ORDER BY qt.created_at ASC LIMIT ?';
     params.push(limit);

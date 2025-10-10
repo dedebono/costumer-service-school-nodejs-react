@@ -1,13 +1,13 @@
 const { db } = require('./db');
 
-function createQueueCustomer({ name, email, phone }) {
+function createQueueCustomer({ name, email, phone, queuegroupId }) {
   return new Promise((resolve, reject) => {
     if (!phone) {
       return reject(new Error('Phone is required'));
     }
     db.query(
-      'INSERT INTO queue_customers (name, email, phone) VALUES (?, ?, ?)',
-      [name || null, email || null, phone],
+      'INSERT INTO queue_customers (name, email, phone, queuegroup_id) VALUES (?, ?, ?, ?)',
+      [name || null, email || null, phone, queuegroupId || null],
       (err, result) => {
         if (err) {
           return reject(err);
