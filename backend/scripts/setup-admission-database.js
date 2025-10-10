@@ -4,6 +4,7 @@
 
 const { db } = require('../src/models/db'); // assumes mysql2 pool; db.promise() is available
 
+// scripts/setup-admission-database.js  (only the helper changed)
 async function ensureColumn(table, column, definition) {
   const [rows] = await db.promise().query(
     `SELECT 1 FROM information_schema.columns
@@ -11,12 +12,14 @@ async function ensureColumn(table, column, definition) {
     [table, column]
   );
   if (rows.length === 0) {
-    await db.promise().query(`ALTER TABLE \`${table}\` ADD COLUMN ${definition}`);
+    // NOTE: include the column name here:
+    await db.promise().query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
     console.log(`+ Added column ${table}.${column}`);
   } else {
     console.log(`= Column ${table}.${column} already exists`);
   }
 }
+
 
 async function ensureForeignKey(table, fkName, fkSql) {
   const [rows] = await db.promise().query(
