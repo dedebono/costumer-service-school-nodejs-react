@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
+import './OptionsKiosk.css'
 
 export default function OptionKiosk() {
   const [step, setStep] = useState('building') // 'building', 'queueGroup', 'service'
@@ -81,95 +82,38 @@ export default function OptionKiosk() {
   }
 
   return (
-    <div className="page safe" style={{
-      minHeight: '100vh',
-      padding: 'var(--space-6) var(--space-4)'
-    }}>
-      <div style={{ maxWidth: '480px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}>
-          <h1 style={{
-            fontSize: 'clamp(1.8rem, 6vw, 2.5rem)',
-            fontWeight: '700',
-            margin: '0 0 var(--space-2)',
-            color: 'var(--clr-text)'
-          }}>
-            Kios Pelanggan
-          </h1>
-          <p style={{ fontSize: 'var(--fs-400)', opacity: '0.8', margin: 0 }}>
-            Pilih layanan dan bergabung ke antrian
-          </p>
+    <div className="kiosk-page">
+      <div className="kiosk-container">
+        <div className="kiosk-header">
+          <h1>Daftar Antrian</h1>
+          <p>Silakan pilih area, grup antrian, dan layanan yang Anda inginkan.</p>
         </div>
 
         {error && (
-          <div className="surface" style={{
-            background: 'color-mix(in oklab, red 10%, var(--clr-bg))',
-            border: '1px solid color-mix(in oklab, red 30%, transparent)',
-            color: 'color-mix(in oklab, red 80%, black)',
-            padding: 'var(--space-4)',
-            marginBottom: 'var(--space-6)',
-            fontSize: 'var(--fs-400)'
-          }}>
+          <div className="kiosk-error">
             {error}
           </div>
         )}
 
-        <div className="surface" style={{ padding: 'var(--space-6)' }}>
+        <div className="kiosk-content">
           {step !== 'building' && (
-            <button
-              onClick={handleBack}
-              style={{
-                marginBottom: 'var(--space-4)',
-                padding: 'var(--space-3) var(--space-4)',
-                background: 'var(--clr-bg)',
-                border: '1px solid var(--clr-border)',
-                borderRadius: 'var(--radius-2)',
-                cursor: 'pointer',
-                fontSize: 'var(--fs-400)'
-              }}
-            >
+            <button onClick={handleBack} className="kiosk-back-button">
               ← Kembali
             </button>
           )}
 
           {step === 'building' && (
             <>
-              <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', marginBottom: 'var(--space-4)' }}>
-                Pilih Gedung
-              </h2>
-              <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
+              <h2>Education Counsultant</h2>
+              <div className="kiosk-options-grid">
                 {buildings.map(building => (
                   <button
                     key={building.id}
                     onClick={() => handleBuildingSelect(building)}
-                    className="surface"
-                    style={{
-                      width: '100%',
-                      textAlign: 'left',
-                      padding: 'var(--space-5)',
-                      border: '2px solid var(--clr-border)',
-                      background: 'var(--clr-bg)',
-                      cursor: 'pointer',
-                      transition: 'all var(--dur-2) var(--ease-out)',
-                      minHeight: '4rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--clr-primary)'
-                      e.currentTarget.style.background = 'color-mix(in oklab, var(--clr-primary) 5%, var(--clr-bg))'
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--clr-border)'
-                      e.currentTarget.style.background = 'var(--clr-bg)'
-                    }}
+                    className="kiosk-option-button"
                   >
-                    <div style={{ fontWeight: '600', fontSize: 'var(--fs-500)', marginBottom: 'var(--space-1)' }}>
-                      {building.name}
-                    </div>
-                    <div style={{ fontSize: 'var(--fs-300)', opacity: '0.7' }}>
-                      Kode: {building.code}
-                    </div>
+                    <div className="option-name">{building.name}</div>
+                    <div className="option-code">Kode: {building.code}</div>
                   </button>
                 ))}
               </div>
@@ -178,43 +122,16 @@ export default function OptionKiosk() {
 
           {step === 'queueGroup' && (
             <>
-              <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', marginBottom: 'var(--space-4)' }}>
-                Pilih Grup Antrian
-              </h2>
-              <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
+              <h2>Pilih Grup Antrian</h2>
+              <div className="kiosk-options-grid">
                 {queueGroups.map(queueGroup => (
                   <button
                     key={queueGroup.id}
                     onClick={() => handleQueueGroupSelect(queueGroup)}
-                    className="surface"
-                    style={{
-                      width: '100%',
-                      textAlign: 'left',
-                      padding: 'var(--space-5)',
-                      border: '2px solid var(--clr-border)',
-                      background: 'var(--clr-bg)',
-                      cursor: 'pointer',
-                      transition: 'all var(--dur-2) var(--ease-out)',
-                      minHeight: '4rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--clr-primary)'
-                      e.currentTarget.style.background = 'color-mix(in oklab, var(--clr-primary) 5%, var(--clr-bg))'
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--clr-border)'
-                      e.currentTarget.style.background = 'var(--clr-bg)'
-                    }}
+                    className="kiosk-option-button"
                   >
-                    <div style={{ fontWeight: '600', fontSize: 'var(--fs-500)', marginBottom: 'var(--space-1)' }}>
-                      {queueGroup.name}
-                    </div>
-                    <div style={{ fontSize: 'var(--fs-300)', opacity: '0.7' }}>
-                      Kode: {queueGroup.code}
-                    </div>
+                    <div className="option-name">{queueGroup.name}</div>
+                    <div className="option-code">Kode: {queueGroup.code}</div>
                   </button>
                 ))}
               </div>
@@ -223,43 +140,16 @@ export default function OptionKiosk() {
 
           {step === 'service' && (
             <>
-              <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', marginBottom: 'var(--space-4)' }}>
-                Pilih Layanan
-              </h2>
-              <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
+              <h2>Pilih Layanan</h2>
+              <div className="kiosk-options-grid">
                 {services.map(service => (
                   <button
                     key={service.id}
                     onClick={() => handleServiceSelect(service)}
-                    className="surface"
-                    style={{
-                      width: '100%',
-                      textAlign: 'left',
-                      padding: 'var(--space-5)',
-                      border: '2px solid var(--clr-border)',
-                      background: 'var(--clr-bg)',
-                      cursor: 'pointer',
-                      transition: 'all var(--dur-2) var(--ease-out)',
-                      minHeight: '4rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--clr-primary)'
-                      e.currentTarget.style.background = 'color-mix(in oklab, var(--clr-primary) 5%, var(--clr-bg))'
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--clr-border)'
-                      e.currentTarget.style.background = 'var(--clr-bg)'
-                    }}
+                    className="kiosk-option-button"
                   >
-                    <div style={{ fontWeight: '600', fontSize: 'var(--fs-500)', marginBottom: 'var(--space-1)' }}>
-                      {service.name}
-                    </div>
-                    <div style={{ fontSize: 'var(--fs-300)', opacity: '0.7' }}>
-                      Kode: {service.code_prefix}
-                    </div>
+                    <div className="option-name">{service.name}</div>
+                    <div className="option-code">Kode: {service.code_prefix}</div>
                   </button>
                 ))}
               </div>
