@@ -1,5 +1,9 @@
-# TODO for Modern Kiosk Style
-
-- [x] Update OptionsKiosk.css with modern, mobile-optimized styles including custom background image
-- [ ] Test styles on mobile view
-- [ ] Run frontend to verify appearance
+- [x] Import SweetAlert2 in Supervisor.jsx
+- [x] Add loading state for saveEditSteps
+- [x] Add confirmation dialog before saving in saveEditSteps
+- [x] Use SweetAlert for success/error after saving
+- [x] Add success message when adding dynamic detail
+- [x] Fix SweetAlert visibility by adding setTimeout after modal close and zIndex
+- [x] Remove "Cancel" button from edit modal footer
+- [x] Change flow: close modal first, then show SweetAlert confirmation
+- [x] Test the changes by running the dev server

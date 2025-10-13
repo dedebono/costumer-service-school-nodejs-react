@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
 import PipelineBuilder from '../features/admission/PipelineBuilder.jsx';
 import Sidebar from '../components/Sidebar.jsx';
+import Swal from 'sweetalert2';
 
 const groupedTabs = [
     {
@@ -70,6 +71,7 @@ function PipelineBuilderForSupervisor() {
   const [editSteps, setEditSteps] = useState([]);
   const [editDynamicDetails, setEditDynamicDetails] = useState({});
   const [selectedSteps, setSelectedSteps] = useState(new Set());
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     async function fetchPipelines() {
@@ -147,11 +149,30 @@ function PipelineBuilderForSupervisor() {
   };
 
   const saveEditSteps = async () => {
+    setShowEditModal(false);
+
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'Do you want to save the changes?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, save it!',
+      cancelButtonText: 'No, cancel',
+      zIndex: 10000,
+      customClass: {
+        popup: 'swal2-popup-custom'
+      }
+    });
+
+    if (!result.isConfirmed) return;
+
+    setIsSaving(true);
+
     try {
       // Save steps
       for (const step of editSteps) {
         if (!step.title || !step.slug) {
-          alert('Title and slug are required for all steps');
+          Swal.fire('Error', 'Title and slug are required for all steps', 'error');
           return;
         }
         await api(`/admission/${selectedPipelineId}/steps/${step.id}`, {
@@ -165,7 +186,7 @@ function PipelineBuilderForSupervisor() {
         const details = editDynamicDetails[step.id] || [];
         for (const detail of details) {
           if (!detail.key || !detail.type || !detail.label) {
-            alert(`Key, type, and label are required for all dynamic details in step ${step.title}`);
+            Swal.fire('Error', `Key, type, and label are required for all dynamic details in step ${step.title}`, 'error');
             return;
           }
           if (detail.id) {
@@ -184,10 +205,20 @@ function PipelineBuilderForSupervisor() {
         }
       }
 
-      setShowEditModal(false);
+      Swal.fire({
+        title: 'Success',
+        text: 'Changes saved successfully!',
+        icon: 'success',
+        zIndex: 10000,
+        customClass: {
+          popup: 'swal2-popup-custom'
+        }
+      });
       // Optionally reload or update state
     } catch (e) {
-      alert('Failed to save changes: ' + e.message);
+      Swal.fire('Error', 'Failed to save changes: ' + e.message, 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -244,7 +275,7 @@ function PipelineBuilderForSupervisor() {
 
       {/* Edit Steps Modal - CORRECTED FOR POP-UP */}
       {showEditModal && (
-        <div className="modals-overlay">
+        <div className="modals-overlay" style={{ zIndex: 9999 }}>
           <div className="modals">
             <header className="modals-header">
               <h3>
@@ -401,6 +432,17 @@ function PipelineBuilderForSupervisor() {
                           if (!newDetails[step.id]) newDetails[step.id] = [];
                           newDetails[step.id].push({ id: null, key: '', type: 'text', required: false, label: '' });
                           setEditDynamicDetails(newDetails);
+                          setTimeout(() => {
+                            Swal.fire({
+                              title: 'Success',
+                              text: 'Dynamic detail added successfully!',
+                              icon: 'success',
+                              zIndex: 10000,
+                              customClass: {
+                                popup: 'swal2-popup-custom'
+                              }
+                            });
+                          }, 100);
                         }}
                       >
                         Add Dynamic Detail
@@ -412,11 +454,8 @@ function PipelineBuilderForSupervisor() {
             </div>
 
             <footer className="modals-footer">
-              <button className="btn btn--primary" onClick={saveEditSteps}>
-                Save Changes
-              </button>
-              <button className="btn btn--subtle" onClick={() => setShowEditModal(false)}>
-                Cancel
+              <button className="btn btn--primary" onClick={saveEditSteps} disabled={isSaving}>
+                {isSaving ? 'Saving...' : 'Save Changes'}
               </button>
             </footer>
           </div>

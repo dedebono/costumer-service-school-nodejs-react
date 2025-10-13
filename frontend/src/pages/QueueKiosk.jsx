@@ -130,7 +130,7 @@ export default function QueueKiosk() {
           marginBottom: 'var(--space-6)'
         }}>
           <div style={{
-            fontSize: 'clamp(2rem, 8vw, 3rem)',
+            fontSize: 'clamp(.9rem, 4vw, 1.3rem)',
             fontWeight: '700',
             color: 'var(--clr-primary)',
             marginBottom: 'var(--space-2)'
@@ -185,17 +185,6 @@ export default function QueueKiosk() {
           )}
         </div>
 
-        <button
-          onClick={resetForm}
-          className="btn btn--primary btn--lg w-full"
-          style={{
-            minHeight: '3.5rem',
-            fontSize: 'var(--fs-500)',
-            fontWeight: '600'
-          }}
-        >
-          Buat Tiket Lain
-        </button>
       </div>
     </div>
   )
