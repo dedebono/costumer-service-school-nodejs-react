@@ -84,6 +84,7 @@
 }
 
 .kiosk-content {
+  position: relative;
   background:
     linear-gradient(to bottom, rgba(1, 45, 93, 0.85), rgba(0, 24, 49, 0.85)),
     url("../images/logo22.png");
@@ -97,6 +98,8 @@
   min-height: 600px;
   width: 100%;
   max-width: 400px;
+  max-height: 80vh;
+  align-items: center;
   overflow: auto;
   animation: fadeIn 0.5s ease-out;
   box-shadow: 0 8px 30px rgba(0,0,0,0.35);
