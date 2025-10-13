@@ -184,8 +184,9 @@ export default function CSDashboard() {
   }
 
   const handleStartService = async (ticketId) => {
-    if (!selectedService || !activeTicket) return
-    const connectionType = selectedService.connection_type || 'none'
+    if (!activeTicket) return
+    const service = selectedService === 'all' ? services.find(s => s.id === activeTicket.service_id) : selectedService
+    const connectionType = service?.connection_type || 'none'
 
     if (connectionType === 'ticket') {
       const customerData = {
