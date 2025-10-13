@@ -31,16 +31,20 @@ setErr(e.message);
 
 
 return (
-<div className="center" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-<form onSubmit={onSubmit} className="surface p-6" style={{ width: 360 }}>
+<div className="kiosk-page" >
+<div className="center" style={{ minHeight: '100vh', 
+  display: 'grid', placeItems: 'center' , }}>
+<form onSubmit={onSubmit} className="kiosk-content" style={{ width: 330 , opacity: '100%', backgroundColor: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)'}}>
 <h2 className="mb-3">Login</h2>
-<label className="block mb-1">Email</label>
-<input className="input mb-3" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" />
-<label className="block mb-1">Password</label>
-<input className="input mb-3" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
-{err && <div style={{ color: '#b00020', fontSize: '0.875rem', marginBottom: '0.75rem' }}>{err}</div>}
+<label className="block mb-1" style={{color:'black' , display:'none'}}>Email</label>
+<input className="input mb-3" style={{color:'black'}} value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" />
+<label className="block mb-1" style={{color:'black' , display:'none' }}>Password</label>
+<input className="input mb-3" type="password" style={{color:'black'}} value={password} onChange={e => setPassword(e.target.value)} placeholder="*********" />
+{err && <div style={{ color: '#b00020', fontSize: '0.875rem', marginBottom: '0.75rem' , textAlign: 'center'
+ }}>{err}</div>}
 <button disabled={busy} className="btn btn--primary w-full">{busy ? 'Signing in…' : 'Sign In'}</button>
 </form>
+</div>
 </div>
 );
 }

@@ -23,7 +23,7 @@
   background-image:
     linear-gradient(to bottom, rgba(159, 160, 161, 0.85), rgba(10, 25, 47, 0.85)),
     image-set(
-      url("https://infobiayapendidikan.web.id/wp-content/uploads/2025/05/SMA-KRISTEN-HARAPAN-BANGSA.jpeg"),
+      url("../images/kiosk-bg@1x.jpg"),
     );
   background-size: cover;
   background-position: center;
@@ -85,17 +85,19 @@
 
 .kiosk-content {
   background:
-    linear-gradient(rgba(10,25,47,.55), rgba(10,25,47,.65)),
-    url("../images/logo21.png");
+    linear-gradient(to bottom, rgba(1, 45, 93, 0.85), rgba(0, 24, 49, 0.85)),
+    url("../images/logo22.png");
   background-size: cover;
   background-position:left top;
   background-repeat: no-repeat;
-
-  /* your existing styles */
   background-color: color-mix(in srgb, var(--card-bg) 85%, transparent);
   border: 1px solid var(--card-border);
   border-radius: 12px;
   padding: 1.5rem;
+  min-height: 600px;
+  width: 100%;
+  max-width: 400px;
+  overflow: auto;
   animation: fadeIn 0.5s ease-out;
   box-shadow: 0 8px 30px rgba(0,0,0,0.35);
   overflow: hidden; /* ensures image respects rounded corners */
