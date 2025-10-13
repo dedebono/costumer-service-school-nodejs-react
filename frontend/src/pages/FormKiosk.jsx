@@ -113,7 +113,7 @@ export default function FormKiosk() {
 
   if (!selectedService) {
     return (
-      <div className="page safe" style={{
+      <div className="kiosk-page" style={{
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
@@ -126,8 +126,12 @@ export default function FormKiosk() {
   }
 
   return (
-    <div className="page safe" style={{
+    <div className="kiosk-page" style={{
       minHeight: '100vh',
+      display: 'block',
+      textAlign: 'center',
+      alignItems: 'center',
+      justifyContent: 'center',
       padding: 'var(--space-6) var(--space-4)'
     }}>
       <div style={{ maxWidth: '480px', margin: '0 auto' }}>
@@ -158,12 +162,17 @@ export default function FormKiosk() {
           </div>
         )}
 
-        <div className="surface" style={{ padding: 'var(--space-6)' }}>
+        <div className="surface" style={{ padding: 'var(--space-6)' , borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)' , backgroundColor: 'white' , color: 'black' }}>
           <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-6)' }}>
             <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', margin: 0 }}>
               Data Pelanggan
             </h2>
-            <button onClick={() => navigate('/kiosk')} className="btn btn--ghost btn--sm">
+            <button onClick={() => navigate('/kiosk')} className="btn" style={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' , 
+            padding: '0.5rem 1rem' ,
+              minHeight: '2.5rem' ,
+              fontWeight: '600' ,
+            borderRadius: '6px' , border: '1px solid var(--clr-accent)'
+             , backgroundColor: 'var(--clr-accent)' , color: 'black' }}>
               Ubah Layanan
             </button>
           </div>
@@ -171,7 +180,11 @@ export default function FormKiosk() {
           <div className="surface" style={{
             marginBottom: 'var(--space-4)',
             padding: 'var(--space-3)',
-            background: 'color-mix(in oklab, var(--clr-primary) 10%, var(--clr-bg))',
+            fontSize: 'var(--fs-400)',
+            color: 'var(--clr-primary)',
+            fontWeight: '600',
+            backgroundColor: 'color-mix(in oklab, var(--clr-primary) 20%, var(--clr-bg))',
+            background: 'color-mix(in oklab, var(--clr-primary) 20%, var(--clr-bg))',
             border: '1px solid color-mix(in oklab, var(--clr-primary) 20%, transparent)'
           }}>
             <div style={{ fontWeight: '600', color: 'var(--clr-primary)', marginBottom: 'var(--space-1)' }}>
@@ -221,7 +234,7 @@ export default function FormKiosk() {
 
             <div>
               <label style={{ display: 'block', fontSize: 'var(--fs-400)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>
-                Nama Lengkap
+                Nama Lengkap *
               </label>
               <input
                 type="text"
@@ -236,7 +249,7 @@ export default function FormKiosk() {
 
             <div>
               <label style={{ display: 'block', fontSize: 'var(--fs-400)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>
-                Email (Opsional)
+                Email (tidak wajib)
               </label>
               <input
                 type="email"
@@ -258,7 +271,7 @@ export default function FormKiosk() {
 
             <div>
               <label style={{ display: 'block', fontSize: 'var(--fs-400)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>
-                Catatan
+                Catatan (tidak wajib)
               </label>
               <textarea
                 name="notes"
