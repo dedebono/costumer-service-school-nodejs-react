@@ -234,9 +234,9 @@ export default function CSCompleted() {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
                   gap: 'var(--space-3)',
-                  maxHeight: '60vh',
+                  maxHeight: '40vh',
                   overflowY: 'auto'
                 }}
               >
@@ -248,10 +248,15 @@ export default function CSCompleted() {
                       key={t.id}
                       className="surface"
                       style={{
-                        padding: 'var(--space-3)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        fontSize: 'var(--fs-300)',
+                        padding: 'var(--space-4)',
                         border: '1px solid var(--clr-border)',
                         opacity: 0.95,
-                        cursor: 'pointer'
+                        cursor: 'pointer',
                       }}
                       onClick={() => {
                         setSelectedTicket(t)
