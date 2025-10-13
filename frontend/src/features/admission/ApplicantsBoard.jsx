@@ -80,10 +80,17 @@ export default function ApplicantsBoard({ pipeline }) {
 
   // Click-to-open modal state
   const [selectedApplicant, setSelectedApplicant] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [editMode, setEditMode] = useState(null); // null, 'dataSiswa', 'detail'
   const [notes, setNotes] = useState('');
   const [stepDynamicDetails, setStepDynamicDetails] = useState([]);
   const [applicantDynamicDetails, setApplicantDynamicDetails] = useState({});
+  // Edited fields for applicant details
+  const [editedName, setEditedName] = useState('');
+  const [editedNisn, setEditedNisn] = useState('');
+  const [editedBirthdate, setEditedBirthdate] = useState('');
+  const [editedParentPhone, setEditedParentPhone] = useState('');
+  const [editedEmail, setEditedEmail] = useState('');
+  const [editedAddress, setEditedAddress] = useState('');
 
   const reloadApplicantCard = async () => {
     try {
@@ -116,7 +123,13 @@ export default function ApplicantsBoard({ pipeline }) {
   const handleApplicantClick = async (applicant) => {
     setSelectedApplicant(applicant);
     setNotes(applicant.notes || '');
-    setIsEditing(false);
+    setEditedName(applicant.name || '');
+    setEditedNisn(applicant.nisn || '');
+    setEditedBirthdate(applicant.birthdate || '');
+    setEditedParentPhone(applicant.parent_phone || '');
+    setEditedEmail(applicant.email || '');
+    setEditedAddress(applicant.address || '');
+    setEditMode(null);
     try {
       const stepDetails = await api(
         `/admission/${pipeline.id}/steps/${applicant.current_step_id}/details`
@@ -142,10 +155,18 @@ export default function ApplicantsBoard({ pipeline }) {
   const handleSaveNotes = async () => {
     if (!selectedApplicant) return;
     try {
-      // Save notes
+      // Save all fields including basic details
       await api(`/admission/applicants/${selectedApplicant.id}`, {
         method: 'PUT',
-        body: { notes },
+        body: {
+          name: editedName,
+          nisn: editedNisn,
+          birthdate: editedBirthdate,
+          parent_phone: editedParentPhone,
+          email: editedEmail,
+          address: editedAddress,
+          notes,
+        },
       });
 
       // Save dynamic details
@@ -159,16 +180,27 @@ export default function ApplicantsBoard({ pipeline }) {
         body: { details: dynamicDetailsToSave },
       });
 
-      // Update the applicant in columns
+      // Update the applicant in columns and selectedApplicant
+      const updatedApplicant = {
+        ...selectedApplicant,
+        name: editedName,
+        nisn: editedNisn,
+        birthdate: editedBirthdate,
+        parent_phone: editedParentPhone,
+        email: editedEmail,
+        address: editedAddress,
+        notes,
+      };
+      setSelectedApplicant(updatedApplicant);
       setColumns((cols) =>
         cols.map((c) => ({
           ...c,
           items: c.items.map((item) =>
-            item.id === selectedApplicant.id ? { ...item, notes } : item
+            item.id === selectedApplicant.id ? updatedApplicant : item
           ),
         })
       ));
-      setIsEditing(false);
+      setEditMode(null);
       toast('success', 'Saved successfully.');
 
       // Auto move to next step if all required dynamic details are filled
@@ -472,81 +504,154 @@ export default function ApplicantsBoard({ pipeline }) {
       {/* Applicant details modal */}
       <Modal
         open={!!selectedApplicant}
-        title="Data Siswa"
+        title={editMode === 'dataSiswa' ? 'Edit Data Siswa' : editMode === 'detail' ? 'Update Detail' : 'Data Siswa'}
         onClose={() => setSelectedApplicant(null)}
         footer={
           <>
-            <button className="btn btn--secondary" onClick={() => setIsEditing(!isEditing)}>
-              {isEditing ? 'Cancel' : 'Edit'}
-            </button>
-            {isEditing && (
-              <button className="btn btn--primary" onClick={handleSaveNotes}>
-                Save
-              </button>
+            {editMode === null && (
+              <>
+                <button className="btn btn--secondary" onClick={() => setEditMode('dataSiswa')}>
+                  Edit Data Siswa
+                </button>
+                <button className="btn btn--secondary" onClick={() => setEditMode('detail')}>
+                  Update Detail
+                </button>
+                <button className="btn btn--primary" onClick={() => setSelectedApplicant(null)}>
+                  Close
+                </button>
+              </>
             )}
-            {!isEditing && (
-              <button className="btn btn--primary" onClick={() => setSelectedApplicant(null)}>
-                Close
-              </button>
+            {editMode === 'dataSiswa' && (
+              <>
+                <button className="btn btn--secondary" onClick={() => setEditMode(null)}>
+                  Cancel
+                </button>
+                <button className="btn btn--primary" onClick={handleSaveNotes}>
+                  Save
+                </button>
+              </>
+            )}
+            {editMode === 'detail' && (
+              <>
+                <button className="btn btn--secondary" onClick={() => setEditMode(null)}>
+                  Cancel
+                </button>
+                <button className="btn btn--primary" onClick={handleSaveNotes}>
+                  Save
+                </button>
+              </>
             )}
           </>
         }
       >
         {selectedApplicant && (
           <div style={{ display: 'grid', gap: '0.5rem' }}>
-            <div>
-              <strong>Nama Lengkap:</strong> {selectedApplicant.name}
-            </div>
-            {selectedApplicant.nisn && (
-              <div>
-                <strong>NISN:</strong> {selectedApplicant.nisn}
-              </div>
-            )}
-            {selectedApplicant.birthdate && (
-              <div>
-                <strong>Tanggal Lahir:</strong> {selectedApplicant.birthdate}
-              </div>
-            )}
-            {selectedApplicant.parent_phone && (
-              <div>
-                <strong>Nomor telepon:</strong> {selectedApplicant.parent_phone}
-              </div>
-            )}
-            {selectedApplicant.email && (
-              <div>
-                <strong>Email:</strong> {selectedApplicant.email}
-              </div>
-            )}
-            {selectedApplicant.address && (
-              <div>
-                <strong>Alamat:</strong> {selectedApplicant.address}
-              </div>
+            {(editMode === null || editMode === 'dataSiswa') && (
+              <>
+                <div>
+                  <strong>Nama Lengkap:</strong>{' '}
+                  {editMode === 'dataSiswa' ? (
+                    <input
+                      type="text"
+                      value={editedName}
+                      onChange={(e) => setEditedName(e.target.value)}
+                      style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
+                    />
+                  ) : (
+                    selectedApplicant.name || <em>Not provided</em>
+                  )}
+                </div>
+                <div>
+                  <strong>NISN:</strong>{' '}
+                  {editMode === 'dataSiswa' ? (
+                    <input
+                      type="text"
+                      value={editedNisn}
+                      onChange={(e) => setEditedNisn(e.target.value)}
+                      style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
+                    />
+                  ) : (
+                    selectedApplicant.nisn || <em>Not provided</em>
+                  )}
+                </div>
+                <div>
+                  <strong>Tanggal Lahir:</strong>{' '}
+                  {editMode === 'dataSiswa' ? (
+                    <input
+                      type="date"
+                      value={editedBirthdate}
+                      onChange={(e) => setEditedBirthdate(e.target.value)}
+                      style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
+                    />
+                  ) : (
+                    selectedApplicant.birthdate || <em>Not provided</em>
+                  )}
+                </div>
+                <div>
+                  <strong>Nomor telepon:</strong>{' '}
+                  {editMode === 'dataSiswa' ? (
+                    <input
+                      type="text"
+                      value={editedParentPhone}
+                      onChange={(e) => setEditedParentPhone(e.target.value)}
+                      style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
+                    />
+                  ) : (
+                    selectedApplicant.parent_phone || <em>Not provided</em>
+                  )}
+                </div>
+                <div>
+                  <strong>Email:</strong>{' '}
+                  {editMode === 'dataSiswa' ? (
+                    <input
+                      type="email"
+                      value={editedEmail}
+                      onChange={(e) => setEditedEmail(e.target.value)}
+                      style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
+                    />
+                  ) : (
+                    selectedApplicant.email || <em>Not provided</em>
+                  )}
+                </div>
+                <div>
+                  <strong>Alamat:</strong>{' '}
+                  {editMode === 'dataSiswa' ? (
+                    <textarea
+                      value={editedAddress}
+                      onChange={(e) => setEditedAddress(e.target.value)}
+                      rows={3}
+                      style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
+                    />
+                  ) : (
+                    selectedApplicant.address || <em>Not provided</em>
+                  )}
+                </div>
+                <div>
+                  <strong>Notes:</strong>{' '}
+                  {editMode === 'dataSiswa' ? (
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      rows={5}
+                      style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
+                    />
+                  ) : (
+                    <p
+                      style={{
+                        whiteSpace: 'pre-wrap',
+                        border: '1px solid #ccc',
+                        padding: '0.5rem',
+                        minHeight: '5rem',
+                      }}
+                    >
+                      {notes || <em>No notes available</em>}
+                    </p>
+                  )}
+                </div>
+              </>
             )}
 
-            <div>
-              <strong>Notes:</strong>
-              {isEditing ? (
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={5}
-                  style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
-                />
-              ) : (
-                <p
-                  style={{
-                    whiteSpace: 'pre-wrap',
-                    border: '1px solid #ccc',
-                    padding: '0.5rem',
-                    minHeight: '5rem',
-                  }}
-                >
-                  {notes || <em>No notes available</em>}
-                </p>
-              )}
-            </div>
-
-            {stepDynamicDetails.length > 0 && (
+            {(editMode === null || editMode === 'detail') && stepDynamicDetails.length > 0 && (
               <div>
                 <strong>Detail</strong>
                 <div style={{ marginTop: '0.5rem', display: 'grid', gap: '0.2rem' }}>
@@ -557,7 +662,7 @@ export default function ApplicantsBoard({ pipeline }) {
                           {detail.label}
                           {detail.required ? ' *' : ''}:
                         </strong>{' '}
-                        {isEditing ? (
+                        {editMode === 'detail' ? (
                           detail.type === 'checkbox' ? (
                             <input
                               type="checkbox"

@@ -16,7 +16,7 @@ const STATUS_COLORS = {
 
 export default function CSDashboard() {
   const [services, setServices] = useState([])
-  const [selectedService, setSelectedService] = useState(null)
+  const [selectedService, setSelectedService] = useState('all')
   const [buildings, setBuildings] = useState([])
   const [selectedBuilding, setSelectedBuilding] = useState(null)
   const [queue, setQueue] = useState([])
@@ -56,12 +56,21 @@ export default function CSDashboard() {
     const s = socketRef.current
     const nextId = selectedService?.id
     const prevId = prevServiceIdRef.current
-    if (!s || !nextId) return
-    if (prevId && prevId !== nextId) s.emit('leave-queue', prevId)
-    s.emit('join-queue', nextId)
-    prevServiceIdRef.current = nextId
+    if (!s) return
+    if (selectedService === 'all') {
+      // Join all service queues
+      services.forEach(service => {
+        if (prevId && prevId !== service.id) s.emit('leave-queue', prevId)
+        s.emit('join-queue', service.id)
+      })
+      prevServiceIdRef.current = null // Reset since we're joining multiple
+    } else if (nextId) {
+      if (prevId && prevId !== nextId) s.emit('leave-queue', prevId)
+      s.emit('join-queue', nextId)
+      prevServiceIdRef.current = nextId
+    }
     loadQueue()
-  }, [selectedService])
+  }, [selectedService, services])
 
   useEffect(() => {
     // Filter queue based on selected building
@@ -97,11 +106,12 @@ export default function CSDashboard() {
     s.on('connect', () => console.log('Connected to socket server'))
 
     s.on('queue-update', (data) => {
-      if (!selectedServiceIdRef.current || data.serviceId !== selectedServiceIdRef.current) return
-      if (queueUpdateTimeoutRef.current) clearTimeout(queueUpdateTimeoutRef.current)
-      queueUpdateTimeoutRef.current = setTimeout(() => {
-        loadQueueRef.current()
-      }, 120)
+      if (selectedService === 'all' || (!selectedServiceIdRef.current || data.serviceId !== selectedServiceIdRef.current)) {
+        if (queueUpdateTimeoutRef.current) clearTimeout(queueUpdateTimeoutRef.current)
+        queueUpdateTimeoutRef.current = setTimeout(() => {
+          loadQueueRef.current()
+        }, 120)
+      }
     })
 
     s.on('disconnect', () => console.log('Disconnected from socket server'))
@@ -133,7 +143,16 @@ export default function CSDashboard() {
   const loadQueue = async () => {
     if (!selectedService) return
     try {
-      const data = await api.queue.getQueue(selectedService.id, null, 100)
+      let data = []
+      if (selectedService === 'all') {
+        // Fetch queues from all services and combine them
+        const allQueues = await Promise.all(
+          services.map(service => api.queue.getQueue(service.id, null, 100))
+        )
+        data = allQueues.flat()
+      } else {
+        data = await api.queue.getQueue(selectedService.id, null, 100)
+      }
       setQueue(data)
 
       let newActiveTicket = null
@@ -359,7 +378,7 @@ export default function CSDashboard() {
       const csv = toCSV(rows)
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
-      const name = selectedService?.code_prefix || selectedService?.name || 'queue'
+      const name = selectedService === 'all' ? 'all-services' : selectedService?.code_prefix || selectedService?.name || 'queue'
       const a = document.createElement('a')
       a.href = url
       a.download = `${name}-tickets-${timestamp()}.csv`
@@ -379,13 +398,18 @@ export default function CSDashboard() {
             <h1>ANTRIAN</h1>
             <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
               <select
-                value={selectedService?.id || ''}
+                value={selectedService === 'all' ? 'all' : selectedService?.id || ''}
                 onChange={(e) => {
-                  const service = services.find(s => s.id === parseInt(e.target.value, 10))
-                  setSelectedService(service || null)
+                  if (e.target.value === 'all') {
+                    setSelectedService('all')
+                  } else {
+                    const service = services.find(s => s.id === parseInt(e.target.value, 10))
+                    setSelectedService(service || null)
+                  }
                 }}
                 className="select"
               >
+                <option value="all">All Services</option>
                 {services.map(service => (
                   <option key={service.id} value={service.id}>
                     {service.name} ({service.code_prefix})

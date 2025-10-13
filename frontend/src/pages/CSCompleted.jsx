@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { toLocalTime } from '../lib/utils'
 import Swal from 'sweetalert2'
+import Modal from '../components/modal.jsx'
 
 const COMPLETED_SET = new Set(['NO_SHOW', 'DONE', 'CANCELED'])
 
@@ -24,7 +25,9 @@ export default function CSCompleted() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [services, setServices] = useState([])
-  const [selectedService, setSelectedService] = useState(null)
+  const [selectedService, setSelectedService] = useState('all')
+  const [selectedTicket, setSelectedTicket] = useState(null)
+  const [showModal, setShowModal] = useState(false)
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -55,8 +58,16 @@ export default function CSCompleted() {
     setLoading(true)
     setError('')
     try {
-      // pull a bigger window; filter client-side
-      const data = await api.queue.getQueue(selectedService.id, null, 500)
+      let data = []
+      if (selectedService === 'all') {
+        // Fetch completed tickets from all services and combine them
+        const allQueues = await Promise.all(
+          services.map(service => api.queue.getQueue(service.id, null, 500))
+        )
+        data = allQueues.flat()
+      } else {
+        data = await api.queue.getQueue(selectedService.id, null, 500)
+      }
       setTickets(Array.isArray(data) ? data.filter(t => COMPLETED_SET.has(t.status)) : [])
     } catch (e) {
       setError(e?.message || 'Failed to load completed tickets')
@@ -106,7 +117,7 @@ export default function CSCompleted() {
       const csv = toCSV(rows)
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
-      const name = selectedService?.code_prefix || selectedService?.name || 'completed'
+      const name = selectedService === 'all' ? 'all-services' : selectedService?.code_prefix || selectedService?.name || 'completed'
       const a = document.createElement('a')
       a.href = url
       a.download = `${name}-completed-${filter === 'ALL' ? 'all' : filter.toLowerCase()}-${timestamp()}.csv`
@@ -135,13 +146,17 @@ export default function CSCompleted() {
           <div className="container-antrian">
             <h1>SELESAI</h1>
             <select
-              value={selectedService?.id || ''}
+              value={selectedService === 'all' ? 'all' : selectedService?.id || ''}
               onChange={(e) => {
-                const id = parseInt(e.target.value)
-                const svc = services.find(s => s.id === id)
-                setSelectedService(svc || null)
+                if (e.target.value === 'all') {
+                  setSelectedService('all')
+                } else {
+                  const id = parseInt(e.target.value)
+                  const svc = services.find(s => s.id === id)
+                  setSelectedService(svc || null)
+                }
               }}
-            style={{ display: 'inline-block', 
+            style={{ display: 'inline-block',
                 color: 'var(--clr-text)',
                 padding: 'var(--space-2)',
                 border: '1px solid var(--clr-border)',
@@ -150,9 +165,10 @@ export default function CSCompleted() {
                 fontSize: 'var(--fs-400)',
                 minWidth: '200px',
                 width:'70%'
-         }} 
+         }}
               title="Select service"
             >
+              <option value="all">All Services</option>
               {services.map(service => (
                 <option key={service.id} value={service.id}>
                   {service.name} ({service.code_prefix})
@@ -218,7 +234,7 @@ export default function CSCompleted() {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
                   gap: 'var(--space-3)',
                   maxHeight: '60vh',
                   overflowY: 'auto'
@@ -234,38 +250,69 @@ export default function CSCompleted() {
                       style={{
                         padding: 'var(--space-3)',
                         border: '1px solid var(--clr-border)',
-                        opacity: 0.95
+                        opacity: 0.95,
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        setSelectedTicket(t)
+                        setShowModal(true)
                       }}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div style={{ fontSize: 'var(--fs-400)', fontWeight: 600 }}>{t.number}</div>
-                          <div>
-                            <div style={{ fontWeight: 500, fontSize: 'var(--fs-300)' }}>{t.customer_name || t.queue_customer_name || 'Anonymous'}</div>
-                            <div style={{ fontSize: 'var(--fs-300)', opacity: 0.6 }}>{toLocalTime(t.created_at)}</div>
-                            <div style={{ fontSize: 'var(--fs-300)', opacity: 0.6 }}>{formatTotalTime(t.timer_start, t.timer_end)}</div>
-                            {t.customer_service_username && (
-                              <div style={{ fontSize: 'var(--fs-300)', opacity: 0.8 }}>
-                                <strong>Handled by:</strong> {t.customer_service_username}
-                              </div>
-                            )}
-                          </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 'var(--fs-500)', fontWeight: 700, marginBottom: 'var(--space-2)' }}>
+                          {t.number}
                         </div>
-                        <span style={{ ...badgeBase, ...(STATUS_BADGE_STYLES[t.status] || {}) }}>
-                          {STATUS_LABEL[t.status] || t.status}
-                        </span>
+                        <div style={{ fontSize: 'var(--fs-300)', opacity: 0.8 }}>
+                          {t.customer_name || t.queue_customer_name || 'Anonymous'}
+                        </div>
                       </div>
-                      {t.notes && (
-                        <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--fs-300)', opacity: 0.85 }}>
-                          <strong>Notes:</strong> {t.notes}
-                        </div>
-                      )}
                     </div>
                   ))}
               </div>
             )}
           </div>
         </main>
+
+        {showModal && selectedTicket && (
+          <Modal open={showModal} title="Ticket Details" onClose={() => setShowModal(false)}>
+            <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
+              <div>
+                <strong>Number:</strong> {selectedTicket.number}
+              </div>
+              <div>
+                <strong>Status:</strong>
+                <span style={{ ...badgeBase, ...(STATUS_BADGE_STYLES[selectedTicket.status] || {}), marginLeft: 'var(--space-2)' }}>
+                  {STATUS_LABEL[selectedTicket.status] || selectedTicket.status}
+                </span>
+              </div>
+              <div>
+                <strong>Customer Name:</strong> {selectedTicket.customer_name || selectedTicket.queue_customer_name || 'Anonymous'}
+              </div>
+              <div>
+                <strong>Phone:</strong> {selectedTicket.customer_phone || selectedTicket.queue_customer_phone || '-'}
+              </div>
+              <div>
+                <strong>Email:</strong> {selectedTicket.customer_email || '-'}
+              </div>
+              <div>
+                <strong>Created:</strong> {toLocalTime(selectedTicket.created_at)}
+              </div>
+              <div>
+                <strong>Total Time:</strong> {formatTotalTime(selectedTicket.timer_start, selectedTicket.timer_end)}
+              </div>
+              {selectedTicket.customer_service_username && (
+                <div>
+                  <strong>Handled by:</strong> {selectedTicket.customer_service_username}
+                </div>
+              )}
+              {selectedTicket.notes && (
+                <div>
+                  <strong>Notes:</strong> {selectedTicket.notes}
+                </div>
+              )}
+            </div>
+          </Modal>
+        )}
       </div>
     </div>
   )
