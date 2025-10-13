@@ -12,7 +12,7 @@
 
 /* ===== Page with Background Image & Overlay ===== */
 .kiosk-page {
-  position: relative; /* enable overlay */
+  position: relative;
   background-color: var(--dark-blue-bg);
   color: var(--light-blue-text);
   min-height: 100vh;

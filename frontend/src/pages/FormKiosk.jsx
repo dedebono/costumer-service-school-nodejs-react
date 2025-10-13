@@ -118,7 +118,6 @@ export default function FormKiosk() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 'var(--space-4)'
       }}>
         <div>Layanan tidak dipilih. Kembali ke <button onClick={() => navigate('/kiosk')}>pilihan layanan</button></div>
       </div>
@@ -126,13 +125,12 @@ export default function FormKiosk() {
   }
 
   return (
-    <div className="kiosk-page" style={{
+    <div className="kiosk" style={{
       minHeight: '100vh',
       display: 'block',
       textAlign: 'center',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: 'var(--space-6) var(--space-4)'
     }}>
       <div style={{ maxWidth: '480px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}>
@@ -168,7 +166,6 @@ export default function FormKiosk() {
               Data Pelanggan
             </h2>
             <button onClick={() => navigate('/kiosk')} className="btn" style={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' , 
-            padding: '0.5rem 1rem' ,
               minHeight: '2.5rem' ,
               fontWeight: '600' ,
             borderRadius: '6px' , border: '1px solid var(--clr-accent)'
@@ -187,9 +184,6 @@ export default function FormKiosk() {
             background: 'color-mix(in oklab, var(--clr-primary) 20%, var(--clr-bg))',
             border: '1px solid color-mix(in oklab, var(--clr-primary) 20%, transparent)'
           }}>
-            <div style={{ fontWeight: '600', color: 'var(--clr-primary)', marginBottom: 'var(--space-1)' }}>
-              Pilihan Terpilih
-            </div>
             {selectedBuilding && (
               <div style={{ color: 'var(--clr-primary)', fontSize: 'var(--fs-400)', marginBottom: 'var(--space-1)' }}>
                 Gedung: {selectedBuilding.name}
