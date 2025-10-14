@@ -8,6 +8,7 @@ import Kiosk from './pages/Kiosk.jsx';
 import OptionKiosk from './pages/OptionKiosk.jsx';
 import FormKiosk from './pages/FormKiosk.jsx';
 import QueueKiosk from './pages/QueueKiosk.jsx';
+import CanvaEmbed from './components/CanvaEmbed.jsx'
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -20,7 +21,8 @@ export default function App() {
     <div className="app-shell">
       <main>
         <Routes>
-
+          <Route path="/" element={<div className="landing-page"><CanvaEmbed src="https://www.canva.com/design/DAG1pmcHjkM/view?embed
+" title="Marketing Landing" /></div>} />
           <Route path="/login" element={<Login />} />
           <Route
             path="/supervisor/*"
