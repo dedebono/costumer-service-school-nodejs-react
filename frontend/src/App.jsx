@@ -21,7 +21,7 @@ export default function App() {
     <div className="app-shell">
       <main>
         <Routes>
-          <Route path="/" element={<div className="landing-page"><CanvaEmbed src="https://www.canva.com/design/DAG1pmcHjkM/view?embed
+          <Route path="/" element={<div className="landing-page"><CanvaEmbed src="https://www.canva.com/design/DAG1pmcHjkM/XKMk2Tut5p4AqFeRkChhLQ/view?embed
 " title="Marketing Landing" /></div>} />
           <Route path="/login" element={<Login />} />
           <Route
