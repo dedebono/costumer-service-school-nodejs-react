@@ -82,7 +82,8 @@ export default function CSDashboard() {
       return
     }
     const start = new Date(activeTicket.called_at)
-    const end = activeTicket.status === 'DONE' ? new Date(activeTicket.finished_at) : activeTicket.status === 'NO_SHOW' ? new Date(activeTicket.no_show_at) : new Date()
+    const end = activeTicket.status === 'DONE' ? new Date(activeTicket.finished_at) : 
+    activeTicket.status === 'NO_SHOW' ? new Date(activeTicket.no_show_at) : new Date()
     const diff = end - start
     const minutes = Math.floor(diff / 60000)
     const seconds = Math.floor((diff % 60000) / 1000)

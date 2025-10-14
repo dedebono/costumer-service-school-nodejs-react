@@ -119,7 +119,8 @@ export default function FormKiosk() {
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        <div>Layanan tidak dipilih. Kembali ke <button onClick={() => navigate('/kiosk')}>pilihan layanan</button></div>
+        <div>Layanan tidak dipilih. Kembali ke <button
+        onClick={() => navigate('/kiosk')}>pilihan layanan</button></div>
       </div>
     )
   }
