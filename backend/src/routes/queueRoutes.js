@@ -34,7 +34,7 @@ router.get('/:serviceId', requireRole(['CustomerService', 'Supervisor']), async 
 });
 
 // GET /api/queue/:serviceId/status - Get queue status counts
-router.get('/:serviceId/status', requireRole(['CustomerService', 'Supervisor']), async (req, res) => {
+router.get('/:serviceId/status', async (req, res) => {
   try {
     const { serviceId } = req.params;
     const status = await getQueueStatus(serviceId);

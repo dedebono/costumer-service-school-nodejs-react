@@ -100,7 +100,7 @@ export default function QueueKiosk() {
       const fetchAndUpdateQueue = async () => {
         console.log('Fetching and updating queue status...');
         try {
-          const queue = await api.queue.getQueue(currentTicket.service_id, null, 100);
+          const queue = await api.kiosk.getQueue(currentTicket.service_id, null, 100);
           const waitingTickets = queue.filter((t) => t.status === 'WAITING');
           const ticketIndex = waitingTickets.findIndex((t) => t.id === currentTicket.id);
 

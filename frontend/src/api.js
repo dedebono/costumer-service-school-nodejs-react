@@ -162,6 +162,13 @@ export const api = {
       return apiHelper(`/kiosk/services?${params}`);
     },
 
+    getQueue: async (serviceId, status, limit = 50) => {
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      if (limit) params.append('limit', limit);
+      return apiHelper(`/kiosk/queue/${serviceId}?${params}`);
+    },
+
     createQueueTicket: async (ticketData) => {
       return apiHelper('/kiosk/ticket', { method: 'POST', body: ticketData });
     },

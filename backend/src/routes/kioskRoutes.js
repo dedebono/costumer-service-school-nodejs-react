@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const {
   createQueueTicket,
+  getQueueByService,
 } = require('../models/queueTicket');
 const {
   findOrCreateQueueCustomerByPhone,
@@ -64,6 +65,31 @@ router.get('/queue-groups', async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to fetch queue groups' });
+  }
+});
+
+// GET /api/kiosk/queue/:serviceId - Get queue for a service (public for kiosk)
+router.get('/queue/:serviceId', async (req, res) => {
+  try {
+    const { serviceId } = req.params;
+    const { status, limit = 50, buildingCode, queuegroupCode } = req.query;
+
+    const tickets = await getQueueByService(serviceId, { status, limit: parseInt(limit), buildingCode, queuegroupCode });
+    // Return limited data for public view (no sensitive customer info)
+    const publicTickets = tickets.map(ticket => ({
+      id: ticket.id,
+      number: ticket.number,
+      status: ticket.status,
+      created_at: ticket.created_at,
+      service_name: ticket.service_name,
+      // Only include customer name if it's queue_customer_name (public)
+      customer_name: ticket.queue_customer_name || null,
+      customer_phone: ticket.queue_customer_phone || null,
+    }));
+    res.json(publicTickets);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch queue' });
   }
 });
 
