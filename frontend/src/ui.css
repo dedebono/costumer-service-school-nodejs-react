@@ -166,7 +166,7 @@ textarea:focus-visible{
   overflow: hidden;
   margin-inline: auto;
   padding-inline: var(--space-4);
-  height: 100%;
+  height: fit-content;
 }
 
 h2{
@@ -223,9 +223,7 @@ h2{
 /* ---------- Cards / Surfaces ---------- */
 .surface{
   background: var(--clr-bg);
-  border: 1px solid var(--clr-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
 }
 
 .surface-2{

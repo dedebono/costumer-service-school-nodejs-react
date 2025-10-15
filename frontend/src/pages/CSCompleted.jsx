@@ -196,7 +196,10 @@ export default function CSCompleted() {
           </div>
         </header>
 
-        <main className="container-2" style={{ paddingTop: 'var(--space-6)', paddingBottom: 'var(--space-6)' }}>
+        <main className="container-2" style={{ paddingTop: 'var(--space-6)', 
+          paddingBottom: 'var(--space-6)' , 
+          background: 'var(--clr-bg)' ,
+          height:'fit-content' }}>
           {error && (
             <div className="surface-2" style={{
               background: 'color-mix(in oklab, red 10%, var(--clr-bg))',
@@ -210,12 +213,26 @@ export default function CSCompleted() {
               <button
                 onClick={() => setError('')}
                 className="btn-icon"
-                style={{ position: 'absolute', top: 'var(--space-2)', right: 'var(--space-2)', background: 'none', border: 'none', fontSize: 'var(--fs-500)', cursor: 'pointer' }}
+                style={{ position: 'absolute', top: 'var(--space-2)', 
+                  right: 'var(--space-2)', background: 'none', 
+                  border: 'none', fontSize: 'var(--fs-500)', cursor: 'pointer' }}
               >×</button>
             </div>
           )}
 
-          <div className="surface-2" style={{ padding: 'var(--space-4)' }}>
+          <div className="surface-2" style={{ 
+          padding: 'var(--space-4)' , 
+          border: '1px solid var(--clr-border)' ,
+          borderRadius: 'var(--space-2)',
+          background: 'var(--clr-bg)' ,
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' ,
+          marginBottom: 'var(--space-6)' ,
+          minHeight: '500px',
+          width:'100%' ,
+          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' ,
+          boxSizing: 'border-box',
+          height:'100%'
+           }}>
             {/* colored counts */}
             <div className="flex items-center gap-3" style={{ marginBottom: 'var(--space-3)' }}>
               <span style={{ ...badgeBase, ...STATUS_BADGE_STYLES.DONE }}>{STATUS_LABEL.DONE}: {countByStatus.DONE}</span>
@@ -236,7 +253,7 @@ export default function CSCompleted() {
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
                   gap: 'var(--space-3)',
-                  maxHeight: '40vh',
+                  maxHeight: '100%',
                   overflowY: 'auto'
                 }}
               >
