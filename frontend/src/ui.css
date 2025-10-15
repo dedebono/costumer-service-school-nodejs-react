@@ -226,6 +226,15 @@ h2{
   border-radius: var(--radius-lg);
 }
 
+.surface-queue{  
+  background-repeat: repeat;
+  background-size: 120px 120px;
+  background-image:
+    image-set(
+      url("./images/logo24.png"),
+    );
+}
+
 .surface-2{
 display: block;
   border: 1px solid var(--clr-border);

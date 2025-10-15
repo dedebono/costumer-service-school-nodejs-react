@@ -207,12 +207,16 @@ export default function QueueKiosk() {
       justifyContent: 'center',
       padding: 'var(--space-4)'
     }}>
-      <div className="surface" style={{
-        maxWidth: '480px',
-        width: '100%',
-        padding: 'var(--space-8)',
-        textAlign: 'center'
-      }}>
+<div
+  className="surface-queue"
+  style={{
+    maxWidth: '480px',
+    width: '100%',
+    minHeight: '280px',
+    padding: 'var(--space-8)',
+    textAlign: 'center',
+  }}
+>
         <div style={{ marginBottom: 'var(--space-6)' }}>
           <div style={{
             width: '4rem',

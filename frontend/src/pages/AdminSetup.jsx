@@ -9,6 +9,7 @@ export default function AdminSetup() {
   const [buildings, setBuildings] = useState([])
   const [queueGroups, setQueueGroups] = useState([])
   const [settings, setSettings] = useState({})
+  const [pendingSettings, setPendingSettings] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -783,13 +784,31 @@ export default function AdminSetup() {
   }
 
   // Settings handlers
-  const handleSettingChange = async (key, value) => {
+  const handleSettingChange = (key, value) => {
+    setPendingSettings({ ...pendingSettings, [key]: value })
+  }
+
+  const handleSaveSettings = async () => {
     try {
-      await api.admin.setSetting(key, value)
-      setSettings({ ...settings, [key]: value })
-      showMessage('Setting updated successfully')
+      const promises = Object.entries(pendingSettings).map(([key, value]) =>
+        api.admin.setSetting(key, value)
+      )
+      await Promise.all(promises)
+      setSettings({ ...settings, ...pendingSettings })
+      setPendingSettings({})
+      await Swal.fire({
+        icon: 'success',
+        title: 'Settings Updated',
+        text: 'All settings updated successfully',
+        timer: 2000,
+        showConfirmButton: false,
+      })
     } catch (err) {
-      showMessage(err.message || 'Failed to update setting', true)
+      await Swal.fire({
+        icon: 'error',
+        title: 'Update Failed',
+        text: err.message || 'Failed to update settings',
+      })
     }
   }
 
@@ -1132,54 +1151,65 @@ export default function AdminSetup() {
                 System Settings
               </h2>
 
-              <div className="surface p-6">
-                <div style={{ display: 'grid', gap: 'var(--space-6)' }}>
+              <div className="surface p-6"
+              style={{display:'flex', flexDirection:'column', gap:'10px'}}
+              >
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr', // 2 columns
+                    gridTemplateRows: 'auto auto',  // 2 rows
+                    gap: 'var(--space-6)',
+                    alignItems: 'start',
+                    justifyContent: 'start',
+                  }}
+                >
                   <div>
-                    <label style={{ 
-                      display: 'block', 
-                      fontSize: 'var(--fs-300)', 
-                      fontWeight: '600', 
-                      marginBottom: 'var(--space-2)' 
+                    <label style={{
+                      display: 'block',
+                      fontSize: 'var(--fs-300)',
+                      fontWeight: '600',
+                      marginBottom: 'var(--space-2)'
                     }}>
                       Business Hours Start (HH:MM)
                     </label>
                     <input
                       type="time"
-                      value={settings.business_hours_start || '09:00'}
+                      value={pendingSettings.business_hours_start !== undefined ? pendingSettings.business_hours_start : (settings.business_hours_start || '09:00')}
                       onChange={(e) => handleSettingChange('business_hours_start', e.target.value)}
                       className="input"
                     />
                   </div>
 
                   <div>
-                    <label style={{ 
-                      display: 'block', 
-                      fontSize: 'var(--fs-300)', 
-                      fontWeight: '600', 
-                      marginBottom: 'var(--space-2)' 
+                    <label style={{
+                      display: 'block',
+                      fontSize: 'var(--fs-300)',
+                      fontWeight: '600',
+                      marginBottom: 'var(--space-2)'
                     }}>
                       Business Hours End (HH:MM)
                     </label>
                     <input
                       type="time"
-                      value={settings.business_hours_end || '17:00'}
+                      value={pendingSettings.business_hours_end !== undefined ? pendingSettings.business_hours_end : (settings.business_hours_end || '17:00')}
                       onChange={(e) => handleSettingChange('business_hours_end', e.target.value)}
                       className="input"
                     />
                   </div>
 
                   <div>
-                    <label style={{ 
-                      display: 'block', 
-                      fontSize: 'var(--fs-300)', 
-                      fontWeight: '600', 
-                      marginBottom: 'var(--space-2)' 
+                    <label style={{
+                      display: 'block',
+                      fontSize: 'var(--fs-300)',
+                      fontWeight: '600',
+                      marginBottom: 'var(--space-2)'
                     }}>
                       Default SLA Warning (minutes)
                     </label>
                     <input
                       type="number"
-                      value={settings.default_sla_warn_minutes || 30}
+                      value={pendingSettings.default_sla_warn_minutes !== undefined ? pendingSettings.default_sla_warn_minutes : (settings.default_sla_warn_minutes || 30)}
                       onChange={(e) => handleSettingChange('default_sla_warn_minutes', parseInt(e.target.value))}
                       className="input"
                       min="1"
@@ -1187,22 +1217,34 @@ export default function AdminSetup() {
                   </div>
 
                   <div>
-                    <label style={{ 
-                      display: 'block', 
-                      fontSize: 'var(--fs-300)', 
-                      fontWeight: '600', 
-                      marginBottom: 'var(--space-2)' 
+                    <label style={{
+                      display: 'block',
+                      fontSize: 'var(--fs-300)',
+                      fontWeight: '600',
+                      marginBottom: 'var(--space-2)'
                     }}>
-                      Queue Display Refresh Interval (seconds)
+                      Queue Ticket Number Format
                     </label>
                     <input
-                      type="number"
-                      value={settings.queue_refresh_interval || 30}
-                      onChange={(e) => handleSettingChange('queue_refresh_interval', parseInt(e.target.value))}
+                      type="text"
+                      value={pendingSettings.ticket_number_format !== undefined ? pendingSettings.ticket_number_format : (settings.ticket_number_format || '{building_code}/{queuegroup_code}/{service_code}/{number}')}
+                      onChange={(e) => handleSettingChange('ticket_number_format', e.target.value)}
                       className="input"
-                      min="5"
+                      placeholder="e.g., {building_code}/{service_code}-{number}"
                     />
+                    <p style={{ fontSize: 'var(--fs-200)', color: 'var(--clr-text-muted)', marginTop: 'var(--space-1)' }}>
+                      Available placeholders: {'{building_code}'}, {'{queuegroup_code}'}, {'{service_code}'}, {'{number}'}
+                    </p>
                   </div>
+                </div>
+                <div style={{ marginTop: 'var(--space-6)', textAlign: 'center' }}>
+                  <button
+                    onClick={handleSaveSettings}
+                    className="btn btn--primary btn--lg"
+                    disabled={Object.keys(pendingSettings).length === 0}
+                  >
+                    Save All Settings Changes
+                  </button>
                 </div>
               </div>
             </div>

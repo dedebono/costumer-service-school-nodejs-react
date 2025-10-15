@@ -1,4 +1,5 @@
 const { db } = require('./db');
+const { getSetting } = require('./setting');
 
 const ALLOWED_STATUSES = new Set(['WAITING', 'CALLED', 'IN_SERVICE', 'DONE', 'NO_SHOW', 'CANCELED']);
 
@@ -20,14 +21,31 @@ function createQueueTicket({ serviceId, customerId, queueCustomerId, notes }) {
       LEFT JOIN buildings b ON b.id = qg.building_id AND b.is_active = 1
       WHERE s.id = ? AND s.is_active = 1
       LIMIT 1
-    `, [serviceId], (err, results) => {
+    `, [serviceId], async (err, results) => {
       if (err) return reject(err);
       const data = results[0];
       if (!data) return reject(new Error('Service not found or inactive, or no active queuegroup allows this service'));
 
       const { code_prefix, queuegroup_code, building_code } = data;
 
-      // Generate number: building_code/queuegroup_code/service_code/sequential number for today
+      // Check business hours
+      const now = new Date();
+      const currentTime = now.getHours() * 60 + now.getMinutes();
+      try {
+        const startTimeStr = await getSetting('business_hours_start') || '09:00';
+        const endTimeStr = await getSetting('business_hours_end') || '17:00';
+        const [startH, startM] = startTimeStr.split(':').map(Number);
+        const startMinutes = startH * 60 + startM;
+        const [endH, endM] = endTimeStr.split(':').map(Number);
+        const endMinutes = endH * 60 + endM;
+        if (currentTime < startMinutes || currentTime > endMinutes) {
+          return reject(new Error(`cannot create queue ticket, come back later between ${startTimeStr} - ${endTimeStr}`));
+        }
+      } catch (settingErr) {
+        return reject(settingErr);
+      }
+
+      // Generate number using configurable format
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       const sql = `
         SELECT COUNT(*) + 1 AS next_num
@@ -36,29 +54,41 @@ function createQueueTicket({ serviceId, customerId, queueCustomerId, notes }) {
       db.query(sql, [serviceId, today], (err2, results2) => {
         if (err2) return reject(err2);
         const sequential = String(results2[0].next_num).padStart(3, '0');
-        const number = `${building_code}/${queuegroup_code}/${code_prefix}/${sequential}`;
 
-        const insertSql = `
-          INSERT INTO queue_tickets (service_id, number, building_code, queuegroup_code, customer_id, queue_customer_id, status, notes, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, 'WAITING', ?, NOW())`;
-        db.query(insertSql, [serviceId, number, building_code, queuegroup_code, customerId || null, queueCustomerId || null, notes || null], (err3, result) => {
-          if (err3) return reject(err3);
-          db.query(`
-            SELECT qt.*, s.name AS service_name, s.code_prefix,
-                   c.name AS customer_name, c.phone AS customer_phone,
-                   qc.name AS queue_customer_name, qc.phone AS queue_customer_phone,
-                   qg.id AS queuegroup_id
-            FROM queue_tickets qt
-            LEFT JOIN services s ON s.id = qt.service_id
-            LEFT JOIN customers c ON c.id = qt.customer_id
-            LEFT JOIN queue_customers qc ON qc.id = qt.queue_customer_id
-            LEFT JOIN queue_groups qg ON qg.code = qt.queuegroup_code AND qg.building_id = (SELECT id FROM buildings WHERE code = qt.building_code)
-            WHERE qt.id = ?
-          `, [result.insertId], (err4, results4) => {
-            if (err4) reject(err4);
-            else resolve(results4[0]);
+        // Get ticket number format from settings
+        getSetting('ticket_number_format').then(format => {
+          if (!format) {
+            format = '{building_code}/{queuegroup_code}/{service_code}/{number}'; // default
+          }
+
+          const number = format
+            .replace('{building_code}', building_code)
+            .replace('{queuegroup_code}', queuegroup_code)
+            .replace('{service_code}', code_prefix)
+            .replace('{number}', sequential);
+
+          const insertSql = `
+            INSERT INTO queue_tickets (service_id, number, building_code, queuegroup_code, customer_id, queue_customer_id, status, notes, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, 'WAITING', ?, NOW())`;
+          db.query(insertSql, [serviceId, number, building_code, queuegroup_code, customerId || null, queueCustomerId || null, notes || null], (err3, result) => {
+            if (err3) return reject(err3);
+            db.query(`
+              SELECT qt.*, s.name AS service_name, s.code_prefix,
+                     c.name AS customer_name, c.phone AS customer_phone,
+                     qc.name AS queue_customer_name, qc.phone AS queue_customer_phone,
+                     qg.id AS queuegroup_id
+              FROM queue_tickets qt
+              LEFT JOIN services s ON s.id = qt.service_id
+              LEFT JOIN customers c ON c.id = qt.customer_id
+              LEFT JOIN queue_customers qc ON qc.id = qt.queue_customer_id
+              LEFT JOIN queue_groups qg ON qg.code = qt.queuegroup_code AND qg.building_id = (SELECT id FROM buildings WHERE code = qt.building_code)
+              WHERE qt.id = ?
+            `, [result.insertId], (err4, results4) => {
+              if (err4) reject(err4);
+              else resolve(results4[0]);
+            });
           });
-        });
+        }).catch(err => reject(err));
       });
     });
   });

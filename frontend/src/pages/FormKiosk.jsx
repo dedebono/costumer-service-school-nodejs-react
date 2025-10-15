@@ -104,7 +104,15 @@ export default function FormKiosk() {
       const result = await api.kiosk.createQueueTicket(ticketData)
       navigate('/kiosk/queue', { state: { ticket: result.ticket } })
     } catch (err) {
-      setError(err.message || 'Gagal membuat nomor antrian')
+      if (err.message && err.message.startsWith('cannot create queue ticket')) {
+        await Swal.fire({
+          icon: 'warning',
+          title: 'Outside Business Hours',
+          text: err.message,
+        })
+      } else {
+        setError(err.message || 'Gagal membuat nomor antrian')
+      }
       console.error(err)
     } finally {
       setLoading(false)

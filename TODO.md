@@ -1,8 +1,6 @@
-- Add counter filter to CSDashboard.jsx
-  - Add counters state and selectedCounter state
-  - Load counters in useEffect
-  - Add counter select dropdown before service select with "All Counter" and individual counters
-  - Filter service options based on selected counter
-  - Adjust queue loading to only load from allowed services when counter selected
-  - Adjust socket joining to only join allowed services when counter selected
-  - Filter queue display to only show tickets from allowed services
+# Task: Add configurable queue ticket number format setting to AdminSetup
+
+## Pending Tasks
+- [ ] Modify backend/src/models/queueTicket.js to use configurable format from settings
+- [ ] Add new setting input in frontend/src/pages/AdminSetup.jsx settings tab
+- [ ] Test ticket generation with different formats
