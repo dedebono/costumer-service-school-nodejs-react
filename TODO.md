@@ -1,6 +1,6 @@
-# Task: Add configurable queue ticket number format setting to AdminSetup
+# TODO: Fix Timezone Conversion for Queue Ticket Creation
 
-## Pending Tasks
-- [ ] Modify backend/src/models/queueTicket.js to use configurable format from settings
-- [ ] Add new setting input in frontend/src/pages/AdminSetup.jsx settings tab
-- [ ] Test ticket generation with different formats
+## Tasks
+- [x] Modify backend/src/models/queueTicket.js to use UTC time for business hours check instead of server local time
+- [ ] Test queue ticket creation during configured business hours
+- [ ] Verify that tickets can be created successfully when within business hours in the selected timezone

@@ -28,9 +28,9 @@ function createQueueTicket({ serviceId, customerId, queueCustomerId, notes }) {
 
       const { code_prefix, queuegroup_code, building_code } = data;
 
-      // Check business hours
+      // Check business hours using UTC time
       const now = new Date();
-      const currentTime = now.getHours() * 60 + now.getMinutes();
+      const currentUTCTime = now.getUTCHours() * 60 + now.getUTCMinutes();
       try {
         const startTimeStr = await getSetting('business_hours_start') || '09:00';
         const endTimeStr = await getSetting('business_hours_end') || '17:00';
@@ -38,8 +38,8 @@ function createQueueTicket({ serviceId, customerId, queueCustomerId, notes }) {
         const startMinutes = startH * 60 + startM;
         const [endH, endM] = endTimeStr.split(':').map(Number);
         const endMinutes = endH * 60 + endM;
-        if (currentTime < startMinutes || currentTime > endMinutes) {
-          return reject(new Error(`cannot create queue ticket, come back later between ${startTimeStr} - ${endTimeStr}`));
+        if (currentUTCTime < startMinutes || currentUTCTime > endMinutes) {
+          return reject(new Error(`cannot create queue ticket, come back later between ${startTimeStr} - ${endTimeStr} UTC`));
         }
       } catch (settingErr) {
         return reject(settingErr);
