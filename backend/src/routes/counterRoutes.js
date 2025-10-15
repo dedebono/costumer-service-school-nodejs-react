@@ -8,9 +8,9 @@ const {
   deleteCounter,
 } = require('../models/counter');
 
-// All counter routes are protected and require Supervisor role
+// All counter routes are protected and require CustomerService or Supervisor role
 router.use(verifyToken);
-router.use(requireRole('Supervisor'));
+router.use(requireRole(['CustomerService', 'Supervisor']));
 
 // GET /api/counters
 router.get('/', async (req, res) => {

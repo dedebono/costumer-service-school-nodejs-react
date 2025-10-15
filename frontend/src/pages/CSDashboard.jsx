@@ -19,6 +19,8 @@ export default function CSDashboard() {
   const [selectedService, setSelectedService] = useState('all')
   const [buildings, setBuildings] = useState([])
   const [selectedBuilding, setSelectedBuilding] = useState(null)
+  const [counters, setCounters] = useState([])
+  const [selectedCounter, setSelectedCounter] = useState('all')
   const [queue, setQueue] = useState([])
   const [activeTicket, setActiveTicket] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -37,6 +39,7 @@ export default function CSDashboard() {
   useEffect(() => {
     loadServices()
     loadBuildings()
+    loadCounters()
     setupSocket()
     return () => {
       if (queueUpdateTimeoutRef.current) clearTimeout(queueUpdateTimeoutRef.current)
@@ -58,8 +61,15 @@ export default function CSDashboard() {
     const prevId = prevServiceIdRef.current
     if (!s) return
     if (selectedService === 'all') {
-      // Join all service queues
-      services.forEach(service => {
+      // Join all service queues or only allowed services based on counter
+      let servicesToJoin = services
+      if (selectedCounter !== 'all') {
+        const counter = counters.find(c => c.id === parseInt(selectedCounter, 10))
+        if (counter?.allowed_service_ids) {
+          servicesToJoin = services.filter(s => counter.allowed_service_ids.includes(s.id))
+        }
+      }
+      servicesToJoin.forEach(service => {
         if (prevId && prevId !== service.id) s.emit('leave-queue', prevId)
         s.emit('join-queue', service.id)
       })
@@ -70,11 +80,18 @@ export default function CSDashboard() {
       prevServiceIdRef.current = nextId
     }
     loadQueue()
-  }, [selectedService, services])
+  }, [selectedService, services, selectedCounter, counters])
 
   useEffect(() => {
-    // Filter queue based on selected building
-  }, [selectedBuilding, queue])
+    // Filter queue based on selected building and counter
+    if (selectedCounter !== 'all') {
+      const counter = counters.find(c => c.id === parseInt(selectedCounter, 10))
+      if (counter?.allowed_service_ids) {
+        // Filter queue to only show tickets from allowed services
+        setQueue(prevQueue => prevQueue.filter(ticket => counter.allowed_service_ids.includes(ticket.service_id)))
+      }
+    }
+  }, [selectedBuilding, queue, selectedCounter, counters])
 
   useEffect(() => {
     if (!activeTicket) {
@@ -139,6 +156,16 @@ export default function CSDashboard() {
     }
   }
 
+  const loadCounters = async () => {
+    try {
+      const data = await api.counters.getAll()
+      setCounters(data)
+    } catch (err) {
+      setError('Failed to load counters')
+      console.error(err)
+    }
+  }
+
 
 
   const loadQueue = async () => {
@@ -146,14 +173,30 @@ export default function CSDashboard() {
     try {
       let data = []
       if (selectedService === 'all') {
-        // Fetch queues from all services and combine them
+        // Fetch queues from all services or only allowed services based on counter
+        let servicesToFetch = services
+        if (selectedCounter !== 'all') {
+          const counter = counters.find(c => c.id === parseInt(selectedCounter, 10))
+          if (counter?.allowed_service_ids) {
+            servicesToFetch = services.filter(s => counter.allowed_service_ids.includes(s.id))
+          }
+        }
         const allQueues = await Promise.all(
-          services.map(service => api.queue.getQueue(service.id, null, 100))
+          servicesToFetch.map(service => api.queue.getQueue(service.id, null, 100))
         )
         data = allQueues.flat()
       } else {
         data = await api.queue.getQueue(selectedService.id, null, 100)
       }
+
+      // Filter queue based on selected counter
+      if (selectedCounter !== 'all') {
+        const counter = counters.find(c => c.id === parseInt(selectedCounter, 10))
+        if (counter?.allowed_service_ids) {
+          data = data.filter(ticket => counter.allowed_service_ids.includes(ticket.service_id))
+        }
+      }
+
       setQueue(data)
 
       let newActiveTicket = null
@@ -400,6 +443,22 @@ export default function CSDashboard() {
             <h1>ANTRIAN</h1>
             <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
               <select
+                value={selectedCounter}
+                onChange={(e) => {
+                  setSelectedCounter(e.target.value)
+                  // Reset service selection when counter changes
+                  setSelectedService('all')
+                }}
+                className="select"
+              >
+                <option value="all">All Counter</option>
+                {counters.map(counter => (
+                  <option key={counter.id} value={counter.id}>
+                    {counter.name}
+                  </option>
+                ))}
+              </select>
+              <select
                 value={selectedService === 'all' ? 'all' : selectedService?.id || ''}
                 onChange={(e) => {
                   if (e.target.value === 'all') {
@@ -412,11 +471,17 @@ export default function CSDashboard() {
                 className="select"
               >
                 <option value="all">All Services</option>
-                {services.map(service => (
-                  <option key={service.id} value={service.id}>
-                    {service.name} ({service.code_prefix})
-                  </option>
-                ))}
+                {services
+                  .filter(service => {
+                    if (selectedCounter === 'all') return true
+                    const counter = counters.find(c => c.id === parseInt(selectedCounter, 10))
+                    return counter?.allowed_service_ids?.includes(service.id) || false
+                  })
+                  .map(service => (
+                    <option key={service.id} value={service.id}>
+                      {service.name} ({service.code_prefix})
+                    </option>
+                  ))}
               </select>
               <select
                 value={selectedBuilding?.id || ''}
@@ -637,7 +702,9 @@ export default function CSDashboard() {
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4">
-                                <div style={{ fontSize: 'var(--fs-500)', fontWeight: '700' }}>{ticket.number}</div>
+                                <div style={{ 
+                                  fontSize: 'var(--fs-500)', 
+                                  fontWeight: '700' }}>{ticket.number}</div>
                                 <div>
                                   <div style={{ fontWeight: '600' }}>
                                     {ticket.customer_name || ticket.queue_customer_name || 'Anonymous'}
