@@ -110,15 +110,24 @@ function PipelineBuilderForSupervisor() {
 
   const deletePipeline = async () => {
     if (!selectedPipelineId || selectedPipelineId === 'new') return;
-    if (confirm('Are you sure you want to delete this pipeline? This will also delete all its steps.')) {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'This will delete the pipeline and all its steps.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
       try {
         await api(`/admission/pipelines/${selectedPipelineId}`, {
           method: 'DELETE',
         });
         setPipelines(prev => prev.filter(p => p.id !== selectedPipelineId));
         setSelectedPipelineId(pipelines.length > 1 ? pipelines.find(p => p.id !== selectedPipelineId)?.id || 'new' : 'new');
+        Swal.fire('Deleted!', 'Pipeline has been deleted.', 'success');
       } catch (e) {
-        alert('Failed to delete pipeline: ' + e.message);
+        Swal.fire('Error', 'Failed to delete pipeline: ' + e.message, 'error');
       }
     }
   };
@@ -270,7 +279,17 @@ function PipelineBuilderForSupervisor() {
           </div>
         </div>
       ) : (
-        selectedPipelineId && selectedPipelineId !== 'new' && <PipelineBuilder pipelineId={selectedPipelineId} />
+        selectedPipelineId && selectedPipelineId !== 'new' && <PipelineBuilder pipelineId={selectedPipelineId} onPipelineDuplicated={async () => {
+          try {
+            const data = await api('/admission/pipelines');
+            setPipelines(data);
+            if (data.length > 0 && !data.find(p => p.id === selectedPipelineId)) {
+              setSelectedPipelineId(data[0].id);
+            }
+          } catch (e) {
+            console.error('Failed to refresh pipelines:', e);
+          }
+        }} />
       )}
 
       {/* Edit Steps Modal - CORRECTED FOR POP-UP */}

@@ -1,30 +1,43 @@
-// SortableItem.jsx
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-
-export default function SortableItem({ id, step, onStepClick }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-    cursor: 'grab',
+// SortableItem.jsx - Now a simple item without drag-and-drop
+export default function SortableItem({ step, onStepClick, onDelete }) {
+  const handleClick = () => {
+    onStepClick?.(step);
   };
 
-  const handleClick = (e) => {
-    // Prevent triggering drag if just a click
-    if (!isDragging) {
-      onStepClick?.(step);
-    }
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    onDelete?.(step.id);
   };
 
   return (
-    <li ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <div className="liststeps" onClick={handleClick}>
-        {step.title} - {step.slug} {step.is_final ? '(Final)' : ''}
-      </div>
+    <li>
+<div
+  className="liststeps"
+  onClick={handleClick}
+  style={{
+    cursor: 'pointer',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  }}
+>
+  <span>
+    {step.title} - {step.slug} {step.is_final ? '(Final)' : ''}
+  </span>
+  <button
+    className="btn-delete"
+    onClick={handleDelete}
+    style={{
+      color: 'red',
+      border: 'none',
+      background: 'none',
+      cursor: 'pointer',
+      fontSize: '1.2rem',
+    }}
+  >
+    ❌
+  </button>
+</div>
     </li>
   );
 }

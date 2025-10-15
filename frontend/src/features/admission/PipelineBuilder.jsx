@@ -1,48 +1,29 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../../lib/api.js';
-import {
-  DndContext,
-  closestCenter,
-  DragOverlay
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  horizontalListSortingStrategy,
-  arrayMove
-} from '@dnd-kit/sortable';
+import Swal from 'sweetalert2';
 import SortableItem from './SortableItem.jsx';
 
-// Simple reusable modal
-function Modal({ open, title, onClose, children, footer }) {
-  if (!open) return null;
-  return (
-    <div className="modal-overlay">
-      <div className="modal">
-        <header className="modal-header">
-          <h3>{title}</h3>
-          <button className="btn-close" onClick={onClose}>✖</button>
-        </header>
-        <div className="modal-body">{children}</div>
-        {footer && <footer className="modal-footer">{footer}</footer>}
-      </div>
-    </div>
-  );
-}
-
-export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
+export default function PipelineBuilder({ pipelineId, hideAddStep = false, onPipelineDuplicated }) {
   const [steps, setSteps] = useState([]);
   const [newStepName, setNewStepName] = useState('');
   const [newStepSlug, setNewStepSlug] = useState('');
   const [isFinal, setIsFinal] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
 
-  const [activeId, setActiveId] = useState(null);
-  const activeStep = useMemo(
-    () => steps.find((s) => s.id === activeId) || null,
-    [activeId, steps]
-  );
-
   const [selectedStep, setSelectedStep] = useState(null);
+
+  const handleStepClick = (step) => {
+    Swal.fire({
+      title: 'Step Details',
+      html: `
+        <p><strong>Title:</strong> ${step.title}</p>
+        <p><strong>Slug:</strong> ${step.slug}</p>
+        <p><strong>Order:</strong> ${step.ord}</p>
+        <p><strong>Is Final:</strong> ${step.is_final ? 'Yes' : 'No'}</p>
+      `,
+      confirmButtonText: 'Close'
+    });
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -56,33 +37,7 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
     load();
   }, [pipelineId]);
 
-  const onDragStart = ({ active }) => setActiveId(active.id);
-  const onDragCancel = () => setActiveId(null);
 
-  const onDragEnd = async ({ active, over }) => {
-    setActiveId(null);
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = steps.findIndex((s) => s.id === active.id);
-    const newIndex = steps.findIndex((s) => s.id === over.id);
-    const reordered = arrayMove(steps, oldIndex, newIndex).map((s, i) => ({
-      ...s,
-      ord: i + 1,
-    }));
-
-    const prev = steps;
-    setSteps(reordered);
-
-    try {
-      await api(`/admission/${pipelineId}/steps`, {
-        method: 'PUT',
-        body: { steps: reordered },
-      });
-    } catch (err) {
-      console.error('Failed to update steps:', err);
-      setSteps(prev); // rollback on error
-    }
-  };
 
   const handleAddStep = async () => {
     if (!newStepName || !newStepSlug) {
@@ -105,11 +60,90 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
     }
   };
 
+  const handleDuplicatePipeline = async () => {
+    const { value: newName } = await Swal.fire({
+      title: 'Duplicate Pipeline',
+      input: 'text',
+      inputLabel: 'Enter new pipeline name',
+      inputPlaceholder: 'New Pipeline Name',
+      showCancelButton: true,
+      inputValidator: (value) => {
+        if (!value) {
+          return 'You need to enter a name!';
+        }
+      }
+    });
+
+    if (newName) {
+      try {
+        // Get current pipeline details
+        const currentPipeline = await api(`/admission/pipelines/${pipelineId}`);
+        // Create new pipeline
+        const newPipeline = await api('/admission/pipelines', {
+          method: 'POST',
+          body: { name: newName, year: currentPipeline.year }
+        });
+        // Duplicate steps and collect mapping
+        const stepMapping = {};
+        for (const step of steps) {
+          const newStep = await api(`/admission/${newPipeline.id}/steps`, {
+            method: 'POST',
+            body: { name: step.title, slug: step.slug, is_final: step.is_final }
+          });
+          stepMapping[step.id] = newStep.id;
+        }
+        // Duplicate step dynamic details
+        for (const step of steps) {
+          const details = await api(`/admission/${pipelineId}/steps/${step.id}/details`);
+          for (const detail of details) {
+            await api(`/admission/${newPipeline.id}/steps/${stepMapping[step.id]}/details`, {
+              method: 'POST',
+              body: {
+                key: detail.key,
+                type: detail.type,
+                required: detail.required,
+                label: detail.label,
+                options: detail.options
+              }
+            });
+          }
+        }
+        Swal.fire('Success', `Pipeline "${newName}" duplicated successfully!`, 'success');
+        // Trigger refresh in parent component (Supervisor.jsx)
+        if (onPipelineDuplicated) {
+          onPipelineDuplicated();
+        }
+      } catch (e) {
+        Swal.fire('Error', 'Failed to duplicate pipeline: ' + e.message, 'error');
+      }
+    }
+  };
+
+  const handleDeleteStep = async (stepId) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'This will delete the step and all its details.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await api(`/admission/${pipelineId}/steps/${stepId}`, { method: 'DELETE' });
+        setSteps(steps.filter(s => s.id !== stepId));
+        Swal.fire('Deleted!', 'Step has been deleted.', 'success');
+      } catch (e) {
+        Swal.fire('Error', 'Failed to delete step: ' + e.message, 'error');
+      }
+    }
+  };
+
   return (
     <div>
       {!hideAddStep && (
         <>
-          <h3>Add New Step</h3>
+          <h3>Tambahkan Langkah</h3>
           <div className="flex gap-2 mb-2">
             <input
               className="input-modal"
@@ -134,7 +168,7 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
               Final
             </label>
             <button className="btn btn--primary" onClick={handleAddStep}>
-              Add Step
+              Tambah
             </button>
           </div>
         </>
@@ -148,68 +182,29 @@ export default function PipelineBuilder({ pipelineId, hideAddStep = false }) {
         >
           {isCollapsed ? 'Lihat' : 'Sembunyi'}
         </button>
+        <button className="btn btn--primary" onClick={handleDuplicatePipeline}>
+          Gandakan Alur
+        </button>
+
       </div>
 
       {!isCollapsed && (
-        <DndContext
-          collisionDetection={closestCenter}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-          onDragCancel={onDragCancel}
-        >
-          <SortableContext
-            items={steps.map((s) => s.id)}
-            strategy={horizontalListSortingStrategy}
-          >
-            <ul className="steps-list">
-              {steps.map((s) => (
-                <SortableItem
-                  key={s.id}
-                  id={s.id}
-                  step={s}
-                  onStepClick={setSelectedStep}
-                />
-              ))}
-            </ul>
-          </SortableContext>
-
-          <DragOverlay dropAnimation={null}>
-            {activeStep ? (
-              <div className="liststeps">
-                {activeStep.title} - {activeStep.slug}{' '}
-                {activeStep.is_final ? '(Final)' : ''}
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+        <ul className="steps-list">
+          {steps.map((s) => (
+            <SortableItem
+              key={s.id}
+              step={s}
+              onStepClick={handleStepClick}
+              onDelete={handleDeleteStep}
+            />
+          ))}
+        </ul>
       )}
 
-      {/* 🔥 Step detail modal */}
-      <Modal
-        open={!!selectedStep}
-        title="Step Details"
-        onClose={() => setSelectedStep(null)}
-        footer={
-          <button
-            className="btn btn--primary"
-            onClick={() => setSelectedStep(null)}
-          >
-            Close
-          </button>
-        }
-      >
-        {selectedStep && (
-          <div>
-            <p><strong>Title:</strong> {selectedStep.title}</p>
-            <p><strong>Slug:</strong> {selectedStep.slug}</p>
-            <p><strong>Order:</strong> {selectedStep.ord}</p>
-            <p><strong>Is Final:</strong> {selectedStep.is_final ? 'Yes' : 'No'}</p>
-          </div>
-        )}
-      </Modal>
 
-      <div className="mt-4">
-        <button className="btnsimpan" 
+
+      <div className="mt-4 flex gap-2">
+        <button className="btnsimpan"
         disabled
         onClick={() => alert('All changes have been auto-saved.')}>
           Simpan
