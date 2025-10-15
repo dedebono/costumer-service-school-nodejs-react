@@ -5,7 +5,7 @@ import ApplicantsBoard from '../features/admission/ApplicantsBoard.jsx';
 import Swal from 'sweetalert2';
 import Modal from '../components/modal.jsx'; // ⬅️ import modal
 
-export default function Admission({ hideAddStep = false, hideCreatePipeline = false }) {
+export default function Admission({ hideAddStep = false, hideCreatePipeline = false, hidePipelineBuilder = false }) {
   const [pipelines, setPipelines] = useState([]);
   const [selectedPipeline, setSelectedPipeline] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -140,7 +140,7 @@ export default function Admission({ hideAddStep = false, hideCreatePipeline = fa
             </form>
           </Modal>
 
-          <PipelineBuilder pipelineId={selectedPipeline.id} hideAddStep={hideAddStep} />
+          {!hidePipelineBuilder && <PipelineBuilder pipelineId={selectedPipeline.id} hideAddStep={hideAddStep} />}
           <ApplicantsBoard key={applicantRefreshKey} pipeline={selectedPipeline} />
         </>
       )}

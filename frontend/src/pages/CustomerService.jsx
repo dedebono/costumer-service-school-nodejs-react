@@ -108,7 +108,7 @@ export default function CustomerService() {
             {tab === 'create' && <TicketCreate />}
             {tab === 'tickets' && <TicketsTable CustomerService />}
             {tab === 'users' && <FetchUser />}
-            {tab === 'admission' && <Admission hideAddStep hideCreatePipeline />}
+            {tab === 'admission' && <Admission hideAddStep hideCreatePipeline hideSortableItem hidePipelineBuilder />}
             {tab === 'cs-dashboard' && <CSDashboard />}
             {tab === 'CSCompleted' && <CSCompleted />}
           </div>
