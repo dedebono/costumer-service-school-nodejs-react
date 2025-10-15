@@ -111,7 +111,7 @@ export const api = {
     },
 
     update: async (id, serviceData) => {
-      return apiHelper(`/services/${id}`, { method: 'PATCH', body: serviceData });
+      return apiHelper(`/services/${id}`, { method: 'PUT', body: serviceData });
     },
 
     delete: async (id) => {
@@ -136,7 +136,7 @@ export const api = {
     },
 
     update: async (id, counterData) => {
-      return apiHelper(`/counters/${id}`, { method: 'PATCH', body: counterData });
+      return apiHelper(`/counters/${id}`, { method: 'PUT', body: counterData });
     },
 
     delete: async (id) => {

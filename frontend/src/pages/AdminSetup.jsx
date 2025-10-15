@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { api } from '../api'
 import Swal from 'sweetalert2'
+import moment from 'moment-timezone'
 
 export default function AdminSetup() {
   const [activeTab, setActiveTab] = useState('services')
@@ -13,8 +14,6 @@ export default function AdminSetup() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-
-
 
   useEffect(() => {
     loadData()
@@ -790,11 +789,26 @@ export default function AdminSetup() {
 
   const handleSaveSettings = async () => {
     try {
-      const promises = Object.entries(pendingSettings).map(([key, value]) =>
+      // Convert business hours to UTC based on selected timezone
+      const processedSettings = { ...pendingSettings }
+
+      if (pendingSettings.business_hours_start && pendingSettings.timezone) {
+        const userTimezone = pendingSettings.timezone
+        const localStartTime = moment.tz(`${moment().format('YYYY-MM-DD')} ${pendingSettings.business_hours_start}`, userTimezone)
+        processedSettings.business_hours_start = localStartTime.utc().format('HH:mm')
+      }
+
+      if (pendingSettings.business_hours_end && pendingSettings.timezone) {
+        const userTimezone = pendingSettings.timezone
+        const localEndTime = moment.tz(`${moment().format('YYYY-MM-DD')} ${pendingSettings.business_hours_end}`, userTimezone)
+        processedSettings.business_hours_end = localEndTime.utc().format('HH:mm')
+      }
+
+      const promises = Object.entries(processedSettings).map(([key, value]) =>
         api.admin.setSetting(key, value)
       )
       await Promise.all(promises)
-      setSettings({ ...settings, ...pendingSettings })
+      setSettings({ ...settings, ...processedSettings })
       setPendingSettings({})
       await Swal.fire({
         icon: 'success',
@@ -1158,7 +1172,7 @@ export default function AdminSetup() {
                   style={{
                     display: 'grid',
                     gridTemplateColumns: '1fr 1fr', // 2 columns
-                    gridTemplateRows: 'auto auto',  // 2 rows
+                    gridTemplateRows: 'auto auto auto',  // 3 rows
                     gap: 'var(--space-6)',
                     alignItems: 'start',
                     justifyContent: 'start',
@@ -1234,6 +1248,35 @@ export default function AdminSetup() {
                     />
                     <p style={{ fontSize: 'var(--fs-200)', color: 'var(--clr-text-muted)', marginTop: 'var(--space-1)' }}>
                       Available placeholders: {'{building_code}'}, {'{queuegroup_code}'}, {'{service_code}'}, {'{number}'}
+                    </p>
+                  </div>
+
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: 'var(--fs-300)',
+                      fontWeight: '600',
+                      marginBottom: 'var(--space-2)'
+                    }}>
+                      Timezone
+                    </label>
+                    <select
+                      value={pendingSettings.timezone !== undefined ? pendingSettings.timezone : (settings.timezone || 'UTC')}
+                      onChange={(e) => handleSettingChange('timezone', e.target.value)}
+                      className="input"
+                    >
+                      <option value="UTC">UTC (Coordinated Universal Time)</option>
+                      <option value="America/New_York">Eastern Time (ET)</option>
+                      <option value="America/Chicago">Central Time (CT)</option>
+                      <option value="America/Denver">Mountain Time (MT)</option>
+                      <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                      <option value="Europe/London">Greenwich Mean Time (GMT)</option>
+                      <option value="Asia/Tokyo">Japan Standard Time (JST)</option>
+                      <option value="Asia/Singapore">Singapore Time (SGT)</option>
+                      <option value="Asia/Jakarta">Indonesia Time (WIB)</option>
+                    </select>
+                    <p style={{ fontSize: 'var(--fs-200)', color: 'var(--clr-text-muted)', marginTop: 'var(--space-1)' }}>
+                      Select the timezone to match backend UTC or your local time zone for display purposes.
                     </p>
                   </div>
                 </div>
