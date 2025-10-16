@@ -3,6 +3,28 @@ const { getSetting } = require('./setting');
 
 const ALLOWED_STATUSES = new Set(['WAITING', 'CALLED', 'IN_SERVICE', 'DONE', 'NO_SHOW', 'CANCELED']);
 
+/** Parse "HH:mm" into minutes since midnight (0–1439) */
+function toMinutes(hhmm) {
+  const [h, m] = (hhmm || '00:00').split(':').map(Number);
+  return (h % 24) * 60 + (m % 60);
+}
+
+/**
+ * Check if currentUTCMinutes is within [startUTCMinutes, endUTCMinutes],
+ * supporting overnight wrap (start > end).
+ * If start === end, treat as always open (24/7).
+ */
+function withinWindowUTC(currentUTCMinutes, startUTCMinutes, endUTCMinutes) {
+  if (Number.isNaN(startUTCMinutes) || Number.isNaN(endUTCMinutes)) return true;
+  if (startUTCMinutes === endUTCMinutes) return true; // 24/7
+  if (startUTCMinutes < endUTCMinutes) {
+    // Normal window
+    return currentUTCMinutes >= startUTCMinutes && currentUTCMinutes <= endUTCMinutes;
+  }
+  // Overnight window (wrap)
+  return currentUTCMinutes >= startUTCMinutes || currentUTCMinutes <= endUTCMinutes;
+}
+
 function createQueueTicket({ serviceId, customerId, queueCustomerId, notes }) {
   return new Promise((resolve, reject) => {
     if (!serviceId || (!customerId && !queueCustomerId)) {
@@ -28,25 +50,29 @@ function createQueueTicket({ serviceId, customerId, queueCustomerId, notes }) {
 
       const { code_prefix, queuegroup_code, building_code } = data;
 
-      // Check business hours using UTC time
+      // Check business hours using UTC time (supports overnight)
       const now = new Date();
       const currentUTCTime = now.getUTCHours() * 60 + now.getUTCMinutes();
       try {
-        const startTimeStr = await getSetting('business_hours_start') || '09:00';
-        const endTimeStr = await getSetting('business_hours_end') || '17:00';
-        const [startH, startM] = startTimeStr.split(':').map(Number);
-        const startMinutes = startH * 60 + startM;
-        const [endH, endM] = endTimeStr.split(':').map(Number);
-        const endMinutes = endH * 60 + endM;
-        if (currentUTCTime < startMinutes || currentUTCTime > endMinutes) {
-          return reject(new Error(`cannot create queue ticket, come back later between ${startTimeStr} - ${endTimeStr} UTC`));
+        const startTimeStr = (await getSetting('business_hours_start')) || '09:00'; // UTC HH:mm
+        const endTimeStr   = (await getSetting('business_hours_end'))   || '17:00'; // UTC HH:mm
+        const configuredTz = (await getSetting('timezone')) || 'UTC'; // for messaging only
+
+        const startMinutes = toMinutes(startTimeStr);
+        const endMinutes   = toMinutes(endTimeStr);
+
+        const open = withinWindowUTC(currentUTCTime, startMinutes, endMinutes);
+        if (!open) {
+          return reject(new Error(
+            `cannot create queue ticket, come back later between ${startTimeStr} - ${endTimeStr} UTC (configured timezone: ${configuredTz})`
+          ));
         }
       } catch (settingErr) {
         return reject(settingErr);
       }
 
       // Generate number using configurable format
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD (UTC)
       const sql = `
         SELECT COUNT(*) + 1 AS next_num
         FROM queue_tickets
@@ -342,4 +368,6 @@ module.exports = {
   markNoShow,
   cancelTicket,
   getQueueStatus,
+  // Export helpers optionally for unit testing
+  _timeUtils: { toMinutes, withinWindowUTC },
 };

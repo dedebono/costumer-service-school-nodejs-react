@@ -1,7 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { api } from '../api'
 import Swal from 'sweetalert2'
 import moment from 'moment-timezone'
+
+/** Helpers for HH:mm conversions */
+const toUTCClock = (hhmm, tz) =>
+  moment.tz(`2000-01-01 ${hhmm}`, tz).utc().format('HH:mm')
+
+const fromUTCClock = (hhmmUTC, tz) =>
+  moment.utc(`2000-01-01 ${hhmmUTC}`).tz(tz).format('HH:mm')
 
 export default function AdminSetup() {
   const [activeTab, setActiveTab] = useState('services')
@@ -22,18 +29,48 @@ export default function AdminSetup() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const [servicesData, countersData, buildingsData, queueGroupsData, settingsData] = await Promise.all([
+      const [
+        servicesData,
+        countersData,
+        buildingsData,
+        queueGroupsData,
+        settingsData
+      ] = await Promise.all([
         api.services.getAll(false),
         api.counters.getAll(false),
         api.buildings.getAll(false),
         api.queueGroups.getAll(false),
         api.admin.getSettings()
       ])
+
       setServices(servicesData)
       setCounters(countersData)
       setBuildings(buildingsData)
       setQueueGroups(queueGroupsData)
-      setSettings(settingsData)
+
+      // Expecting UTC HH:mm stored in backend
+      const savedTz = settingsData?.timezone || moment.tz.guess() || 'UTC'
+      const savedStartUTC = settingsData?.business_hours_start || '09:00'
+      const savedEndUTC = settingsData?.business_hours_end || '17:00'
+
+      setSettings({
+        ...settingsData,
+        timezone: savedTz,
+        business_hours_start: savedStartUTC,
+        business_hours_end: savedEndUTC
+      })
+
+      // Initialize pending in LOCAL for display/edit
+      setPendingSettings({
+        timezone: savedTz,
+        business_hours_start: fromUTCClock(savedStartUTC, savedTz),
+        business_hours_end: fromUTCClock(savedEndUTC, savedTz),
+        default_sla_warn_minutes:
+          settingsData?.default_sla_warn_minutes ?? 30,
+        ticket_number_format:
+          settingsData?.ticket_number_format ??
+          '{building_code}/{queuegroup_code}/{service_code}/{number}'
+      })
     } catch (err) {
       setError('Failed to load data')
       console.error(err)
@@ -207,8 +244,6 @@ export default function AdminSetup() {
     }
   }
 
-
-
   const handleDeleteService = async (serviceId) => {
     const result = await Swal.fire({
       title: 'Delete Service',
@@ -370,8 +405,6 @@ export default function AdminSetup() {
     }
   }
 
-
-
   const handleDeleteCounter = async (counterId) => {
     const result = await Swal.fire({
       title: 'Delete Counter',
@@ -402,8 +435,6 @@ export default function AdminSetup() {
       }
     }
   }
-
-
 
   // Building handlers
   const handleCreateBuilding = async () => {
@@ -782,34 +813,85 @@ export default function AdminSetup() {
     }
   }
 
-  // Settings handlers
+  // ===== Settings (timezone & business hours) =====
+
+  // Use IANA list for completeness (optional — keep your fixed list if you prefer)
+  const allTimezones = useMemo(() => moment.tz.names(), [])
+
+  const effectiveTz =
+    pendingSettings.timezone ||
+    settings.timezone ||
+    moment.tz.guess() ||
+    'UTC'
+
   const handleSettingChange = (key, value) => {
-    setPendingSettings({ ...pendingSettings, [key]: value })
+    if (key === 'timezone') {
+      // When timezone changes, re-derive LOCAL inputs from saved UTC so form stays consistent
+      const newTz = value || 'UTC'
+      const startUTC = settings.business_hours_start || '09:00'
+      const endUTC = settings.business_hours_end || '17:00'
+      setPendingSettings(prev => ({
+        ...prev,
+        timezone: newTz,
+        business_hours_start: fromUTCClock(startUTC, newTz),
+        business_hours_end: fromUTCClock(endUTC, newTz)
+      }))
+      return
+    }
+    setPendingSettings(prev => ({ ...prev, [key]: value }))
   }
 
   const handleSaveSettings = async () => {
     try {
-      // Convert business hours to UTC based on selected timezone
+      const tz = pendingSettings.timezone || settings.timezone || 'UTC'
       const processedSettings = { ...pendingSettings }
 
-      if (pendingSettings.business_hours_start && pendingSettings.timezone) {
-        const userTimezone = pendingSettings.timezone
-        const localStartTime = moment.tz(`${moment().format('YYYY-MM-DD')} ${pendingSettings.business_hours_start}`, userTimezone)
-        processedSettings.business_hours_start = localStartTime.utc().format('HH:mm')
+      // Convert local HH:mm to UTC HH:mm
+      if (pendingSettings.business_hours_start) {
+        processedSettings.business_hours_start = toUTCClock(
+          pendingSettings.business_hours_start,
+          tz
+        )
+      }
+      if (pendingSettings.business_hours_end) {
+        processedSettings.business_hours_end = toUTCClock(
+          pendingSettings.business_hours_end,
+          tz
+        )
       }
 
-      if (pendingSettings.business_hours_end && pendingSettings.timezone) {
-        const userTimezone = pendingSettings.timezone
-        const localEndTime = moment.tz(`${moment().format('YYYY-MM-DD')} ${pendingSettings.business_hours_end}`, userTimezone)
-        processedSettings.business_hours_end = localEndTime.utc().format('HH:mm')
-      }
-
+      // Persist each changed key
       const promises = Object.entries(processedSettings).map(([key, value]) =>
         api.admin.setSetting(key, value)
       )
       await Promise.all(promises)
-      setSettings({ ...settings, ...processedSettings })
-      setPendingSettings({})
+
+      // Update canonical settings (UTC) and reflect back to local display
+      const savedStartUTC =
+        processedSettings.business_hours_start ??
+        settings.business_hours_start ??
+        '09:00'
+      const savedEndUTC =
+        processedSettings.business_hours_end ??
+        settings.business_hours_end ??
+        '17:00'
+      const savedTz = processedSettings.timezone ?? settings.timezone ?? 'UTC'
+
+      setSettings(prev => ({
+        ...prev,
+        ...processedSettings,
+        business_hours_start: savedStartUTC,
+        business_hours_end: savedEndUTC,
+        timezone: savedTz
+      }))
+
+      setPendingSettings(prev => ({
+        ...prev,
+        timezone: savedTz,
+        business_hours_start: fromUTCClock(savedStartUTC, savedTz),
+        business_hours_end: fromUTCClock(savedEndUTC, savedTz)
+      }))
+
       await Swal.fire({
         icon: 'success',
         title: 'Settings Updated',
@@ -825,6 +907,19 @@ export default function AdminSetup() {
       })
     }
   }
+
+  // Preview strings
+  const previewLocal =
+    (pendingSettings.business_hours_start || '') +
+    ' – ' +
+    (pendingSettings.business_hours_end || '') +
+    ' ' +
+    (effectiveTz || '')
+  const previewUTC =
+    (settings.business_hours_start || '') +
+    ' – ' +
+    (settings.business_hours_end || '') +
+    ' UTC'
 
   const tabs = [
     { id: 'services', label: 'Services', count: services.length },
@@ -847,8 +942,8 @@ export default function AdminSetup() {
 
         <main className="container" style={{ paddingTop: 'var(--space-6)', paddingBottom: 'var(--space-6)' }}>
           {(error || success) && (
-            <div className="surface" style={{ 
-              background: error ? 'color-mix(in oklab, red 10%, var(--clr-bg))' : 'color-mix(in oklab, green 10%, var(--clr-bg))', 
+            <div className="surface" style={{
+              background: error ? 'color-mix(in oklab, red 10%, var(--clr-bg))' : 'color-mix(in oklab, green 10%, var(--clr-bg))',
               border: error ? '1px solid color-mix(in oklab, red 30%, transparent)' : '1px solid color-mix(in oklab, green 30%, transparent)',
               color: error ? 'color-mix(in oklab, red 80%, black)' : 'color-mix(in oklab, green 80%, black)',
               padding: 'var(--space-4)',
@@ -927,8 +1022,8 @@ export default function AdminSetup() {
                           {service.sla_warn_minutes} minutes
                         </td>
                         <td>
-                          {service.connection_type === 'none' ? 'None' : 
-                           service.connection_type === 'admission' ? 'Admission' : 
+                          {service.connection_type === 'none' ? 'None' :
+                           service.connection_type === 'admission' ? 'Admission' :
                            service.connection_type === 'ticket' ? 'Ticket' : 'None'}
                         </td>
                         <td>
@@ -1165,14 +1260,12 @@ export default function AdminSetup() {
                 System Settings
               </h2>
 
-              <div className="surface p-6"
-              style={{display:'flex', flexDirection:'column', gap:'10px'}}
-              >
+              <div className="surface p-6" style={{display:'flex', flexDirection:'column', gap:'10px'}}>
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr 1fr', // 2 columns
-                    gridTemplateRows: 'auto auto auto',  // 3 rows
+                    gridTemplateColumns: '1fr 1fr',
+                    gridTemplateRows: 'auto auto auto',
                     gap: 'var(--space-6)',
                     alignItems: 'start',
                     justifyContent: 'start',
@@ -1185,11 +1278,11 @@ export default function AdminSetup() {
                       fontWeight: '600',
                       marginBottom: 'var(--space-2)'
                     }}>
-                      Business Hours Start (HH:MM)
+                      Business Hours Start (Local HH:MM)
                     </label>
                     <input
                       type="time"
-                      value={pendingSettings.business_hours_start !== undefined ? pendingSettings.business_hours_start : (settings.business_hours_start || '09:00')}
+                      value={pendingSettings.business_hours_start || ''}
                       onChange={(e) => handleSettingChange('business_hours_start', e.target.value)}
                       className="input"
                     />
@@ -1202,11 +1295,11 @@ export default function AdminSetup() {
                       fontWeight: '600',
                       marginBottom: 'var(--space-2)'
                     }}>
-                      Business Hours End (HH:MM)
+                      Business Hours End (Local HH:MM)
                     </label>
                     <input
                       type="time"
-                      value={pendingSettings.business_hours_end !== undefined ? pendingSettings.business_hours_end : (settings.business_hours_end || '17:00')}
+                      value={pendingSettings.business_hours_end || ''}
                       onChange={(e) => handleSettingChange('business_hours_end', e.target.value)}
                       className="input"
                     />
@@ -1223,8 +1316,12 @@ export default function AdminSetup() {
                     </label>
                     <input
                       type="number"
-                      value={pendingSettings.default_sla_warn_minutes !== undefined ? pendingSettings.default_sla_warn_minutes : (settings.default_sla_warn_minutes || 30)}
-                      onChange={(e) => handleSettingChange('default_sla_warn_minutes', parseInt(e.target.value))}
+                      value={
+                        pendingSettings.default_sla_warn_minutes !== undefined
+                          ? pendingSettings.default_sla_warn_minutes
+                          : (settings.default_sla_warn_minutes || 30)
+                      }
+                      onChange={(e) => handleSettingChange('default_sla_warn_minutes', parseInt(e.target.value || '0', 10))}
                       className="input"
                       min="1"
                     />
@@ -1241,7 +1338,11 @@ export default function AdminSetup() {
                     </label>
                     <input
                       type="text"
-                      value={pendingSettings.ticket_number_format !== undefined ? pendingSettings.ticket_number_format : (settings.ticket_number_format || '{building_code}/{queuegroup_code}/{service_code}/{number}')}
+                      value={
+                        pendingSettings.ticket_number_format !== undefined
+                          ? pendingSettings.ticket_number_format
+                          : (settings.ticket_number_format || '{building_code}/{queuegroup_code}/{service_code}/{number}')
+                      }
                       onChange={(e) => handleSettingChange('ticket_number_format', e.target.value)}
                       className="input"
                       placeholder="e.g., {building_code}/{service_code}-{number}"
@@ -1260,26 +1361,38 @@ export default function AdminSetup() {
                     }}>
                       Timezone
                     </label>
+
+                    {/* Use IANA list for full coverage */}
                     <select
-                      value={pendingSettings.timezone !== undefined ? pendingSettings.timezone : (settings.timezone || 'UTC')}
+                      value={pendingSettings.timezone || effectiveTz}
                       onChange={(e) => handleSettingChange('timezone', e.target.value)}
                       className="input"
                     >
-                      <option value="UTC">UTC (Coordinated Universal Time)</option>
-                      <option value="America/New_York">Eastern Time (ET)</option>
-                      <option value="America/Chicago">Central Time (CT)</option>
-                      <option value="America/Denver">Mountain Time (MT)</option>
-                      <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                      <option value="Europe/London">Greenwich Mean Time (GMT)</option>
-                      <option value="Asia/Tokyo">Japan Standard Time (JST)</option>
-                      <option value="Asia/Singapore">Singapore Time (SGT)</option>
-                      <option value="Asia/Jakarta">Indonesia Time (WIB)</option>
+                      {allTimezones.map(tz => (
+                        <option key={tz} value={tz}>{tz}</option>
+                      ))}
                     </select>
+
                     <p style={{ fontSize: 'var(--fs-200)', color: 'var(--clr-text-muted)', marginTop: 'var(--space-1)' }}>
-                      Select the timezone to match backend UTC or your local time zone for display purposes.
+                      Frontend edits times in this timezone; backend saves them as UTC.
                     </p>
+
+                    {/* Preview */}
+                    <div className="surface" style={{ marginTop: 'var(--space-4)', padding: 'var(--space-4)' }}>
+                      <div style={{ fontSize: 'var(--fs-300)', fontWeight: 600, marginBottom: 6 }}>Preview</div>
+                      <div style={{ fontSize: 'var(--fs-200)', marginBottom: 2 }}>
+                        Local: <code>{previewLocal}</code>
+                      </div>
+                      <div style={{ fontSize: 'var(--fs-200)' }}>
+                        UTC (will be saved): <code>{previewUTC}</code>
+                      </div>
+                      <div style={{ fontSize: 'var(--fs-200)', opacity: 0.8, marginTop: 6 }}>
+                        Overnight windows (e.g., 22:00–06:00) are supported by the backend logic.
+                      </div>
+                    </div>
                   </div>
                 </div>
+
                 <div style={{ marginTop: 'var(--space-6)', textAlign: 'center' }}>
                   <button
                     onClick={handleSaveSettings}
