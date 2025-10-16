@@ -64,7 +64,7 @@ function createQueueTicket({ serviceId, customerId, queueCustomerId, notes }) {
         const open = withinWindowUTC(currentUTCTime, startMinutes, endMinutes);
         if (!open) {
           return reject(new Error(
-            `cannot create queue ticket, come back later between ${startTimeStr} - ${endTimeStr} UTC (configured timezone: ${configuredTz})`
+            `Diluar jam kerja, silakan coba lagi`
           ));
         }
       } catch (settingErr) {
