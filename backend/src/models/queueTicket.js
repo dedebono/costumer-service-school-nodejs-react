@@ -39,7 +39,7 @@ function createQueueTicket({ serviceId, customerId, queueCustomerId, notes }) {
         const [endH, endM] = endTimeStr.split(':').map(Number);
         const endMinutes = endH * 60 + endM;
         if (currentUTCTime < startMinutes || currentUTCTime > endMinutes) {
-          return reject(new Error(`cannot create queue ticket, come back later between ${startTimeStr} - ${endTimeStr} UTC`));
+          return reject(new Error(`tidak bisa membuat antrian, diluar jam kerja`));
         }
       } catch (settingErr) {
         return reject(settingErr);
