@@ -7,7 +7,9 @@ A full-stack customer service application for schools, built with Node.js, Expre
 ### Backend
 *   **Node.js**: JavaScript runtime environment.
 *   **Express.js**: Web framework for Node.js.
-*   **SQLite**: SQL database engine.
+*   **MySQL**: SQL database engine.
+*   **multer**: Middleware for handling `multipart/form-data`, used for file uploads.
+*   **csv-parser**: For parsing CSV files, used for bulk data import.
 *   **jsonwebtoken (JWT)**: For generating and verifying access tokens for authentication.
 *   **bcrypt**: For hashing passwords.
 *   **Swagger UI Express**: For API documentation.
@@ -137,6 +139,7 @@ This method involves running the frontend and backend servers directly on your m
 **Prerequisites**:
 *   [Node.js](https://nodejs.org/) (v16 or later recommended)
 *   [npm](https://www.npmjs.com/) (usually comes with Node.js)
+*   [MySQL](https://www.mysql.com/downloads/)
 
 **Instructions**:
 
@@ -197,6 +200,12 @@ For a manual setup, you need to create `.env` files in the respective directorie
     SUPERVISOR_USERNAME=admin
     SUPERVISOR_PASSWORD=adminpassword
     SUPERVISOR_EMAIL=admin@example.com
+
+    # MySQL Database Configuration
+    DB_HOST=127.0.0.1
+    DB_USER=root
+    DB_PASSWORD=
+    DB_NAME=customer_service
     ```
 
 2.  **Frontend (`frontend/.env`)**:
