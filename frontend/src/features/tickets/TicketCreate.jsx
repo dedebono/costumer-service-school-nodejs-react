@@ -1173,7 +1173,7 @@ Phone: ${customerPhone || '-'}${customerEmail ? `\nEmail: ${customerEmail}` : ''
 
       // Final description = header + two newlines + previous (numbered) + newline + this step
       const bodyDescription =
-        `${lockedPrefix}\n\n${previousStepsText}${previousStepsText ? '\n' : ''}${nextLine}`;
+        `${previousStepsText}${previousStepsText ? '\n' : ''}${nextLine}`;
 
       const body = {
         title: finalTitle,
@@ -1239,7 +1239,7 @@ Phone: ${customerPhone || '-'}${customerEmail ? `\nEmail: ${customerEmail}` : ''
           const isUsed = usedOptionSet.has(norm(opt));
           return (
             <option key={opt} value={opt} disabled={isUsed}>
-              {opt}{isUsed ? '✅' : ''}
+              {opt}{isUsed ? ' (✅' : ''}
             </option>
           );
         })}
