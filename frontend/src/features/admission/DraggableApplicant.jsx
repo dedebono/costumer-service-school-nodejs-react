@@ -26,12 +26,21 @@ export default function DraggableApplicant({ applicant, onClick }) {
       className="card"
       onClick={handleClick}
     >
-      <div className="card__title">
-        {applicant.name}
+      <div className='card_title'>{applicant.name}
       </div>
-      {applicant.parent_phone && <div className="card__meta">{applicant.parent_phone}</div>}
-      {applicant.birthdate && <div className="card__meta">{formatDate(applicant.birthdate)}</div>}
-      {applicant.notes && <div className="badge">{applicant.notes}</div>}
+      {applicant.parent_phone && <div className="card__meta">📞{applicant.parent_phone}</div>}
+      {applicant.birthdate && <div className="card__meta">🎂{formatDate(applicant.birthdate)}</div>}
+      {applicant.address && <div 
+       style={{maxWidth:'130px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}
+      className="card__meta">🏠{applicant.address}</div>}
+      {applicant.email && <div 
+      style={{maxWidth:'130px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}
+      className="card__meta">📧{applicant.email}</div>}
+      {applicant.notes && <div
+      className="card__meta"
+      style={{maxWidth:'130px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}
+      >✒️{applicant.notes}</div>}
+      {applicant.nisn && <div className="card__meta"> 📋{applicant.nisn}</div>}
     </li>
   );
 }

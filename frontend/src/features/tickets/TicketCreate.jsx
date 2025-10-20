@@ -719,18 +719,6 @@ export default function TicketCreate() {
                 />
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label>Status</label>
-                  <select style={inp} value={status} onChange={(e) => setStatus(e.target.value)}>
-                    <option value="open">open</option>
-                    <option value="in_progress">in_progress</option>
-                    <option value="resolved">resolved</option>
-                    <option value="closed">closed</option>
-                  </select>
-                </div>
-              </div>
-
               <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
                 <button type="button" onClick={closeTicketModal} style={btn}>
                   Cancel
