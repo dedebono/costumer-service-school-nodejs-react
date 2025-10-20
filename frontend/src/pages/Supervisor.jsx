@@ -487,7 +487,7 @@ function PipelineBuilderForSupervisor() {
 function Header({ user, onLogout }) {
   return (
     <div className="flex justify-between items-center mb-4">
-      <h1 className="mt-0">EDUCATION COUNSULTAN ADMIN</h1>
+      <h1 className="mt-0">EDUCATION CONSULTAN ADMIN</h1>
       <div className="flex gap-2 items-center">
         <span className="badge">{user.username} • {user.role}</span>
         <button onClick={onLogout} className="btn btn--primary">Logout</button>

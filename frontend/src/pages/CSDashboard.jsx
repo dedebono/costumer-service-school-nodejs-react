@@ -440,7 +440,9 @@ export default function CSDashboard() {
       <div className="w-full">
         <header>
           <div className="container-antrian">
-            <h1>ANTRIAN</h1>
+            <h1 
+              style={{ color:'white', fontSize: 'var(--fs-700)', fontWeight: '700', marginBottom: 'var(--space-4)' }}
+            >DASHBOARD ANTRIAN</h1>
             <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
               <select
                 value={selectedCounter}
@@ -539,7 +541,7 @@ export default function CSDashboard() {
             {/* Active Ticket Panel */}
             <div className="surface-2">
               <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', marginBottom: 'var(--space-4)' }}>
-                ANTRIAN AKTIF
+                PANGGILAN AKTIF
               </h2>
 
               {activeTicket ? (
@@ -647,11 +649,11 @@ export default function CSDashboard() {
 
             {/* Queue List */}
             <div className="surface-2">
-              <div className="flex items-center justify-between mb-4">
-                <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', margin: 0 }}>ANTRIAN</h2>
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between mb-4"> 
+                <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', margin: 0 }}></h2>
+                <div className="flex items-center gap-2"> Download daftar antrian : 
                   <button onClick={exportCSV} className="btn" title="Export current queue to CSV">
-                    Export CSV
+                    CSV ⬇️
                   </button>
                 </div>
               </div>
@@ -691,7 +693,7 @@ export default function CSDashboard() {
                         {activeTickets.map((ticket) => (
                           <div
                             key={ticket.id}
-                            className="surface"
+                            className="badge-queue-item"
                             style={{
                               padding: 'var(--space-4)',
                               border:
@@ -709,6 +711,10 @@ export default function CSDashboard() {
                                   <div style={{ fontWeight: '600' }}>
                                     {ticket.customer_name || ticket.queue_customer_name || 'Anonymous'}
                                   </div>
+                              <div>
+                              {ticket.service_name || 'General Service'}
+                              </div>
+
                                   <div style={{ fontSize: 'var(--fs-300)', opacity: 0.7 }}>
                                     {toLocalTime(ticket.created_at)}
                                   </div>
