@@ -15,9 +15,9 @@ const DESCRIPTION_OPTIONS = {
     'Pembelian Seragam': ['Size terkonfirmasi', 'EduCS sudah menghubungi GA (Stok)', 'Fitting Baju', 'Pembayaran', 'Pengambilan di EduCS'],
     'Siswa Pindah Sekolah': ['Menyampaikan prosedur pindah Sekolah','Konfirmasi ke pihak terkait','Janji temu principal','Telah bertemu principal','Telah mengisi Formulir pindah sekolah','Formulir telah diserahkan ke admin area','Surat Pindah telah diserahkan kepada orang tua'],
     'Ketertinggalan Picker Card': ['Mengambil foto penjemput', 'Menerbitkan Kartu sementara', 'Menerbitkan Kartu baru (biaya)', 'Mengalihkan nama siswa ke Dismissal App'],
-    'Menerima tamu : Orang Tua': ['Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
+    'Menerima Tamu : Orang tua': ['Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
     'Menerima Tamu : Vendor': ['Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
-    'Menerima tamu : Tamu Khusus': ['Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
+    'Menerima Tamu : Tamu Khusus': ['Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
   // "Lain-lain" intentionally no options → free text
 };
 
