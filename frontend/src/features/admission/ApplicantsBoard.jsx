@@ -567,7 +567,7 @@ export default function ApplicantsBoard({ pipeline }) {
                       style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
                     />
                   ) : (
-                    selectedApplicant.name || <em>Not provided</em>
+                    selectedApplicant.name || <em>Belum diisi</em>
                   )}
                 </div>
                 <div>
@@ -580,7 +580,7 @@ export default function ApplicantsBoard({ pipeline }) {
                       style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
                     />
                   ) : (
-                    selectedApplicant.nisn || <em>Not provided</em>
+                    selectedApplicant.nisn || <em>Belum diisi</em>
                   )}
                 </div>
                 <div>
@@ -593,7 +593,7 @@ export default function ApplicantsBoard({ pipeline }) {
                       style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
                     />
                   ) : (
-                    selectedApplicant.birthdate ? new Date(selectedApplicant.birthdate).toLocaleDateString('en-GB') : <em>Not provided</em>
+                    selectedApplicant.birthdate ? new Date(selectedApplicant.birthdate).toLocaleDateString('en-GB') : <em>Belum diisi</em>
                   )}
                 </div>
                 <div>
@@ -606,7 +606,7 @@ export default function ApplicantsBoard({ pipeline }) {
                       style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
                     />
                   ) : (
-                    selectedApplicant.parent_phone || <em>Not provided</em>
+                    selectedApplicant.parent_phone || <em>Belum diisi</em>
                   )}
                 </div>
                 <div>
@@ -619,7 +619,7 @@ export default function ApplicantsBoard({ pipeline }) {
                       style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
                     />
                   ) : (
-                    selectedApplicant.email || <em>Not provided</em>
+                    selectedApplicant.email || <em>Belum diisi</em>
                   )}
                 </div>
                 <div>
@@ -632,7 +632,7 @@ export default function ApplicantsBoard({ pipeline }) {
                       style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
                     />
                   ) : (
-                    selectedApplicant.address || <em>Not provided</em>
+                    selectedApplicant.address || <em>Belum diisi</em>
                   )}
                 </div>
                 <div>
@@ -761,9 +761,9 @@ export default function ApplicantsBoard({ pipeline }) {
                           <span>
                             {detail.type === 'checkbox'
                               ? applicantDynamicDetails[detail.key] === 'true'
-                                ? '✅'
-                                : '❌'
-                              : applicantDynamicDetails[detail.key] || <em>Not set</em>}
+                                ? '✔️'
+                                : '✖️'
+                              : applicantDynamicDetails[detail.key] || <em>Belum diisi</em>}
                           </span>
                         )}
                       </label>
