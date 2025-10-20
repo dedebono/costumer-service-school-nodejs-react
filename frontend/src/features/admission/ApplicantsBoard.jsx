@@ -125,7 +125,12 @@ export default function ApplicantsBoard({ pipeline }) {
     setNotes(applicant.notes || '');
     setEditedName(applicant.name || '');
     setEditedNisn(applicant.nisn || '');
-    setEditedBirthdate(applicant.birthdate || '');
+    let parsedBirthdate = applicant.birthdate;
+    if (parsedBirthdate && parsedBirthdate.includes('/')) {
+      const parts = parsedBirthdate.split('/');
+      parsedBirthdate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+    setEditedBirthdate(parsedBirthdate ? parsedBirthdate.split('T')[0] : '');
     setEditedParentPhone(applicant.parent_phone || '');
     setEditedEmail(applicant.email || '');
     setEditedAddress(applicant.address || '');
@@ -155,13 +160,17 @@ export default function ApplicantsBoard({ pipeline }) {
   const handleSaveNotes = async () => {
     if (!selectedApplicant) return;
     try {
+      // Format birthdate to YYYY-MM-DD for database, but display as DD-MM-YYYY
+      const formattedBirthdate = editedBirthdate; // Keep as YYYY-MM-DD for DB
+      const displayBirthdate = editedBirthdate ? new Date(editedBirthdate).toLocaleDateString('en-GB') : editedBirthdate;
+
       // Save all fields including basic details
       await api(`/admission/applicants/${selectedApplicant.id}`, {
         method: 'PUT',
         body: {
           name: editedName,
           nisn: editedNisn,
-          birthdate: editedBirthdate,
+          birthdate: formattedBirthdate,
           parent_phone: editedParentPhone,
           email: editedEmail,
           address: editedAddress,
@@ -185,7 +194,7 @@ export default function ApplicantsBoard({ pipeline }) {
         ...selectedApplicant,
         name: editedName,
         nisn: editedNisn,
-        birthdate: editedBirthdate,
+        birthdate: displayBirthdate,
         parent_phone: editedParentPhone,
         email: editedEmail,
         address: editedAddress,
@@ -584,7 +593,7 @@ export default function ApplicantsBoard({ pipeline }) {
                       style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit' }}
                     />
                   ) : (
-                    selectedApplicant.birthdate || <em>Not provided</em>
+                    selectedApplicant.birthdate ? new Date(selectedApplicant.birthdate).toLocaleDateString('en-GB') : <em>Not provided</em>
                   )}
                 </div>
                 <div>

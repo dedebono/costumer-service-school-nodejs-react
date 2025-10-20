@@ -1,4 +1,5 @@
 import { useDraggable } from '@dnd-kit/core';
+import { formatDate } from '../../lib/utils';
 
 export default function DraggableApplicant({ applicant, onClick }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -31,7 +32,7 @@ export default function DraggableApplicant({ applicant, onClick }) {
       {applicant.email && <div className="card__meta">{applicant.email}</div>}
       {applicant.address && <div className="card__meta">{applicant.address}</div>}
       {applicant.nisn && <div className="card__meta">NISN: {applicant.nisn}</div>}
-      {applicant.birthdate && <div className="card__meta">Birthdate: {applicant.birthdate}</div>}
+      {applicant.birthdate && <div className="card__meta">Tanggal Lahir: {formatDate(applicant.birthdate)}</div>}
       {applicant.notes && <div className="badge">{applicant.notes}</div>}
 
     </li>

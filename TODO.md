@@ -1,6 +1,5 @@
-# TODO: Fix Timezone Conversion for Queue Ticket Creation
-
-## Tasks
-- [x] Modify backend/src/models/queueTicket.js to use UTC time for business hours check instead of server local time
-- [ ] Test queue ticket creation during configured business hours
-- [ ] Verify that tickets can be created successfully when within business hours in the selected timezone
+- [x] Modify handleApplicantClick to parse birthdate to YYYY-MM-DD for editing
+- [x] Modify handleSaveNotes to format editedBirthdate to DD-MM-YYYY when saving
+- [x] Update applicant objects with the formatted date
+- [x] Add `formatDate` function to `frontend/src/lib/utils.js` to format date as DD-MM-YYYY
+- [x] Update `frontend/src/features/admission/DraggableApplicant.jsx` to import and use `formatDate` for birthdate display

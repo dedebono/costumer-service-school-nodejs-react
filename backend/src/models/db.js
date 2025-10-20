@@ -4,7 +4,7 @@ const mysql = require('mysql2');
 const dbConfig = {
   host: process.env.DB_HOST || '127.0.0.1',
   user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
+  password: process.env.DB_PASSWORD || 'hb99g',
   database: process.env.DB_NAME || 'customer_service',
   multipleStatements: true,
 
