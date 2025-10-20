@@ -9,6 +9,7 @@ const {
   createApplicant,
   updateApplicantStep,
   updateApplicantNotes,
+  updateApplicantData,
   insertApplicantHistory,
   getStepRequirements,
   checkDocument,
@@ -254,14 +255,13 @@ router.delete('/pipelines/:id', async (req, res) => {
   // PUT /api/admission/applicants/:id
   router.put('/applicants/:id', async (req, res) => {
     const applicantId = Number(req.params.id);
-    const { notes } = req.body;
-    if (typeof notes !== 'string') return res.status(400).json({ message: 'notes must be a string' });
+    const { name, nisn, birthdate, parent_phone, email, address, notes } = req.body;
 
     try {
       const applicant = await getApplicantById(applicantId);
       if (!applicant) return res.status(404).json({ message: 'Applicant not found' });
 
-      await updateApplicantNotes(applicantId, notes);
+      await updateApplicantData(applicantId, { name, nisn, birthdate, parent_phone, email, address, notes });
       res.json({ ok: true });
     } catch (e) {
       res.status(400).json({ message: e.message });

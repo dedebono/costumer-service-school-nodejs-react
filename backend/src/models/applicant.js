@@ -116,6 +116,17 @@ function updateApplicantNotes(applicantId, notes) {
   });
 }
 
+function updateApplicantData(applicantId, { name, nisn, birthdate, parent_phone, email, address, notes }) {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      UPDATE applicants SET name = ?, nisn = ?, birthdate = ?, parent_phone = ?, email = ?, address = ?, notes = ?, updated_at = NOW() WHERE id = ?`;
+    db.query(sql, [name, nisn, birthdate, parent_phone, email, address, notes, applicantId], (err, result) => {
+      if (err) reject(err);
+      else resolve(true);
+    });
+  });
+}
+
 function getApplicantDynamicDetails(applicantId) {
   return new Promise((resolve, reject) => {
     const sql = `SELECT id, applicant_id, detail_key, value FROM applicant_dynamic_details WHERE applicant_id = ?`;
@@ -173,6 +184,7 @@ module.exports = {
   createApplicant,
   updateApplicantStep,
   updateApplicantNotes,
+  updateApplicantData,
   insertApplicantHistory,
   getStepRequirements,
   checkDocument,
