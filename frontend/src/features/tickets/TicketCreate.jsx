@@ -71,9 +71,7 @@ export default function TicketCreate() {
 
   const DESCRIPTION_OPTIONS = {
     'Layanan Kritik dan Saran': [
-      'Saran',
-      'Kritik',
-      'Pertanyaan Umum',
+      'Detail kritik/saran telah dicatat',
       'Edcon mengumpulkan Informasi',
       'Edcon telah menyampaikan ke pihak terkait',
       'Follow up ke Customer',
@@ -82,7 +80,7 @@ export default function TicketCreate() {
       'Size terkonfirmasi',
       'EduCS sudah menghubungi GA (Stok)',
       'Fitting Baju',
-      'Pembayaran',
+      'Pembayaran (tambahkan cash , transfer, atau debit di detail)',
       'Pengambilan di EduCS',
     ],
     'Siswa Pindah Sekolah': [
@@ -592,7 +590,7 @@ export default function TicketCreate() {
 
       {/* Modal for Create Ticket */}
       {isTicketOpen && (
-        <Modal onClose={closeTicketModal} title="Create Ticket">
+        <Modal onClose={closeTicketModal} title="Buat Ticket Baru">
           <form onSubmit={submit}>
             <div style={{ display: 'grid', gap: 8 }}>
               <div
@@ -613,7 +611,7 @@ export default function TicketCreate() {
                 </div>
               </div>
 
-              <label>Title</label>
+              <label style={{backgroundColor:'black' , width:'fit-content', color:'white', padding:'1px 6px' , }}>Nama Layanan</label>
               <select
                 style={inp}
                 value={titleChoice}
@@ -625,7 +623,7 @@ export default function TicketCreate() {
                 required
               >
                 <option value="" disabled>
-                  — Select a title —
+                  — Pilih layanan —
                 </option>
                 {TITLE_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>
@@ -671,7 +669,7 @@ export default function TicketCreate() {
               )}
 
               {/* Description */}
-              <label>Description</label>
+              <label style={{backgroundColor:'black' , width:'fit-content', color:'white', padding:'1px 6px' , }} >Alur Layanan</label>
               {titleChoice && currentDescOptions.length > 0 ? (
                 <>
                   <select
@@ -687,21 +685,23 @@ export default function TicketCreate() {
                     ))}
                   </select>
 
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <input
+                  <label className='badge' style={{ display: 'flex', 
+                    fontSize: '15px', alignItems: 'center', 
+                    gap: 8 , width:'fit-content' , padding:'10px' , 
+                    border:'none', borderRadius:'0px'}}>
+                    <input                      
                       type="checkbox"
                       checked={allowExtraDesc}
                       onChange={(e) => setAllowExtraDesc(e.target.checked)}
                     />
-                    Add extra text
+                    Tambahkan detail (centang ✅)
                   </label>
-
                   {allowExtraDesc && (
                     <textarea
                       style={{ ...inp, minHeight: 100 }}
                       value={extraDesc}
                       onChange={(e) => setExtraDesc(e.target.value)}
-                      placeholder="Type extra details… (optional)"
+                      placeholder="Tulis detail tambahan… (opsional)"
                     />
                   )}
                 </>
@@ -1013,7 +1013,7 @@ const DESCRIPTION_OPTIONS_FOLLOWUP = {
     'Size terkonfirmasi',
     'EduCS sudah menghubungi GA (Stok)',
     'Fitting Baju',
-    'Pembayaran',
+    'Pembayaran (tambahkan cash , transfer, atau debit di detail)',
     'Pengambilan di EduCS',
   ],
   'Siswa Pindah Sekolah': [
@@ -1142,17 +1142,27 @@ Phone: ${customerPhone || '-'}${customerEmail ? `\nEmail: ${customerEmail}` : ''
     stepLines.map(extractStepLabel).map(norm).filter(Boolean)
   );
 
+  // Extra details for THIS step
+  const [extraDetails, setExtraDetails] = useState('');
+
+  // Allow appending extra free text to the step
+  const [allowExtraDesc, setAllowExtraDesc] = useState(false);
+  const [extraDesc, setExtraDesc] = useState('');
+
   const [descOption, setDescOption] = useState(() =>
     descOptions.length ? descOptions[0] : 'Follow up'
   );
-  useEffect(() => {
-    if (descOptions.length) setDescOption(descOptions[0]);
-    else setDescOption('Follow up');
+useEffect(() => {
+  if (descOptions.length) {
+    const firstUnused = descOptions.find(opt => !usedOptionSet.has(norm(opt)));
+    setDescOption(firstUnused || descOptions[0]);
+  } else {
+    setDescOption('Follow up');
+  }    
+  setAllowExtraDesc(false);
+    setExtraDesc('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rootTitle]);
-
-  // Extra details for THIS step
-  const [extraDetails, setExtraDetails] = useState('');
+  }, [rootTitle, previousStepsText]);
 
   const [msg, setMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1165,11 +1175,16 @@ Phone: ${customerPhone || '-'}${customerEmail ? `\nEmail: ${customerEmail}` : ''
 
     try {
       // Compose THIS step line (e.g., "2) Follow up — called parent")
-      const nextLine = buildNextStepLine(
+      let nextLine = buildNextStepLine(
         nextStepNumber,
         (!isLainLain && descOptions.length ? descOption : 'Follow up'),
         extraDetails
       );
+
+      // Append extra text if allowed
+      if (allowExtraDesc && extraDesc.trim()) {
+        nextLine = `${nextLine}\n${extraDesc.trim()}`;
+      }
 
       // Final description = header + two newlines + previous (numbered) + newline + this step
       const bodyDescription =
@@ -1200,70 +1215,110 @@ Phone: ${customerPhone || '-'}${customerEmail ? `\nEmail: ${customerEmail}` : ''
   }
 
   return (
-    <form onSubmit={submit} style={{ display: 'grid', gap: 10 , minWidth: 400, overflowY: 'auto', maxHeight: '80vh' }}>
+    <form onSubmit={submit} style={{ display: 'grid', gap: 10 , minWidth: 400, maxHeight: '80vh', overflowY: 'auto'}}>
       <textarea
-        style={{ ...inp, minHeight: 88, background: '#4a4a4aff', color: '#ffffffff' }}
+        style={{ ...inp, minHeight: 18, background: '#4a4a4aff', color: '#ffffffff' }}
         value={lockedPrefix}
         readOnly
       />
 
-      <label>Subject</label>
       <input
         style={{ ...inp, background: '#4a4a4aff', color: '#ffffffff', fontWeight: '600' }}
         value={baseTitle}
         readOnly
       />
-      <div style={{ fontSize: 12, color: '#64748b', marginTop: -4 }}>
-        Final title → <b>{finalTitle}</b>
+      <div style={{ fontSize: 12, color: '#64748b', marginTop: -10 }}>
+      <b>{finalTitle}</b>
       </div>
 
       {/* Previous steps (read-only) */}
-      <label>Previous steps</label>
+      <label></label>
       <textarea
-        style={{ ...inp, minHeight: 120, background: '#fafafa', color: '#111' }}
-        value={previousStepsText || '(none yet — original description will become Step 1)'}
+        style={{ ...inp, minHeight: 20, background: '#d3d3d3ff', color: '#000000ff' , overflowY: 'auto' }}
+        value={previousStepsText  || '(none yet — original description will become Step 1)'}
         readOnly
       />
 
-      {/* This step */}
-      <label>This step</label>
-      {!isLainLain && descOptions.length > 0 ? (
-        <>
-      <select
-        style={inp}
-        value={descOption}
-        onChange={(e) => setDescOption(e.target.value)}
-        required
-      >
-        {descOptions.map((opt) => {
-          const isUsed = usedOptionSet.has(norm(opt));
-          return (
-            <option key={opt} value={opt} disabled={isUsed}>
-              {opt}{isUsed ? ' (✅' : ''}
-            </option>
-          );
-        })}
-      </select>
-      {descOptions.every((o) => usedOptionSet.has(norm(o))) && (
-  <div style={{ fontSize: 12, color: '#64748b', marginTop: -4 }}>
-    All preset options have been used in previous steps — add details below.
-  </div>
-)}
+{/* This step */}
+<label 
+style={{ backgroundColor:'#000000ff', 
+  borderRadius:'5px',
+  fontWeight:700,
+  padding:'1px 7px 5px', color:'white', 
+width:'fit-content' }}
+>Pilih tindakan 👇
+</label>
+{!isLainLain && descOptions.length > 0 ? (
+  <>
+    <select
+      style={inp}
+      value={descOption}
+      onChange={(e) => setDescOption(e.target.value)}
+      required
+    >
+      {descOptions.map((opt) => {
+        const isUsed = usedOptionSet.has(norm(opt));
+        return (
+          <option key={opt} value={opt} disabled={isUsed}>
+            {opt}{isUsed ? '✅' : ''}
+          </option>
+        );
+      })}
+    </select>
+
+    {descOptions.every(o => usedOptionSet.has(norm(o))) && (
+      <div style={{ fontSize: 12, color: '#64748b', marginTop: -4 }}>
+        All preset options have been used in previous steps — add details below.
+      </div>
+    )}
+
+    <label className='badge' style={{ display: 'flex', 
+                    fontSize: '15px', alignItems: 'center', 
+                    gap: 8 , width:'fit-content' , padding:'10px' , 
+                    border:'none', borderRadius:'0px'}}>
+      <input
+        type="checkbox"
+        checked={allowExtraDesc}
+        onChange={(e) => setAllowExtraDesc(e.target.checked)}
+      />
+      Tambahkan detail
+    </label>
+
+    {allowExtraDesc && (
+      <textarea
+        style={{ ...inp, minHeight: 100 }}
+        value={extraDesc}
+        onChange={(e) => setExtraDesc(e.target.value)}
+        placeholder="Tulis detail tambahan… (opsional)"
+      />
+    )}
+  </>
+) : ( 
+         <>
           <textarea
-            style={{ ...inp, minHeight: 80 }}
+            style={{ ...inp, minHeight: 120 }}
             value={extraDetails}
             onChange={(e) => setExtraDetails(e.target.value)}
-            placeholder={`Details for Step ${nextStepNumber} (optional)`}
+            placeholder={`Describe Step ${nextStepNumber}…`}
+            required
           />
+          <label className='badge'>
+            <input
+              type="checkbox"
+              checked={allowExtraDesc}
+              onChange={(e) => setAllowExtraDesc(e.target.checked)}
+            />
+            Tambahkan detail
+          </label>
+          {allowExtraDesc && (
+            <textarea
+              style={{ ...inp, minHeight: 100 }}
+              value={extraDesc}
+              onChange={(e) => setExtraDesc(e.target.value)}
+              placeholder="Tulis detail tambahan… (opsional)"
+            />
+          )}
         </>
-      ) : (
-        <textarea
-          style={{ ...inp, minHeight: 120 }}
-          value={extraDetails}
-          onChange={(e) => setExtraDetails(e.target.value)}
-          placeholder={`Describe Step ${nextStepNumber}…`}
-          required
-        />
       )}
 
       <div style={{ display: 'flex', gap: 8 }}>
@@ -1290,7 +1345,7 @@ function CustomerTicketsModal({
   onCloseTicket,
 }) {
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
+    <div style={{ display: 'grid', gap: 12 , maxHeight: '80vh'}}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontWeight: 600 }}>Tickets</div>
         <button onClick={onRefresh} style={btn}>Refresh</button>
