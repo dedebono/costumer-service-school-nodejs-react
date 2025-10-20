@@ -104,7 +104,7 @@ export default function OptionKiosk() {
 
           {step === 'building' && (
             <>
-              <h2>Education Counsultant</h2>
+              <h2>Education Consultant</h2>
               <div className="kiosk-options-grid">
                 {buildings.map(building => (
                   <button

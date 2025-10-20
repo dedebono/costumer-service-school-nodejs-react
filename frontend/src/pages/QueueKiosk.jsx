@@ -238,7 +238,7 @@ export default function QueueKiosk() {
             margin: '0 0 var(--space-2)',
             color: 'var(--clr-text)'
           }}>
-            Education Counsultant
+            Education Consultant
           </h1>
           <p style={{
             fontSize: 'var(--fs-400)',
