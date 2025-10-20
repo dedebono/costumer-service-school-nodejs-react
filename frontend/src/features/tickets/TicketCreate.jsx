@@ -7,7 +7,9 @@ import Swal from 'sweetalert2';
 export default function TicketCreate() {
   const navigate = useNavigate();
   const location = useLocation();
+
   const [titleChoice, setTitleChoice] = useState('');
+  const [guestType, setGuestType] = useState(''); // NEW: sub-option for "Menerima Tamu"
   const [customTitle, setCustomTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium'); // low | medium | high | urgent
@@ -16,8 +18,11 @@ export default function TicketCreate() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
 
+  // compute submit-enabling with the new rule for "Menerima Tamu"
   const canSubmitTitle =
-    !!titleChoice && (titleChoice !== 'Lain-lain' || customTitle.trim().length > 0);
+    !!titleChoice &&
+    (titleChoice !== 'Lain-lain' || customTitle.trim().length > 0) &&
+    (titleChoice !== 'Menerima Tamu' || !!guestType);
 
   const [searchResults, setSearchResults] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -47,6 +52,9 @@ export default function TicketCreate() {
     'Menerima Tamu',
     'Lain-lain',
   ];
+
+  // NEW: Sub-options for "Menerima Tamu"
+  const GUEST_TYPES = ['Orang tua', 'Vendor', 'Tamu Khusus'];
 
   const DESCRIPTION_OPTIONS = {
     'Layanan Kritik dan Saran': [
@@ -79,22 +87,12 @@ export default function TicketCreate() {
       'Menerbitkan Kartu baru (biaya)',
       'Mengalihkan nama siswa ke Dismissal App',
     ],
-    'Menerima Tamu Resmi': [
+    // UPDATED: remove 'Orang tua' / 'Vendor' from description list (they’re title sub-options now)
+    'Menerima Tamu': [
       'Tamu telah mengisi buku tamu',
       'EduCS telah meneruskan informasi ke area',
       'Area telah menghubungi tamu',
     ],
-      'Menerima Tamu: Orang tua': [
-      'Tamu telah mengisi buku tamu',
-      'EduCS telah meneruskan informasi ke area',
-      'Area telah menghubungi tamu',
-    ],
-    'Menerima Tamu: Vendor': [
-      'Tamu telah mengisi buku tamu',
-      'EduCS telah meneruskan informasi ke area',
-      'Area telah menghubungi tamu',
-    ],
-
   };
 
   const currentDescOptions =
@@ -105,13 +103,13 @@ export default function TicketCreate() {
   const [extraDesc, setExtraDesc] = useState('');
 
   useEffect(() => {
+    // reset guestType whenever title changes
+    setGuestType('');
     if (titleChoice && currentDescOptions.length > 0) {
       setDescription(currentDescOptions[0] || '');
-      // reset extra text UI whenever we switch to an option-driven title
       setAllowExtraDesc(false);
       setExtraDesc('');
     } else if (titleChoice === 'Lain-lain') {
-      // keep whatever user typed before, or clear it if coming from a select title
       setDescription((prev) => prev || '');
       setAllowExtraDesc(false);
       setExtraDesc('');
@@ -342,18 +340,31 @@ export default function TicketCreate() {
     setIsTicketOpen(false);
   }
 
-  // UPDATE your submit() to compute final title + combined description
+  // UPDATE submit() to compute final title (with guestType for "Menerima Tamu")
   async function submit(e) {
     e.preventDefault();
     setMsg('');
 
-    const finalTitle =
-      titleChoice === 'Lain-lain' ? customTitle.trim() : titleChoice.trim();
-
-    if (!finalTitle) {
-      showError('Missing Title', 'Please select a title (or type one for Lain-lain).');
+    // Validate title + guestType
+    if (!titleChoice) {
+      showError('Missing Title', 'Please select a title.');
       return;
     }
+    if (titleChoice === 'Lain-lain' && !customTitle.trim()) {
+      showError('Missing Title', 'Please type your custom title.');
+      return;
+    }
+    if (titleChoice === 'Menerima Tamu' && !guestType) {
+      showError('Missing Guest Type', 'Please choose Orang tua / Vendor / Tamu Khusus.');
+      return;
+    }
+
+    const finalTitle =
+      titleChoice === 'Lain-lain'
+        ? customTitle.trim()
+        : titleChoice === 'Menerima Tamu'
+        ? `${titleChoice} : ${guestType}` // e.g., "menerima tamu orang tua"
+        : titleChoice.trim();
 
     if (!description?.trim()) {
       showError('Missing Description', 'Please provide a description.');
@@ -365,12 +376,9 @@ export default function TicketCreate() {
       return;
     }
 
-    // Build finalDescription:
-    // - For option-driven titles: combine selected option + optional extra text
-    // - For "Lain-lain": just free text (no combining needed)
+    // Build finalDescription
     let finalDescription = description.trim();
     if (currentDescOptions.length > 0 && allowExtraDesc && extraDesc.trim()) {
-      // Join with newline so backend receives one field
       finalDescription = `${finalDescription}\n${extraDesc.trim()}`;
     }
 
@@ -410,8 +418,7 @@ export default function TicketCreate() {
         position: 'top',
       });
 
-      const customerNameForSearch =
-        (selectedCustomer?.name || name || '').trim();
+      const customerNameForSearch = (selectedCustomer?.name || name || '').trim();
       setTimeout(() => {
         navigate('./TicketSearch.jsx', {
           state: { prefillName: customerNameForSearch, autoSearch: true },
@@ -420,6 +427,7 @@ export default function TicketCreate() {
 
       // reset fields
       setTitleChoice('');
+      setGuestType('');
       setCustomTitle('');
       setDescription('');
       setPriority('medium');
@@ -523,6 +531,28 @@ export default function TicketCreate() {
                   </option>
                 ))}
               </select>
+
+              {/* NEW: Show guest type when "Menerima Tamu" */}
+              {titleChoice === 'Menerima Tamu' && (
+                <>
+                  <label>Kategori Tamu</label>
+                  <select
+                    style={inp}
+                    value={guestType}
+                    onChange={(e) => setGuestType(e.target.value)}
+                    required
+                  >
+                    <option value="" disabled>
+                      — Pilih kategori tamu —
+                    </option>
+                    {GUEST_TYPES.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
 
               {/* Show custom title field only when "Lain-lain" is chosen */}
               {titleChoice === 'Lain-lain' && (

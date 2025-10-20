@@ -11,11 +11,13 @@ const numberedPrefixRegex = /^Follow\s*up\s*(\d+)\s*[xX]\s*:\s*/i;
 
 // Shared with TicketCreate (keep in sync)
 const DESCRIPTION_OPTIONS = {
-    'Layanan Kritik dan Saran': ['Saran', 'Kritik', 'Pertanyaan Umum', 'EduCs telah menyampaikan ke pihak terkait', 'Follow up ke konsumen','EduCs mengumpulkan informasi'],
+    'Layanan Kritik dan Saran': ['Saran', 'Kritik', 'Pertanyaan Umum', 'Edcon mengumpulkan Informasi', 'Edcon Telah menyampaikan ke pihak terkait','Follow up ke Customer'],
     'Pembelian Seragam': ['Size terkonfirmasi', 'EduCS sudah menghubungi GA (Stok)', 'Fitting Baju', 'Pembayaran', 'Pengambilan di EduCS'],
     'Siswa Pindah Sekolah': ['Menyampaikan prosedur pindah Sekolah','Konfirmasi ke pihak terkait','Janji temu principal','Telah bertemu principal','Telah mengisi Formulir pindah sekolah','Formulir telah diserahkan ke admin area','Surat Pindah telah diserahkan kepada orang tua'],
     'Ketertinggalan Picker Card': ['Mengambil foto penjemput', 'Menerbitkan Kartu sementara', 'Menerbitkan Kartu baru (biaya)', 'Mengalihkan nama siswa ke Dismissal App'],
-    'Menerima Tamu': ['Orang tua', 'Tamu resmi', 'Vendor', 'Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
+    'menerima tamu orang tua': ['Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
+    'menerima Tamu vendor': ['Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
+    'menerima tamu tamu khusus': ['Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
   // "Lain-lain" intentionally no options → free text
 };
 
