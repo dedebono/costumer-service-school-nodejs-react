@@ -837,6 +837,11 @@ margin: 10px;
   width: fit-content;
 }
 
+/*===checkbox===*/
+.checkbox{
+  display: none;
+}
+
 /* ===== Applicant card (draggable) ===== */
 .card{
   display: flex; 
@@ -858,7 +863,7 @@ margin: 10px;
   background-color: var(--clr-primary-700);
   filter: saturate(1.05);
   color: var(--clr-surface);
-}
+  }
 
 /* simple content styling */
 .card__title{ font-weight: 800; display:flex; align-items:center; gap:.5rem; }

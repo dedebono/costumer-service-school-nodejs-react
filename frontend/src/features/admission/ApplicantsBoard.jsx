@@ -513,7 +513,7 @@ export default function ApplicantsBoard({ pipeline }) {
       {/* Applicant details modal */}
       <Modal
         open={!!selectedApplicant}
-        title={editMode === 'dataSiswa' ? 'Edit Data Siswa' : editMode === 'detail' ? 'Update Detail' : 'Data Siswa'}
+        title={editMode === 'dataSiswa' ? 'Edit Data Siswa' : editMode === 'detail' ? 'Update List' : 'Data Siswa'}
         onClose={() => setSelectedApplicant(null)}
         footer={
           <>
@@ -662,11 +662,10 @@ export default function ApplicantsBoard({ pipeline }) {
 
             {(editMode === null || editMode === 'detail') && stepDynamicDetails.length > 0 && (
               <div>
-                <strong>Detail</strong>
                 <div style={{ marginTop: '0.5rem', display: 'grid', gap: '0.2rem' }}>
                   {stepDynamicDetails.map((detail) => (
-                    <div key={detail.id} style={{ marginBottom: '0.5rem' }}>
-                      <label>
+                    <div key={detail.id} style={{ marginBottom: '0.1rem' , padding:'0.1rem' , borderBottom:'1px solid #eee' }}>
+                      <label style={{ display: 'flex', flexDirection:'row', gap: '10px' }}>
                         <strong>
                           {detail.label}
                           {detail.required ? ' *' : ''}:
@@ -696,7 +695,7 @@ export default function ApplicantsBoard({ pipeline }) {
                                   [detail.key]: e.target.value,
                                 }))
                               }
-                              style={{ width: '100%' }}
+                              style={{ width: 'fit-content' , padding: '0.3rem' , fontFamily: 'inherit' , borderRadius:'8px', border:'1px solid #ccc'}}
                             />
                           ) : detail.type === 'number' ? (
                             <input
@@ -755,7 +754,7 @@ export default function ApplicantsBoard({ pipeline }) {
                                   [detail.key]: e.target.value,
                                 }))
                               }
-                              style={{ width: '100%' }}
+                              style={{ width: 'fit-content' , padding: '0.3rem' , fontFamily: 'inherit' , borderRadius:'8px', border:'1px solid #ccc'}}
                             />
                           )
                         ) : (
