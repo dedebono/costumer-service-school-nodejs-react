@@ -53,9 +53,9 @@ export default function TicketCreate() {
       'Saran',
       'Kritik',
       'Pertanyaan Umum',
-      'EduCs telah menyampaikan ke pihak terkait',
-      'Follow up ke konsumen',
-      'EduCs mengumpulkan informasi',
+      'Edcon mengumpulkan Informasi',
+      'Edcon telah menyampaikan ke pihak terkait',
+      'Follow up ke Customer',
     ],
     'Pembelian Seragam': [
       'Size terkonfirmasi',
@@ -79,14 +79,22 @@ export default function TicketCreate() {
       'Menerbitkan Kartu baru (biaya)',
       'Mengalihkan nama siswa ke Dismissal App',
     ],
-    'Menerima Tamu': [
-      'Orang tua',
-      'Tamu resmi',
-      'Vendor',
+    'Menerima Tamu Resmi': [
       'Tamu telah mengisi buku tamu',
       'EduCS telah meneruskan informasi ke area',
       'Area telah menghubungi tamu',
     ],
+      'Menerima Tamu: Orang tua': [
+      'Tamu telah mengisi buku tamu',
+      'EduCS telah meneruskan informasi ke area',
+      'Area telah menghubungi tamu',
+    ],
+    'Menerima Tamu: Vendor': [
+      'Tamu telah mengisi buku tamu',
+      'EduCS telah meneruskan informasi ke area',
+      'Area telah menghubungi tamu',
+    ],
+
   };
 
   const currentDescOptions =
