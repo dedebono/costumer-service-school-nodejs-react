@@ -176,21 +176,18 @@ function PipelineBuilderForSupervisor() {
     if (!result.isConfirmed) return;
 
     setIsSaving(true);
+    console.time('saveEditSteps'); // Start timing
 
     try {
-      // Save steps
+      // Validate steps first
       for (const step of editSteps) {
         if (!step.title || !step.slug) {
           Swal.fire('Error', 'Title and slug are required for all steps', 'error');
           return;
         }
-        await api(`/admission/${selectedPipelineId}/steps/${step.id}`, {
-          method: 'PUT',
-          body: { title: step.title, slug: step.slug, is_final: step.is_final },
-        });
       }
 
-      // Save dynamic details for each step
+      // Validate dynamic details
       for (const step of editSteps) {
         const details = editDynamicDetails[step.id] || [];
         for (const detail of details) {
@@ -198,21 +195,46 @@ function PipelineBuilderForSupervisor() {
             Swal.fire('Error', `Key, type, and label are required for all dynamic details in step ${step.title}`, 'error');
             return;
           }
+        }
+      }
+
+      // Collect all step update promises
+      const stepPromises = editSteps.map(step =>
+        api(`/admission/${selectedPipelineId}/steps/${step.id}`, {
+          method: 'PUT',
+          body: { title: step.title, slug: step.slug, is_final: step.is_final },
+        })
+      );
+
+      // Collect all dynamic detail promises
+      const detailPromises = [];
+      for (const step of editSteps) {
+        const details = editDynamicDetails[step.id] || [];
+        for (const detail of details) {
           if (detail.id) {
             // Update existing
-            await api(`/admission/${selectedPipelineId}/steps/${step.id}/details/${detail.id}`, {
-              method: 'PUT',
-              body: { key: detail.key, type: detail.type, required: detail.required, label: detail.label, options: detail.options },
-            });
+            detailPromises.push(
+              api(`/admission/${selectedPipelineId}/steps/${step.id}/details/${detail.id}`, {
+                method: 'PUT',
+                body: { key: detail.key, type: detail.type, required: detail.required, label: detail.label, options: detail.options },
+              })
+            );
           } else {
             // Create new
-            await api(`/admission/${selectedPipelineId}/steps/${step.id}/details`, {
-              method: 'POST',
-              body: { key: detail.key, type: detail.type, required: detail.required, label: detail.label, options: detail.options },
-            });
+            detailPromises.push(
+              api(`/admission/${selectedPipelineId}/steps/${step.id}/details`, {
+                method: 'POST',
+                body: { key: detail.key, type: detail.type, required: detail.required, label: detail.label, options: detail.options },
+              })
+            );
           }
         }
       }
+
+      // Execute all promises in parallel
+      await Promise.all([...stepPromises, ...detailPromises]);
+
+      console.timeEnd('saveEditSteps'); // End timing
 
       Swal.fire({
         title: 'Success',
@@ -225,6 +247,7 @@ function PipelineBuilderForSupervisor() {
       });
       // Optionally reload or update state
     } catch (e) {
+      console.timeEnd('saveEditSteps'); // End timing on error
       Swal.fire('Error', 'Failed to save changes: ' + e.message, 'error');
     } finally {
       setIsSaving(false);

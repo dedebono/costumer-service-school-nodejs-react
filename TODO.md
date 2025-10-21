@@ -1,5 +1,10 @@
-- [x] Modify handleApplicantClick to parse birthdate to YYYY-MM-DD for editing
-- [x] Modify handleSaveNotes to format editedBirthdate to DD-MM-YYYY when saving
-- [x] Update applicant objects with the formatted date
-- [x] Add `formatDate` function to `frontend/src/lib/utils.js` to format date as DD-MM-YYYY
-- [x] Update `frontend/src/features/admission/DraggableApplicant.jsx` to import and use `formatDate` for birthdate display
+# TODO: Optimize setEditDynamicDetails Save Operation
+
+## Pending Tasks
+- [ ] Add console.time logging around the save operation to measure total time
+- [ ] Test the save operation on localhost and VPS to compare performance
+
+## Completed Tasks
+- [x] Analyze code and identify bottleneck (sequential API calls in saveEditSteps)
+- [x] Create plan to optimize by parallelizing calls and adding logging
+- [x] Refactor saveEditSteps in Supervisor.jsx to parallelize API calls using Promise.all
