@@ -178,6 +178,17 @@ function PipelineBuilderForSupervisor() {
     setIsSaving(true);
     console.time('saveEditSteps'); // Start timing
 
+    // Show loading notification
+    Swal.fire({
+      title: 'Saving...',
+      text: 'Please wait while we save your changes.',
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      willOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
     try {
       // Validate steps first
       for (const step of editSteps) {
