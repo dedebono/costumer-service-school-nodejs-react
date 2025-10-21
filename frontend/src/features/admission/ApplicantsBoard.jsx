@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../../lib/api.js';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
@@ -84,6 +84,9 @@ export default function ApplicantsBoard({ pipeline }) {
   const [notes, setNotes] = useState('');
   const [stepDynamicDetails, setStepDynamicDetails] = useState([]);
   const [applicantDynamicDetails, setApplicantDynamicDetails] = useState({});
+  const [stepDynamicDetailsMap, setStepDynamicDetailsMap] = useState({});
+  const [applicantDynamicDetailsMap, setApplicantDynamicDetailsMap] = useState({});
+
   // Edited fields for applicant details
   const [editedName, setEditedName] = useState('');
   const [editedNisn, setEditedNisn] = useState('');
@@ -91,6 +94,21 @@ export default function ApplicantsBoard({ pipeline }) {
   const [editedParentPhone, setEditedParentPhone] = useState('');
   const [editedEmail, setEditedEmail] = useState('');
   const [editedAddress, setEditedAddress] = useState('');
+
+  // New: batching/abort + UX flag
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const abortBagRef = useRef(new Map()); // applicantId -> AbortController
+
+  // Helpers
+  const chunk = (arr, size) => {
+    const out = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+  };
+  const abortAll = () => {
+    abortBagRef.current.forEach((c) => c.abort());
+    abortBagRef.current.clear();
+  };
 
   const reloadApplicantCard = async () => {
     try {
@@ -119,36 +137,155 @@ export default function ApplicantsBoard({ pipeline }) {
     if (pipeline.steps && pipeline.steps.length > 0) reloadApplicantCard();
   }, [pipeline.id, pipeline.steps]);
 
-  // Click handler to open modal with details
+  // Derived: currently selected column + stable key of sorted applicant IDs
+  const selectedColumn = useMemo(
+    () => columns.find((c) => c.step.id === selectedStepId),
+    [columns, selectedStepId]
+  );
+  const selectedIdsKey = useMemo(() => {
+    const ids = (selectedColumn?.items || []).map((i) => i.id);
+    ids.sort();
+    return JSON.stringify(ids);
+  }, [selectedColumn]);
+
+  // Prefetch applicant details in small batches with abort/caching
+  async function prefetchApplicantDetails(applicantIds) {
+    if (!applicantIds?.length) return;
+
+    setLoadingDetails(true);
+    abortAll();
+
+    const batches = chunk(applicantIds, 10); // tune batch size as needed
+
+    try {
+      for (const batch of batches) {
+        await Promise.all(
+          batch.map(async (id) => {
+            if (applicantDynamicDetailsMap[id]) return; // cached
+
+            const controller = new AbortController();
+            abortBagRef.current.set(id, controller);
+            try {
+              const appDetails = await api(
+                `/admission/applicants/${id}/dynamic-details`,
+                { signal: controller.signal }
+              );
+              const detailsMap = {};
+              (appDetails || []).forEach((d) => {
+                detailsMap[d.detail_key] = d.value;
+              });
+              setApplicantDynamicDetailsMap((prev) => ({
+                ...prev,
+                [id]: detailsMap,
+              }));
+            } finally {
+              abortBagRef.current.delete(id);
+            }
+          })
+        );
+      }
+    } catch (e) {
+      if (e?.name !== 'AbortError') {
+        console.error('Prefetch dynamic details failed:', e);
+      }
+    } finally {
+      setLoadingDetails(false);
+    }
+  }
+
+  // Phase 1: load step dynamic detail DEFINITIONS (cached per step)
+  useEffect(() => {
+    if (!selectedStepId) return;
+    if (stepDynamicDetailsMap[selectedStepId]) return; // cached
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const stepDetails = await api(
+          `/admission/${pipeline.id}/steps/${selectedStepId}/details`
+        );
+        if (!cancelled) {
+          setStepDynamicDetailsMap((prev) => ({
+            ...prev,
+            [selectedStepId]: stepDetails,
+          }));
+        }
+      } catch (e) {
+        if (!cancelled) {
+          console.error('Failed to load step dynamic details:', e);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedStepId, pipeline.id, stepDynamicDetailsMap]);
+
+  // Phase 2: prefetch APPLICANT dynamic details (batched + abort on change)
+  useEffect(() => {
+    abortAll();
+    if (!selectedColumn || !selectedColumn.items?.length) return;
+
+    const missingIds = selectedColumn.items
+      .map((a) => a.id)
+      .filter((id) => !applicantDynamicDetailsMap[id]);
+
+    if (missingIds.length === 0) return;
+    prefetchApplicantDetails(missingIds);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStepId, selectedIdsKey]); // stable deps
+
+  // Click handler to open modal with details (uses cache first)
   const handleApplicantClick = async (applicant) => {
     setSelectedApplicant(applicant);
     setNotes(applicant.notes || '');
     setEditedName(applicant.name || '');
     setEditedNisn(applicant.nisn || '');
     let parsedBirthdate = applicant.birthdate;
-    if (parsedBirthdate && parsedBirthdate.includes('/')) {
+    if (parsedBirthdate && typeof parsedBirthdate === 'string' && parsedBirthdate.includes('/')) {
       const parts = parsedBirthdate.split('/');
       parsedBirthdate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
     }
-    setEditedBirthdate(parsedBirthdate ? parsedBirthdate.split('T')[0] : '');
+    setEditedBirthdate(parsedBirthdate ? String(parsedBirthdate).split('T')[0] : '');
     setEditedParentPhone(applicant.parent_phone || '');
     setEditedEmail(applicant.email || '');
     setEditedAddress(applicant.address || '');
     setEditMode(null);
-    try {
-      const stepDetails = await api(
-        `/admission/${pipeline.id}/steps/${applicant.current_step_id}/details`
-      );
-      setStepDynamicDetails(stepDetails);
 
-      const appDetails = await api(
-        `/admission/applicants/${applicant.id}/dynamic-details`
-      );
-      const detailsMap = {};
-      appDetails.forEach((d) => {
-        detailsMap[d.detail_key] = d.value;
-      });
-      setApplicantDynamicDetails(detailsMap);
+    try {
+      // Step details: prefer cache
+      let stepDetails = stepDynamicDetailsMap[applicant.current_step_id];
+      if (!stepDetails) {
+        stepDetails = await api(
+          `/admission/${pipeline.id}/steps/${applicant.current_step_id}/details`
+        );
+        setStepDynamicDetailsMap((prev) => ({
+          ...prev,
+          [applicant.current_step_id]: stepDetails,
+        }));
+      }
+      setStepDynamicDetails(stepDetails || []);
+
+      // Applicant details: prefer cache
+      let appDetailsMap = applicantDynamicDetailsMap[applicant.id];
+      if (!appDetailsMap) {
+        const appDetails = await api(
+          `/admission/applicants/${applicant.id}/dynamic-details`
+        );
+        const detailsMap = {};
+        (appDetails || []).forEach((d) => {
+          detailsMap[d.detail_key] = d.value;
+        });
+        appDetailsMap = detailsMap;
+        setApplicantDynamicDetailsMap((prev) => ({
+          ...prev,
+          [applicant.id]: detailsMap,
+        }));
+      }
+      setApplicantDynamicDetails(appDetailsMap || {});
     } catch (e) {
       console.error('Failed to load dynamic details:', e);
       setStepDynamicDetails([]);
@@ -160,11 +297,12 @@ export default function ApplicantsBoard({ pipeline }) {
   const handleSaveNotes = async () => {
     if (!selectedApplicant) return;
     try {
-      // Format birthdate to YYYY-MM-DD for database, but display as DD-MM-YYYY
-      const formattedBirthdate = editedBirthdate; // Keep as YYYY-MM-DD for DB
-      const displayBirthdate = editedBirthdate ? new Date(editedBirthdate).toLocaleDateString('en-GB') : editedBirthdate;
+      const formattedBirthdate = editedBirthdate; // YYYY-MM-DD for DB
+      const displayBirthdate = editedBirthdate
+        ? new Date(editedBirthdate).toLocaleDateString('en-GB')
+        : editedBirthdate;
 
-      // Save all fields including basic details
+      // Save basic fields
       await api(`/admission/applicants/${selectedApplicant.id}`, {
         method: 'PUT',
         body: {
@@ -189,7 +327,7 @@ export default function ApplicantsBoard({ pipeline }) {
         body: { details: dynamicDetailsToSave },
       });
 
-      // Update the applicant in columns and selectedApplicant
+      // Update UI
       const updatedApplicant = {
         ...selectedApplicant,
         name: editedName,
@@ -207,12 +345,19 @@ export default function ApplicantsBoard({ pipeline }) {
           items: c.items.map((item) =>
             item.id === selectedApplicant.id ? updatedApplicant : item
           ),
-        })
-      ));
+        }))
+      );
+
+      // Update cache
+      setApplicantDynamicDetailsMap((prev) => ({
+        ...prev,
+        [selectedApplicant.id]: { ...applicantDynamicDetails },
+      }));
+
       setEditMode(null);
       toast('success', 'Saved successfully.');
 
-      // Auto move to next step if all required dynamic details are filled
+      // Auto move if all required filled
       const allRequiredFilled = stepDynamicDetails.every((detail) => {
         if (!detail.required) return true;
         const val = applicantDynamicDetails[detail.key];
@@ -425,8 +570,6 @@ export default function ApplicantsBoard({ pipeline }) {
     }
   };
 
-  const selectedColumn = columns.find((c) => c.step.id === selectedStepId);
-
   return (
     <>
       <div style={{ marginBottom: '1rem' }}>
@@ -469,9 +612,10 @@ export default function ApplicantsBoard({ pipeline }) {
           style={{ display: 'none' }}
         />
       </div>
-{/* -------------------------------------------
-   Step Tabs
---------------------------------------------*/}
+
+      {/* -------------------------------------------
+         Step Tabs
+      --------------------------------------------*/}
       <div style={{ display: 'flex', gap: '0.4rem', padding: '.2rem' }}>
         {columns.map((col) => (
           <button
@@ -504,7 +648,7 @@ export default function ApplicantsBoard({ pipeline }) {
                       justifyContent: 'center',
                       alignContent: 'center',
                       flexDirection: 'column',
-                       alignItems: 'center',                      
+                      alignItems: 'center',
                       display: 'inline-block',
                     }
               }
@@ -524,15 +668,37 @@ export default function ApplicantsBoard({ pipeline }) {
             </span>
           </button>
         ))}
+        {loadingDetails && (
+          <div style={{ marginLeft: '0.5rem', alignSelf: 'center', fontSize: 12, opacity: 0.75 }}>
+            Loading details…
+          </div>
+        )}
       </div>
-{/* -------------------------------------------
-   Applicant List untuk step terpilih
---------------------------------------------*/}
+
+      {/* -------------------------------------------
+         Applicant List untuk step terpilih
+      --------------------------------------------*/}
       <ul className="applicant-list" style={{ marginTop: '1rem' }}>
-        {(searchResult && searchResult.length > 0 ? searchResult : selectedColumn?.items || []).map(
-          (item) => (
-            <DraggableApplicant key={item.id} applicant={item} onClick={() => handleApplicantClick(item)} />
-          )
+        {(searchResult && searchResult.length > 0 ? searchResult : (columns.find((c) => c.step.id === selectedStepId)?.items || [])).map(
+          (item) => {
+            const stepDetails = stepDynamicDetailsMap[selectedStepId] || [];
+            const appDetails = applicantDynamicDetailsMap[item.id] || {};
+            const requiredDetails = stepDetails.filter((d) => d.required);
+            const filledCount = requiredDetails.filter((d) => {
+              const val = appDetails[d.key];
+              return val !== undefined && val !== null && val !== '';
+            }).length;
+            const progress = { filled: filledCount, total: requiredDetails.length };
+
+            return (
+              <DraggableApplicant
+                key={item.id}
+                applicant={item}
+                progress={progress}
+                onClick={() => handleApplicantClick(item)}
+              />
+            );
+          }
         )}
       </ul>
 
