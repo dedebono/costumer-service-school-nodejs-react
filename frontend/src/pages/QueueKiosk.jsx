@@ -4,6 +4,7 @@ import { api } from '../api'
 import { toLocalTime } from '../lib/utils'
 import io from 'socket.io-client'
 import Swal from 'sweetalert2'
+import dingSound from '../sounds/ding.mp3'
 
 const STATUS_LABEL_ID = {
   WAITING: 'Menunggu',
@@ -22,6 +23,11 @@ export default function QueueKiosk() {
   const [remainingQueue, setRemainingQueue] = useState(0)
   const [queuePosition, setQueuePosition] = useState(null)
   const socketRef = useRef(null)
+
+  const playSound = () => {
+    const audio = new Audio(dingSound)
+    audio.play().catch(err => console.error('Failed to play sound:', err))
+  }
 
   const showStatusToast = (status, ticketNumber) => {
     let title = ''
@@ -131,6 +137,7 @@ export default function QueueKiosk() {
         console.log('Event "ticket-update" received:', data)
         setCurrentTicket(prev => ({ ...prev, ...data }))
         if (data.status) {
+          playSound()
           showStatusToast(data.status, data.number || currentTicket.number)
         }
       };
@@ -152,6 +159,7 @@ export default function QueueKiosk() {
           }
 
           if (newStatus) {
+            playSound()
             setCurrentTicket(prev => ({ ...prev, status: newStatus }))
             showStatusToast(newStatus, currentTicket.number)
           }
