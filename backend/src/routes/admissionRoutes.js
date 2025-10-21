@@ -16,6 +16,7 @@ const {
   getStepById,
   getApplicantDynamicDetails,
   setApplicantDynamicDetail,
+  setApplicantDynamicDetails,
   checkRequiredDynamicDetailsFilled,
 } = require('../models/applicant');
 
@@ -178,6 +179,90 @@ router.get('/pipelines/:id', async (req, res) => {
 });
 
 // GET /api/admission/applicants?pipelineId=...
+router.delete('/:id/steps/:stepId', async (req, res) => {
+  const pipelineId = Number(req.params.id);
+  const stepId = Number(req.params.stepId);
+
+  try {
+    const pipeline = await getPipelineById(pipelineId);
+    if (!pipeline) return res.status(404).json({ message: 'Pipeline not found' });
+
+    await deleteStep(stepId, pipelineId);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ message: e.message });
+  }
+});
+
+
+// POST /api/admission/:id/move
+router.post('/:id/move', async (req, res) => {
+  const applicantId = Number(req.params.id);
+  const { toStepId, note } = req.body;
+  const adminId = req.user.id;
+
+  try {
+    const applicant = await getApplicantById(applicantId);
+    if (!applicant) throw new Error('Applicant not found');
+
+    const step = await getStepById(toStepId, applicant.pipeline_id);
+    if (!step) throw new Error('Invalid step');
+
+    // Check required documents
+    const reqs = await getStepRequirements(toStepId);
+    if (reqs.length) {
+      const missing = [];
+      for (const r of reqs) {
+        const hasDoc = await checkDocument(applicantId, r.doc_key);
+        if (!hasDoc) missing.push(r.doc_key);
+      }
+      if (missing.length) {
+        const err = new Error('Dokumen wajib belum lengkap');
+        err.missing = missing;
+        throw err;
+      }
+    }
+
+    // Check required dynamic details for the current step
+    const dynamicCheck = await checkRequiredDynamicDetailsFilled(applicantId, applicant.current_step_id);
+    if (dynamicCheck !== true) {
+      const err = new Error('Dynamic details wajib belum lengkap');
+      err.missing = dynamicCheck;
+      throw err;
+    }
+
+    await updateApplicantStep(applicantId, toStepId);
+    await insertApplicantHistory(applicantId, applicant.current_step_id, toStepId, adminId, note);
+
+    res.json({ ok: true });
+  } catch (e) {
+    if (e.missing) return res.status(400).json({ message: e.message, missing: e.missing });
+    res.status(400).json({ message: e.message });
+  }
+});
+
+// GET /api/admission/pipelines
+router.get('/pipelines', async (req, res) => {
+  try {
+    const pipelines = await getAllPipelines();
+    res.json(pipelines);
+  } catch (e) {
+    res.status(400).json({ message: e.message });
+  }
+});
+
+// GET /api/admission/pipelines/:id
+router.get('/pipelines/:id', async (req, res) => {
+  try {
+    const pipeline = await getPipelineWithSteps(req.params.id);
+    if (!pipeline) return res.status(404).json({ message: 'Pipeline not found' });
+    res.json(pipeline);
+  } catch (e) {
+    res.status(400).json({ message: e.message });
+  }
+});
+
+// GET /api/admission/applicants?pipelineId=...
 router.get('/applicants', async (req, res) => {
   const { pipelineId } = req.query;
   if (!pipelineId) return res.status(400).json({ message: 'pipelineId required' });
@@ -243,9 +328,7 @@ router.delete('/pipelines/:id', async (req, res) => {
     const { details } = req.body; // [{detail_key, value}, ...]
 
     try {
-      for (const d of details) {
-        await setApplicantDynamicDetail(applicantId, d.detail_key, d.value);
-      }
+      await setApplicantDynamicDetails(applicantId, details);
       res.json({ ok: true });
     } catch (e) {
       res.status(400).json({ message: e.message });

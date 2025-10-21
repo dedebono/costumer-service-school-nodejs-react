@@ -178,6 +178,27 @@ function checkRequiredDynamicDetailsFilled(applicantId, stepId) {
   });
 }
 
+
+function setApplicantDynamicDetails(applicantId, details) {
+  return new Promise((resolve, reject) => {
+    if (!details || details.length === 0) {
+      return resolve(true);
+    }
+
+    const sql = `
+      INSERT INTO applicant_dynamic_details (applicant_id, detail_key, value)
+      VALUES ?
+      ON DUPLICATE KEY UPDATE value = VALUES(value)`;
+
+    const values = details.map(d => [applicantId, d.detail_key, d.value]);
+
+    db.query(sql, [values], (err, result) => {
+      if (err) reject(err);
+      else resolve(true);
+    });
+  });
+}
+
 module.exports = {
   getApplicantById,
   getApplicantsByPipeline,
@@ -191,5 +212,6 @@ module.exports = {
   getStepById,
   getApplicantDynamicDetails,
   setApplicantDynamicDetail,
+  setApplicantDynamicDetails,
   checkRequiredDynamicDetailsFilled,
 };
