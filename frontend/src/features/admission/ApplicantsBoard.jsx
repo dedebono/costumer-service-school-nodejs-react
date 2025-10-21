@@ -469,7 +469,9 @@ export default function ApplicantsBoard({ pipeline }) {
           style={{ display: 'none' }}
         />
       </div>
-
+{/* -------------------------------------------
+   Step Tabs
+--------------------------------------------*/}
       <div style={{ display: 'flex', gap: '0.4rem', padding: '.2rem' }}>
         {columns.map((col) => (
           <button
@@ -486,7 +488,29 @@ export default function ApplicantsBoard({ pipeline }) {
               setSearchResult(null);
             }}
           >
-            {col.step.title}{' '}
+            <span
+              style={
+                selectedStepId === col.step.id
+                  ? {}
+                  : {
+                      maxWidth: '50px',
+                      maxHeight: '1.2rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      lineHeight: '1.2rem',
+                      verticalAlign: 'middle',
+                      textAlign: 'center',
+                      justifyContent: 'center',
+                      alignContent: 'center',
+                      flexDirection: 'column',
+                       alignItems: 'center',                      
+                      display: 'inline-block',
+                    }
+              }
+            >
+              {col.step.title}
+            </span>{' '}
             <span
               style={{
                 color: 'black',
@@ -501,7 +525,9 @@ export default function ApplicantsBoard({ pipeline }) {
           </button>
         ))}
       </div>
-
+{/* -------------------------------------------
+   Applicant List untuk step terpilih
+--------------------------------------------*/}
       <ul className="applicant-list" style={{ marginTop: '1rem' }}>
         {(searchResult && searchResult.length > 0 ? searchResult : selectedColumn?.items || []).map(
           (item) => (
