@@ -251,43 +251,70 @@ export default function CSDashboard() {
 
     if (connectionType === 'admission') {
       try {
-        const pipelinesData = await api.admission.getPipelines()
-        setPipelines(pipelinesData)
-        if (pipelinesData.length === 0) { setError('No admission pipelines available'); return }
-
-        const { value: selectedPipelineId } = await Swal.fire({
-          title: 'Select Pipeline',
-          html: `
-            <div style="text-align: left;">
-              <label for="pipeline-select" style="display: block; margin-bottom: 8px; font-weight: bold;">Choose Pipeline:</label>
-              <select id="pipeline-select" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                ${pipelinesData.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
-              </select>
-            </div>
-          `,
-          showCancelButton: true,
-          confirmButtonText: 'Create Applicant',
-          cancelButtonText: 'Cancel',
-          preConfirm: () => parseInt(document.getElementById('pipeline-select').value, 10),
+        // Ask whether the customer has already registered
+        const { isConfirmed, isDenied } = await Swal.fire({
+          title: 'Apakah sudah pernah mendaftar?',
+          icon: 'question',
+          showDenyButton: true,
+          confirmButtonText: 'Ya',
+          denyButtonText: 'Tidak',
+          reverseButtons: true,
         })
 
-        if (selectedPipelineId) {
+        // If already registered, just start the service without picking a pipeline
+        if (isConfirmed) {
           setLoading(true)
           try {
-            const applicantData = {
-              pipelineId: selectedPipelineId,
-              customerName: activeTicket.customer_name || activeTicket.queue_customer_name || 'Queue Customer',
-              customerPhone: activeTicket.customer_phone || activeTicket.queue_customer_phone || '',
-              customerEmail: activeTicket.customer_email || activeTicket.queue_customer_email || '',
-            }
-            await api.admission.autoCreateApplicant(applicantData)
             await api.queue.startService(ticketId)
-            Swal.fire({ icon: 'success', title: 'Applicant Created', text: 'Applicant created successfully. Please resolve the ticket when done.' })
             await loadQueue()
           } catch (err) {
-            setError(err.message || 'Failed to create applicant')
+            setError(err.message || 'Failed to start service')
           } finally {
             setLoading(false)
+          }
+          return
+        }
+
+        // If not, continue to pipeline selection flow
+        if (isDenied) {
+          const pipelinesData = await api.admission.getPipelines()
+          setPipelines(pipelinesData)
+          if (pipelinesData.length === 0) { setError('No admission pipelines available'); return }
+
+          const { value: selectedPipelineId } = await Swal.fire({
+            title: 'Select Pipeline',
+            html: `
+              <div style="text-align: left;">
+                <label for="pipeline-select" style="display: block; margin-bottom: 8px; font-weight: bold;">Choose Pipeline:</label>
+                <select id="pipeline-select" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                  ${pipelinesData.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                </select>
+              </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Create Applicant',
+            cancelButtonText: 'Cancel',
+            preConfirm: () => parseInt(document.getElementById('pipeline-select').value, 10),
+          })
+
+          if (selectedPipelineId) {
+            setLoading(true)
+            try {
+              const applicantData = {
+                pipelineId: selectedPipelineId,
+                customerName: activeTicket.customer_name || activeTicket.queue_customer_name || 'Queue Customer',
+                customerPhone: activeTicket.customer_phone || activeTicket.queue_customer_phone || '',
+                customerEmail: activeTicket.customer_email || activeTicket.queue_customer_email || '',
+              }
+              await api.admission.autoCreateApplicant(applicantData)
+              await api.queue.startService(ticketId)
+              Swal.fire({ icon: 'success', title: 'Applicant Created', text: 'Applicant created successfully. Please resolve the ticket when done.' })
+              await loadQueue()
+            } catch (err) {
+              setError(err.message || 'Failed to create applicant')
+            } finally {
+              setLoading(false)
+            }
           }
         }
       } catch (err) {
