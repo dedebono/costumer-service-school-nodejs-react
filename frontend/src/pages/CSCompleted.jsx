@@ -229,7 +229,6 @@ export default function CSCompleted() {
           marginBottom: 'var(--space-6)' ,
           minHeight: '500px',
           width:'100%' ,
-          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' ,
           boxSizing: 'border-box',
           height:'100%'
            }}>

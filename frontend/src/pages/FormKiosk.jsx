@@ -250,7 +250,7 @@ export default function FormKiosk() {
               />
             </div>
 
-            <div>
+            <div style={{display:'none'}}>
               <label style={{ display: 'block', fontSize: 'var(--fs-400)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>
                 Email (tidak wajib)
               </label>
@@ -272,7 +272,7 @@ export default function FormKiosk() {
               )}
             </div>
 
-            <div>
+            <div style={{display:'none'}}>
               <label style={{ display: 'block', fontSize: 'var(--fs-400)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>
                 Catatan (tidak wajib)
               </label>

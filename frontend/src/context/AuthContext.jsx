@@ -8,29 +8,47 @@ const AuthCtx = createContext(null);
 
 export function AuthProvider({ children }) {
 const [token, setTok] = useState(() => getToken());
-const [user, setUsr] = useState(() => getUser());
+// If there is no token, treat any cached user as stale so we don't redirect from /login
+const [user, setUsr] = useState(() => {
+  const t = getToken();
+  if (!t) {
+    clearUser();
+    return null;
+  }
+  return getUser();
+});
 const [loading, setLoading] = useState(true);
 
 
   useEffect(() => {
     async function verifyUserToken() {
       const currentToken = getToken();
-      if (currentToken) {
-        try {
-          // Set token for the upcoming API call
-          setToken(currentToken);
-          const { user: freshUser } = await api('/auth/me');
-          setUsr(freshUser);
-          setUser(freshUser); // also save to localStorage
-        } catch (error) {
-          // Token is invalid or expired, clear everything
-          clearToken();
-          clearUser();
-          setUsr(null);
-          setTok('');
-        }
+
+      // If we don't have a token, ensure we also drop any stale user info so the
+      // app doesn't think we're logged in and redirect away from /login.
+      if (!currentToken) {
+        clearUser();
+        setUsr(null);
+        setTok('');
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      try {
+        // Set token for the upcoming API call
+        setToken(currentToken);
+        const { user: freshUser } = await api('/auth/me');
+        setUsr(freshUser);
+        setUser(freshUser); // also save to localStorage
+      } catch (error) {
+        // Token is invalid or expired, clear everything
+        clearToken();
+        clearUser();
+        setUsr(null);
+        setTok('');
+      } finally {
+        setLoading(false);
+      }
     }
 
     verifyUserToken();

@@ -597,7 +597,7 @@ export default function CSDashboard() {
                         disabled={loading}
                         className="btn btn--accent w-full"
                       >
-                        Start Service
+                        Mulai
                       </button>
                     )}
 
@@ -627,7 +627,7 @@ export default function CSDashboard() {
                         className="btn btn--outline btn--sm"
                         style={{ flex: 1 }}
                       >
-                        Requeue
+                        Kembali ke antrian
                       </button>
                       <button
                         onClick={() => handleMarkNoShow(activeTicket.id)}
@@ -635,7 +635,7 @@ export default function CSDashboard() {
                         className="btn btn--outline btn--sm"
                         style={{ flex: 1 }}
                       >
-                        No Show
+                        Tidak Hadir
                       </button>
                     </div>
                   </div>
