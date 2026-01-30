@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { api } from '../api'
 import Swal from 'sweetalert2'
+import './OptionsKiosk.css'
 
 export default function FormKiosk() {
   const location = useLocation()
@@ -128,89 +129,72 @@ export default function FormKiosk() {
         justifyContent: 'center',
       }}>
         <div>Layanan tidak dipilih. Kembali ke <button
-        onClick={() => navigate('/kiosk')}>pilihan layanan</button></div>
+          onClick={() => navigate('/kiosk')}>pilihan layanan</button></div>
       </div>
     )
   }
 
   return (
-    <div className="kiosk" style={{
-      minHeight: '100vh',
-      display: 'block',
-      textAlign: 'center',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}>
-      <div style={{ maxWidth: '480px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}>
-          <h1 style={{
-            fontSize: 'clamp(1.8rem, 6vw, 2.5rem)',
-            fontWeight: '700',
-            margin: '0 0 var(--space-2)',
-            color: 'var(--clr-text)'
-          }}>
-            Kios Pelanggan
-          </h1>
-          <p style={{ fontSize: 'var(--fs-400)', opacity: '0.8', margin: 0 }}>
-            Isi data pelanggan
-          </p>
+    <div className="kiosk-page">
+      <div className="kiosk-container">
+        <div className="kiosk-header">
+          <h1>📝 Data Pelanggan</h1>
+          <p>Lengkapi data untuk mendapat nomor antrian</p>
         </div>
 
         {error && (
-          <div className="surface" style={{
-            background: 'color-mix(in oklab, red 10%, var(--clr-bg))',
-            border: '1px solid color-mix(in oklab, red 30%, transparent)',
-            color: 'color-mix(in oklab, red 80%, black)',
-            padding: 'var(--space-4)',
-            marginBottom: 'var(--space-6)',
-            fontSize: 'var(--fs-400)'
-          }}>
+          <div className="kiosk-error">
             {error}
           </div>
         )}
 
-        <div className="surface" style={{ padding: 'var(--space-6)' , borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)' , backgroundColor: 'white' , color: 'black' }}>
-          <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-6)' }}>
-            <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', margin: 0 }}>
-              Data Pelanggan
-            </h2>
-            <button onClick={() => navigate('/kiosk')} className="btn" style={{ fontSize: '0.875rem', padding: '0.25rem 0.5rem' , 
-              minHeight: '2.5rem' ,
-              fontWeight: '600' ,
-            borderRadius: '6px' , border: '1px solid var(--clr-accent)'
-             , backgroundColor: 'var(--clr-accent)' , color: 'black' }}>
-              Ubah Layanan
+        <div className="kiosk-content">
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '1.5rem',
+            flexWrap: 'wrap',
+            gap: '0.75rem'
+          }}>
+            <h2 style={{ margin: 0 }}>Isi Data</h2>
+            <button
+              onClick={() => navigate('/kiosk')}
+              className="kiosk-back-button"
+              style={{ marginBottom: 0 }}
+            >
+              ← Ubah Layanan
             </button>
           </div>
 
-          <div className="surface" style={{
-            marginBottom: 'var(--space-4)',
-            padding: 'var(--space-3)',
-            fontSize: 'var(--fs-400)',
-            color: 'var(--clr-primary)',
+          <div style={{
+            marginBottom: '1.25rem',
+            padding: '1rem',
+            fontSize: '0.9rem',
+            color: '#f7b917',
             fontWeight: '600',
-            backgroundColor: 'color-mix(in oklab, var(--clr-primary) 20%, var(--clr-bg))',
-            background: 'color-mix(in oklab, var(--clr-primary) 20%, var(--clr-bg))',
-            border: '1px solid color-mix(in oklab, var(--clr-primary) 20%, transparent)'
+            backgroundColor: 'rgba(247, 185, 23, 0.1)',
+            border: '1px solid rgba(247, 185, 23, 0.3)',
+            borderRadius: '10px'
           }}>
             {selectedBuilding && (
-              <div style={{ color: 'var(--clr-primary)', fontSize: 'var(--fs-400)', marginBottom: 'var(--space-1)' }}>
-                Gedung: {selectedBuilding.name}
+              <div style={{ marginBottom: '0.25rem', opacity: 0.9 }}>
+                📍 {selectedBuilding.name}
               </div>
             )}
             {selectedQueueGroup && (
-              <div style={{ color: 'var(--clr-primary)', fontSize: 'var(--fs-400)', marginBottom: 'var(--space-1)' }}>
-                Grup Antrian: {selectedQueueGroup.name}
+              <div style={{ marginBottom: '0.25rem', opacity: 0.9 }}>
+                📋 {selectedQueueGroup.name}
               </div>
             )}
-            <div style={{ color: 'var(--clr-primary)', fontSize: 'var(--fs-500)' }}>
-              Layanan: {selectedService.name}
+            <div style={{ fontSize: '1rem' }}>
+              🎯 {selectedService.name}
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 'var(--space-4)' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: 'var(--fs-400)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>
+              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', marginBottom: '0.5rem', color: 'rgba(203, 226, 240, 0.9)' }}>
                 Nomor Telepon *
               </label>
               <input
@@ -219,24 +203,33 @@ export default function FormKiosk() {
                 value={formData.phone}
                 onChange={handlePhoneChange}
                 onKeyDown={phoneKeyGuard}
-                className="input"
-                style={{ fontSize: 'var(--fs-400)', minHeight: '3rem' }}
                 placeholder="08xxxxxxxxxx"
                 inputMode="numeric"
                 maxLength={12}
                 aria-invalid={!!phoneError}
                 aria-describedby="phone-error"
                 required
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  fontSize: '1rem',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  border: phoneError ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: '#ffffff',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
               />
               {phoneError && (
-                <div id="phone-error" style={{ color: '#b91c1c', fontSize: 12, marginTop: 6 }}>
+                <div id="phone-error" style={{ color: '#fca5a5', fontSize: '0.8rem', marginTop: '0.5rem' }}>
                   {phoneError}
                 </div>
               )}
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 'var(--fs-400)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>
+              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', marginBottom: '0.5rem', color: 'rgba(203, 226, 240, 0.9)' }}>
                 Nama Lengkap *
               </label>
               <input
@@ -244,14 +237,23 @@ export default function FormKiosk() {
                 name="name"
                 value={formData.name}
                 onChange={handleBasicChange}
-                className="input"
-                style={{ fontSize: 'var(--fs-400)', minHeight: '3rem' }}
                 placeholder="Nama lengkap Anda"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  fontSize: '1rem',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: '#ffffff',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
               />
             </div>
 
-            <div style={{display:'none'}}>
-              <label style={{ display: 'block', fontSize: 'var(--fs-400)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>
+            <div style={{ display: 'none' }}>
+              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                 Email (tidak wajib)
               </label>
               <input
@@ -259,21 +261,19 @@ export default function FormKiosk() {
                 name="email"
                 value={formData.email}
                 onChange={handleEmailChange}
-                className="input"
-                style={{ fontSize: 'var(--fs-400)', minHeight: '3rem' }}
                 placeholder="nama@domain.com (opsional)"
                 aria-invalid={!!emailError}
                 aria-describedby="email-error"
               />
               {emailError && (
-                <div id="email-error" style={{ color: '#b91c1c', fontSize: 12, marginTop: 6 }}>
+                <div id="email-error" style={{ color: '#fca5a5', fontSize: '0.8rem', marginTop: '0.5rem' }}>
                   {emailError}
                 </div>
               )}
             </div>
 
-            <div style={{display:'none'}}>
-              <label style={{ display: 'block', fontSize: 'var(--fs-400)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>
+            <div style={{ display: 'none' }}>
+              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                 Catatan (tidak wajib)
               </label>
               <textarea
@@ -281,28 +281,42 @@ export default function FormKiosk() {
                 value={formData.notes}
                 onChange={handleBasicChange}
                 rows={3}
-                className="textarea"
-                style={{ fontSize: 'var(--fs-400)', minHeight: '4rem' }}
                 placeholder="Catatan tambahan atau kebutuhan khusus"
               />
             </div>
 
-            <div className="flex gap-3" style={{ marginTop: 'var(--space-2)' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
               <button
                 type="button"
                 onClick={() => navigate('/kiosk')}
-                className="btn btn--outline btn--lg"
-                style={{ flex: 1, minHeight: '3.5rem', fontSize: 'var(--fs-400)' }}
+                className="kiosk-back-button"
+                style={{
+                  flex: 1,
+                  marginBottom: 0,
+                  padding: '1rem',
+                  justifyContent: 'center'
+                }}
               >
-                Kembali
+                ← Kembali
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="btn btn--primary btn--lg"
-                style={{ flex: 1, minHeight: '3.5rem', fontSize: 'var(--fs-400)', fontWeight: '600' }}
+                style={{
+                  flex: 1,
+                  padding: '1rem',
+                  backgroundColor: '#f7b917',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#143258',
+                  fontSize: '1rem',
+                  fontWeight: '700',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.7 : 1,
+                  transition: 'all 0.3s ease'
+                }}
               >
-                {loading ? 'Membuat Nomor…' : 'Ambil Nomor Antrian'}
+                {loading ? 'Membuat Nomor…' : '🎫 Ambil Nomor'}
               </button>
             </div>
           </form>

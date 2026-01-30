@@ -5,6 +5,7 @@ import { toLocalTime } from '../lib/utils'
 import io from 'socket.io-client'
 import Swal from 'sweetalert2'
 import dingSound from '../sounds/ding.mp3'
+import './OptionsKiosk.css'
 
 const STATUS_LABEL_ID = {
   WAITING: 'Menunggu',
@@ -198,138 +199,167 @@ export default function QueueKiosk() {
         justifyContent: 'center',
         padding: 'var(--space-4)'
       }}>
-        <div>Tiket tidak ditemukan. Kembali ke 
-          <button 
-          className='btn primary'
-          style={{padding:'0.2rem', margin:'0 10px'}}
-          onClick={() => navigate('/kiosk')}>Depan</button></div>
+        <div>Tiket tidak ditemukan. Kembali ke
+          <button
+            className='btn primary'
+            style={{ padding: '0.2rem', margin: '0 10px' }}
+            onClick={() => navigate('/kiosk')}>Depan</button></div>
       </div>
     )
   }
 
   return (
-    <div className="page safe" style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 'var(--space-4)'
-    }}>
-<div
-  className="surface-queue"
-  style={{
-    maxWidth: '480px',
-    width: '100%',
-    minHeight: '280px',
-    padding: 'var(--space-8)',
-    textAlign: 'center',
-  }}
->
-        <div style={{ marginBottom: 'var(--space-6)' }}>
+    <div className="kiosk-page" style={{ alignItems: 'center' }}>
+      <div className="kiosk-container">
+        <div className="kiosk-content" style={{ textAlign: 'center', padding: '2rem' }}>
+          {/* Success Icon */}
           <div style={{
             width: '4rem',
             height: '4rem',
-            background: 'color-mix(in oklab, var(--clr-accent) 20%, var(--clr-bg))',
+            background: 'rgba(247, 185, 23, 0.2)',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto var(--space-4)'
+            margin: '0 auto 1.5rem'
           }}>
-            <svg style={{ width: '2rem', height: '2rem', color: 'var(--clr-accent)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg style={{ width: '2rem', height: '2rem', color: '#f7b917' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
+
+          {/* Title */}
           <h1 style={{
-            fontSize: 'var(--fs-700)',
-            fontWeight: '700',
-            margin: '0 0 var(--space-2)',
-            color: 'var(--clr-text)'
+            fontSize: 'clamp(1.5rem, 5vw, 2rem)',
+            fontWeight: '800',
+            margin: '0 0 0.5rem',
+            background: 'linear-gradient(135deg, #ffffff 0%, #cbe2f0 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
           }}>
-            Education Consultant
+            🏫 EduConsult
           </h1>
-          <p style={{
-            fontSize: 'var(--fs-400)',
-            opacity: '0.8',
-            margin: 0
-          }}>
-            <strong>{currentTicket.service_name}</strong>
+          <p style={{ fontSize: '0.9rem', opacity: '0.8', margin: '0 0 1.5rem', color: 'rgba(203, 226, 240, 0.8)' }}>
+            <strong style={{ color: '#f7b917' }}>{currentTicket.service_name}</strong>
           </p>
-        </div>
 
-        <div className="surface" style={{
-          background: 'var(--clr-surface-2)',
-          padding: 'var(--space-6)',
-          marginBottom: 'var(--space-6)'
-        }}>
+          {/* Queue Number Card */}
           <div style={{
-            fontSize: 'clamp(.9rem, 4vw, 1.3rem)',
-            fontWeight: '700',
-            color: 'var(--clr-primary)',
-            marginBottom: 'var(--space-2)'
+            background: 'rgba(247, 185, 23, 0.1)',
+            border: '1px solid rgba(247, 185, 23, 0.3)',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            marginBottom: '1.5rem'
           }}>
-            {currentTicket.number}
+            <div style={{
+              fontSize: 'clamp(1.5rem, 8vw, 2.5rem)',
+              fontWeight: '800',
+              color: '#f7b917',
+              marginBottom: '0.5rem'
+            }}>
+              {currentTicket.number}
+            </div>
+            <div style={{ fontSize: '0.85rem', opacity: '0.7', color: 'rgba(203, 226, 240, 0.7)' }}>
+              Simpan nomor antrian ini
+            </div>
           </div>
+
+          {/* Details */}
           <div style={{
-            fontSize: 'var(--fs-300)',
-            opacity: '0.7'
+            textAlign: 'left',
+            display: 'grid',
+            gap: '0.5rem',
+            marginBottom: '1.5rem',
+            fontSize: '0.9rem',
+            color: 'rgba(203, 226, 240, 0.9)'
           }}>
-            Simpan nomor antrian ini.
+            <div><strong style={{ color: '#fff' }}>Nama:</strong> {currentTicket.queue_customer_name}</div>
+            <div><strong style={{ color: '#fff' }}>Telepon:</strong> {currentTicket.queue_customer_phone}</div>
+            <div><strong style={{ color: '#fff' }}>Dibuat:</strong> {toLocalTime(currentTicket.created_at)}</div>
+            <div>
+              <strong style={{ color: '#fff' }}>Status:</strong>
+              <span style={{
+                marginLeft: '0.5rem',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '20px',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                backgroundColor: currentTicket.status === 'WAITING' ? 'rgba(59, 130, 246, 0.2)' :
+                  currentTicket.status === 'CALLED' ? 'rgba(247, 185, 23, 0.2)' :
+                    currentTicket.status === 'IN_SERVICE' ? 'rgba(16, 185, 129, 0.2)' :
+                      currentTicket.status === 'DONE' ? 'rgba(16, 185, 129, 0.2)' :
+                        'rgba(239, 68, 68, 0.2)',
+                color: currentTicket.status === 'WAITING' ? '#60a5fa' :
+                  currentTicket.status === 'CALLED' ? '#f7b917' :
+                    currentTicket.status === 'IN_SERVICE' ? '#34d399' :
+                      currentTicket.status === 'DONE' ? '#34d399' :
+                        '#f87171'
+              }}>
+                {STATUS_LABEL_ID[currentTicket.status] || currentTicket.status}
+              </span>
+            </div>
+
+            {currentTicket.status === 'WAITING' && (
+              <>
+                <div><strong style={{ color: '#fff' }}>Sisa Antrian:</strong> {remainingQueue}</div>
+                {queuePosition && (
+                  <div><strong style={{ color: '#fff' }}>Posisi Antrian:</strong> {queuePosition}</div>
+                )}
+              </>
+            )}
           </div>
-        </div>
 
-        <div style={{
-          textAlign: 'left',
-          display: 'grid',
-          gap: 'var(--space-2)',
-          marginBottom: 'var(--space-6)',
-          fontSize: 'var(--fs-400)'
-        }}>
-          <div><strong>Nama:</strong> {currentTicket.queue_customer_name}</div>
-          <div><strong>Telepon:</strong> {currentTicket.queue_customer_phone}</div>
-          <div><strong>Dibuat:</strong> {toLocalTime(currentTicket.created_at)}</div>
-          <div>
-            <strong>Status:</strong>
-            <span className="badge" style={{ marginLeft: 'var(--space-2)' }}>
-              {STATUS_LABEL_ID[currentTicket.status] || currentTicket.status}
-            </span>
+          {/* Status Message */}
+          <div style={{
+            fontSize: '0.85rem',
+            opacity: '0.8',
+            marginBottom: '1.5rem',
+            lineHeight: '1.6',
+            color: 'rgba(203, 226, 240, 0.8)',
+            padding: '1rem',
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '8px'
+          }}>
+            {currentTicket.status === 'WAITING' && (
+              <p style={{ margin: 0 }}>⏳ Silakan menunggu sampai nomor Anda dipanggil.</p>
+            )}
+            {currentTicket.status === 'CALLED' && (
+              <p style={{ margin: 0 }}>📢 Nomor Anda sedang dipanggil. Silakan menuju loket!</p>
+            )}
+            {currentTicket.status === 'IN_SERVICE' && (
+              <p style={{ margin: 0 }}>✅ Anda sedang dilayani.</p>
+            )}
+            {currentTicket.status === 'DONE' && (
+              <p style={{ margin: 0 }}>🎉 Layanan Anda telah selesai. Terima kasih!</p>
+            )}
+            {currentTicket.status === 'NO_SHOW' && (
+              <p style={{ margin: 0 }}>⚠️ Anda tidak hadir saat dipanggil.</p>
+            )}
+            {currentTicket.status === 'CANCELED' && (
+              <p style={{ margin: 0 }}>❌ Antrian Anda telah dibatalkan.</p>
+            )}
           </div>
 
-          {currentTicket.status === 'WAITING' && (
-            <div><strong>Sisa Antrian:</strong> {remainingQueue}</div>
-          )}
-          
-          {queuePosition && currentTicket.status === 'WAITING' && (
-            <div><strong>Posisi Antrian:</strong> {queuePosition}</div>
-          )}
+          {/* New Queue Button */}
+          <button
+            onClick={resetForm}
+            style={{
+              width: '100%',
+              padding: '1rem',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '8px',
+              color: '#ffffff',
+              fontSize: '0.95rem',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            🎫 Ambil Antrian Baru
+          </button>
         </div>
-
-        <div style={{
-          fontSize: 'var(--fs-300)',
-          opacity: '0.8',
-          marginBottom: 'var(--space-6)',
-          lineHeight: '1.6'
-        }}>
-          {currentTicket.status === 'WAITING' && (
-            <p>Silakan menunggu sampai nomor Anda dipanggil. Anda dapat melihat posisi antrian di layar.</p>
-          )}
-          {currentTicket.status === 'CALLED' && (
-            <p>Nomor Anda sedang dipanggil. Silakan menuju loket.</p>
-          )}
-          {currentTicket.status === 'IN_SERVICE' && (
-            <p>Anda sedang dilayani.</p>
-          )}
-          {currentTicket.status === 'DONE' && (
-            <p>Layanan Anda telah selesai.</p>
-          )}
-          {currentTicket.status === 'NO_SHOW' && (
-            <p>Anda tidak hadir saat nomor antrian Anda dipanggil.</p>
-          )}
-          {currentTicket.status === 'CANCELED' && (
-            <p>Antrian Anda telah dibatalkan.</p>
-          )}
-        </div>
-
       </div>
     </div>
   )

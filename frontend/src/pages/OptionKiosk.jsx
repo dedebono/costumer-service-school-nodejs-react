@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { api } from '../api'
 import './OptionsKiosk.css'
 
@@ -85,8 +85,8 @@ export default function OptionKiosk() {
     <div className="kiosk-page">
       <div className="kiosk-container">
         <div className="kiosk-header">
-          <h1>Daftar Antrian</h1>
-          <p>Silakan pilih area, grup antrian, dan layanan yang Anda inginkan.</p>
+          <h1>🎫 Daftar Antrian</h1>
+          <p>Silakan pilih layanan yang Anda inginkan</p>
         </div>
 
         {error && (
@@ -154,6 +154,15 @@ export default function OptionKiosk() {
                 ))}
               </div>
             </>
+          )}
+
+          {/* Back to Home Link */}
+          {step === 'building' && (
+            <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+              <Link to="/" style={{ color: 'rgba(203, 226, 240, 0.7)', fontSize: '0.9rem' }}>
+                ← Kembali ke Beranda
+              </Link>
+            </div>
           )}
         </div>
       </div>
