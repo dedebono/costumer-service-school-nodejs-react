@@ -1,5 +1,6 @@
 import { useDraggable } from '@dnd-kit/core';
 import { formatDate } from '../../lib/utils';
+import { Phone, Cake, Home, Mail, FileText, ClipboardList } from 'lucide-react';
 
 export default function DraggableApplicant({ applicant, onClick, progress }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -54,19 +55,19 @@ export default function DraggableApplicant({ applicant, onClick, progress }) {
           </div>
         </div>
       )}
-      {applicant.parent_phone && <div className="card__meta">📞{applicant.parent_phone}</div>}
-      {applicant.birthdate && <div className="card__meta">🎂{formatDate(applicant.birthdate)}</div>}
-      {applicant.address && <div 
-       style={{maxWidth:'130px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}
-      className="card__meta">🏠{applicant.address}</div>}
-      {applicant.email && <div 
-      style={{maxWidth:'130px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}
-      className="card__meta">📧{applicant.email}</div>}
+      {applicant.parent_phone && <div className="card__meta" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Phone size={12} />{applicant.parent_phone}</div>}
+      {applicant.birthdate && <div className="card__meta" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Cake size={12} />{formatDate(applicant.birthdate)}</div>}
+      {applicant.address && <div
+        style={{ maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+        className="card__meta"><Home size={12} />{applicant.address}</div>}
+      {applicant.email && <div
+        style={{ maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+        className="card__meta"><Mail size={12} />{applicant.email}</div>}
       {applicant.notes && <div
-      className="card__meta"
-      style={{maxWidth:'130px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}
-      >✒️{applicant.notes}</div>}
-      {applicant.nisn && <div className="card__meta"> 📋{applicant.nisn}</div>}
+        className="card__meta"
+        style={{ maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+      ><FileText size={12} />{applicant.notes}</div>}
+      {applicant.nisn && <div className="card__meta" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><ClipboardList size={12} />{applicant.nisn}</div>}
     </li>
   );
 }

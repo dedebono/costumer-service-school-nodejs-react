@@ -1,7 +1,7 @@
-// src/features/tickets/TicketSearch.jsx
 import { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { CheckCircle, X, Search } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { qs, toLocalTime } from '../../lib/utils.js';
 import TicketDetails from './TicketDetails.jsx';
@@ -11,13 +11,13 @@ const numberedPrefixRegex = /^Follow\s*up\s*(\d+)\s*[xX]\s*:\s*/i;
 
 // Shared with TicketCreate (keep in sync)
 const DESCRIPTION_OPTIONS = {
-    'Layanan Kritik dan Saran': ['Saran', 'Kritik', 'Pertanyaan Umum', 'Edcon mengumpulkan Informasi', 'Edcon Telah menyampaikan ke pihak terkait','Follow up ke Customer'],
-    'Pembelian Seragam': ['Size terkonfirmasi', 'EduCS sudah menghubungi GA (Stok)', 'Fitting Baju', 'Pembayaran', 'Pengambilan di EduCS'],
-    'Siswa Pindah Sekolah': ['Menyampaikan prosedur pindah Sekolah','Konfirmasi ke pihak terkait','Janji temu principal','Telah bertemu principal','Telah mengisi Formulir pindah sekolah','Formulir telah diserahkan ke admin area','Surat Pindah telah diserahkan kepada orang tua'],
-    'Ketertinggalan Picker Card': ['Mengambil foto penjemput', 'Menerbitkan Kartu sementara', 'Menerbitkan Kartu baru (biaya)', 'Mengalihkan nama siswa ke Dismissal App'],
-    'Menerima Tamu : Orang tua': ['Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
-    'Menerima Tamu : Vendor': ['Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
-    'Menerima Tamu : Tamu Khusus': ['Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
+  'Layanan Kritik dan Saran': ['Saran', 'Kritik', 'Pertanyaan Umum', 'Edcon mengumpulkan Informasi', 'Edcon Telah menyampaikan ke pihak terkait', 'Follow up ke Customer'],
+  'Pembelian Seragam': ['Size terkonfirmasi', 'EduCS sudah menghubungi GA (Stok)', 'Fitting Baju', 'Pembayaran', 'Pengambilan di EduCS'],
+  'Siswa Pindah Sekolah': ['Menyampaikan prosedur pindah Sekolah', 'Konfirmasi ke pihak terkait', 'Janji temu principal', 'Telah bertemu principal', 'Telah mengisi Formulir pindah sekolah', 'Formulir telah diserahkan ke admin area', 'Surat Pindah telah diserahkan kepada orang tua'],
+  'Ketertinggalan Picker Card': ['Mengambil foto penjemput', 'Menerbitkan Kartu sementara', 'Menerbitkan Kartu baru (biaya)', 'Mengalihkan nama siswa ke Dismissal App'],
+  'Menerima Tamu : Orang tua': ['Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
+  'Menerima Tamu : Vendor': ['Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
+  'Menerima Tamu : Tamu Khusus': ['Tamu telah mengisi buku tamu', 'EduCS telah meneruskan informasi ke area', 'Area telah menghubungi tamu'],
   // "Lain-lain" intentionally no options → free text
 };
 
@@ -75,7 +75,7 @@ export default function TicketSearch() {
   function phoneKeyGuard(e) {
     const k = e.key;
     if (k === 'Enter') return;
-    const allowed = ['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End'];
+    const allowed = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
     if (allowed.includes(k)) return;
     if (/^\d$/.test(k)) {
       if ((e.target.value || '').length >= 12) e.preventDefault();
@@ -90,7 +90,7 @@ export default function TicketSearch() {
   };
 
   async function refreshTickets({ preserveSelection = true, preserveModal = true } = {}) {
-    const nameQ  = (name || '').trim();
+    const nameQ = (name || '').trim();
     const emailQ = (email || '').trim().toLowerCase();
     const phoneQ = (phone || '').trim();
 
@@ -132,7 +132,7 @@ export default function TicketSearch() {
     }
   }
 
-    // If navigated here with a prefilled name, auto-run the search once
+  // If navigated here with a prefilled name, auto-run the search once
   useEffect(() => {
     const pre = location.state?.prefillName || '';
     const auto = !!location.state?.autoSearch;
@@ -254,12 +254,12 @@ export default function TicketSearch() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 12, marginBottom: 16 , padding:'20px' }}>
-      <div style={{ display:'flex', flexDirection: 'row', gap: 12, alignItems: 'start', marginBottom: 8 }}>
-        <div style={{ display:'flex', flexDirection: 'column', gap: 6, flexGrow: 1 }}>
-          <label style={{ fontSize: 15, fontWeight:'600' }}>Search by Name</label>
+    <div style={{ display: 'grid', gap: 12, marginBottom: 16, padding: '20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'row', gap: 12, alignItems: 'start', marginBottom: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexGrow: 1 }}>
+          <label style={{ fontSize: 15, fontWeight: '600' }}>Search by Name</label>
           <input
-            style={{width: '60%', border: '1px solid #ddd', borderRadius: 8, padding: '8px 10px' }}
+            style={{ width: '60%', border: '1px solid #ddd', borderRadius: 8, padding: '8px 10px' }}
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Customer name"
@@ -267,10 +267,10 @@ export default function TicketSearch() {
           />
         </div>
 
-        <div style={{ display:'flex', flexDirection: 'column', gap: 6, flexGrow: 1 }}>
-          <label style={{ fontSize: 15, fontWeight:'600' }}>Search by Phone</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexGrow: 1 }}>
+          <label style={{ fontSize: 15, fontWeight: '600' }}>Search by Phone</label>
           <input
-            style={{width: '60%', border: '1px solid #ddd', borderRadius: 8, padding: '8px 10px' }}
+            style={{ width: '60%', border: '1px solid #ddd', borderRadius: 8, padding: '8px 10px' }}
             value={phone}
             onChange={onPhoneChange}
             placeholder="08xxxxxxxxxx"
@@ -284,9 +284,13 @@ export default function TicketSearch() {
       <div>
         <button
           onClick={() => refreshTickets({ preserveSelection: false, preserveModal: false })}
-          style={{ padding: '8px 12px', borderRadius: 8, background: '#111', color: '#fff', border: 'none', cursor: 'pointer' }}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 16px', borderRadius: 8, background: '#3b82f6',
+            color: '#fff', border: '1px solid #3b82f6', cursor: 'pointer', fontWeight: 500
+          }}
         >
-          Search
+          <Search size={16} /> Search
         </button>
       </div>
 
@@ -509,8 +513,8 @@ Phone: ${customerPhone || '-'}`;
   if (submittedTicket) {
     return (
       <div style={{ display: 'grid', gap: 8 }}>
-        <div style={{ fontSize: 14, color: '#16a34a', fontWeight: 600 }}>
-          ✅ Follow-up ticket created!
+        <div style={{ fontSize: 14, color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle size={18} /> Follow-up ticket created!
         </div>
         <div style={{ fontSize: 14 }}>
           <b>ID:</b> {submittedTicket.id ?? '(check list)'}
@@ -613,7 +617,7 @@ function Modal({ title, children, onClose }) {
       <div style={modalCard} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <h3 id="modal-title" style={{ margin: 0 }}>{title}</h3>
-          <button onClick={onClose} style={btn}>×</button>
+          <button onClick={onClose} style={btn}><X size={18} /></button>
         </div>
         <div>{children}</div>
       </div>
@@ -624,8 +628,8 @@ function Modal({ title, children, onClose }) {
 /* ---------- Styles ---------- */
 const inp = { border: '1px solid #ddd', borderRadius: 8, padding: '8px 10px' };
 const btn = { padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, background: '#fff', cursor: 'pointer' };
-const btnPrimary = { padding: '8px 12px', borderRadius: 8, background: '#111', color: '#fff', border: 'none', cursor: 'pointer' };
-const btnDisabled = { ...btnPrimary, background: '#9ca3af', cursor: 'not-allowed', margin:'5px' };
+const btnPrimary = { padding: '8px 12px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: '1px solid #3b82f6', cursor: 'pointer', fontWeight: 500 };
+const btnDisabled = { ...btnPrimary, background: '#9ca3af', cursor: 'not-allowed', margin: '5px' };
 const modalBackdrop = {
   position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
   display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 1000
@@ -634,4 +638,4 @@ const modalCard = {
   background: '#fff', border: '1px solid #eee', borderRadius: 12, padding: 16,
   width: 'min(560px, 100%)', boxShadow: '0 10px 30px rgba(0,0,0,0.15)'
 };
-const btnDanger = { padding: '8px 12px', margin:'10px', borderRadius: 8, background: '#b91c1c', color: '#fff', border: 'none', cursor: 'pointer' };
+const btnDanger = { padding: '8px 12px', margin: '10px', borderRadius: 8, background: '#b91c1c', color: '#fff', border: 'none', cursor: 'pointer' };

@@ -1,4 +1,5 @@
 import { useAuth } from '../context/AuthContext.jsx';
+import { Settings, GraduationCap, Ticket, Search, Users, X, User, LogOut } from 'lucide-react';
 import TicketsTable from '../features/tickets/TicketsTable.jsx';
 import CreateUserForm from '../features/users/CreateUserForm.jsx';
 import TicketSearch from '../features/tickets/TicketSearch.jsx';
@@ -10,30 +11,30 @@ import Sidebar from '../components/Sidebar.jsx';
 import Swal from 'sweetalert2';
 
 const groupedTabs = [
-    {
+  {
     title: 'ANTRIAN',
     items: [
-      { value: 'admin-setup', label: 'Admin Setup', icon: '⚙️' },
+      { value: 'admin-setup', label: 'Admin Setup', icon: <Settings size={20} /> },
     ],
   },
-    {
+  {
     title: 'PMB',
     items: [
-      { value: 'pipelineBuilder', label: 'Pembuatan Alur PMB', icon: '🎓' },
+      { value: 'pipelineBuilder', label: 'Pembuatan Alur PMB', icon: <GraduationCap size={20} /> },
     ],
   },
 
   {
     title: 'TIKET',
     items: [
-      { value: 'tickets', label: 'Semua Tiket', icon: '🎫' },
-      { value: 'search', label: 'Cari Tiket' , icon: '🔍' },
+      { value: 'tickets', label: 'Semua Tiket', icon: <Ticket size={20} /> },
+      { value: 'search', label: 'Cari Tiket', icon: <Search size={20} /> },
     ],
   },
   {
     title: 'PENGGUNA',
     items: [
-      { value: 'createUser', label: 'Kelola Akun', icon: '👥' },
+      { value: 'createUser', label: 'Kelola Akun', icon: <Users size={20} /> },
     ],
   },
 ];
@@ -134,8 +135,8 @@ function PipelineBuilderForSupervisor() {
 
   const openEditModal = async () => {
     if (!selectedPipelineId || selectedPipelineId === 'new') {
-        alert('Please select an existing pipeline to edit.');
-        return;
+      alert('Please select an existing pipeline to edit.');
+      return;
     }
     try {
       const pipeline = await api(`/admission/pipelines/${selectedPipelineId}`);
@@ -270,7 +271,7 @@ function PipelineBuilderForSupervisor() {
       <h2>Pilih Alur PMB / Buat Baru</h2>
       <div className="flex gap-2 items-center mb-4">
         <select className='option-selector'
-        value={selectedPipelineId || ''} onChange={e => { setSelectedPipelineId(e.target.value); setShowCreateForm(e.target.value === "new"); }}>
+          value={selectedPipelineId || ''} onChange={e => { setSelectedPipelineId(e.target.value); setShowCreateForm(e.target.value === "new"); }}>
           <option value="new">Alur PMB baru</option>
           {pipelines.map(p => (
             <option key={p.id} value={p.id}>
@@ -337,7 +338,7 @@ function PipelineBuilderForSupervisor() {
                   className="btn-close"
                   onClick={() => setShowEditModal(false)}
                 >
-                  ✖
+                  <X size={20} />
                 </button>
               </h3>
             </header>
@@ -521,10 +522,33 @@ function PipelineBuilderForSupervisor() {
 function Header({ user, onLogout }) {
   return (
     <div className="flex justify-between items-center mb-4">
-      <h1 className="mt-0">EDUCATION CONSULTAN ADMIN</h1>
-      <div className="flex gap-2 items-center">
-        <span className="badge">{user.username} • {user.role}</span>
-        <button onClick={onLogout} className="btn btn--primary">Logout</button>
+      <h1 className="mt-0" style={{ fontSize: '1.25rem', color: '#1e293b' }}>EDUCATION CONSULTAN ADMIN</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '8px',
+          background: '#fff', border: '1px solid #e2e8f0', borderRadius: '20px',
+          padding: '6px 12px', fontSize: '13px', color: '#64748b'
+        }}>
+          <User size={14} />
+          <span style={{ fontWeight: 600, color: '#0f172a' }}>{user.username}</span>
+          <span style={{ color: '#cbd5e1' }}>•</span>
+          <span>{user.role}</span>
+        </div>
+
+        <button
+          onClick={onLogout}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: '#fff', border: '1px solid #ef4444', borderRadius: '8px',
+            padding: '6px 12px', fontSize: '13px', fontWeight: '500',
+            color: '#ef4444', cursor: 'pointer', transition: 'all 0.2s'
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
+          onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+          title="Logout"
+        >
+          <LogOut size={14} /> Logout
+        </button>
       </div>
     </div>
   );

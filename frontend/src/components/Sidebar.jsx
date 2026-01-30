@@ -1,6 +1,6 @@
-// Sidebar.jsx
 import React, { useEffect, useRef, useState } from 'react'
 import io from 'socket.io-client'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export default function Sidebar({
   tab,
@@ -48,7 +48,8 @@ export default function Sidebar({
         onClick={() => setSidebarCollapsed(c => !c)}
         aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
-        {sidebarCollapsed ? '▶' : '◀'}
+
+        {sidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
       </button>
 
       <div className="sidebar-content" style={{ flex: '1 1 auto', overflowY: 'auto' }}>

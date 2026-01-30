@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
+import { XCircle, Clock, Save, Upload, FolderOpen, Info, CheckCircle, FileEdit, CreditCard, FileText, Users, GraduationCap, ClipboardList, Camera, Paperclip, Check } from 'lucide-react';
 import './ParentUpload.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -205,7 +206,7 @@ export default function ParentUpload() {
                 <div className="parent-upload-container">
                     <div className="parent-upload-card">
                         <div className="error-notice">
-                            <span className="error-icon">❌</span>
+                            <XCircle size={48} style={{ color: '#ef4444', marginBottom: '1rem' }} />
                             <h2>Terjadi Kesalahan</h2>
                             <p>{error}</p>
                         </div>
@@ -220,10 +221,10 @@ export default function ParentUpload() {
             <div className="parent-upload-container">
                 {/* Header */}
                 <div className="parent-upload-header">
-                    <h1>📝 Edit Data Siswa</h1>
+                    <h1><FileEdit size={28} style={{ verticalAlign: 'middle', marginRight: '0.5rem' }} /> Edit Data Siswa</h1>
                     <p>Silakan lengkapi atau perbaiki data siswa dan upload dokumen yang diperlukan.</p>
                     <div className="timer-badge">
-                        <span className="timer-icon">⏱️</span>
+                        <Clock size={18} style={{ marginRight: '0.5rem' }} />
                         <span>Sisa waktu: <strong>{timeLeft}</strong></span>
                     </div>
                 </div>
@@ -324,7 +325,7 @@ export default function ParentUpload() {
                         onClick={handleSaveData}
                         disabled={saving}
                     >
-                        {saving ? 'Menyimpan...' : '💾 Simpan Data'}
+                        {saving ? 'Menyimpan...' : <><Save size={18} style={{ marginRight: '0.5rem' }} /> Simpan Data</>}
                     </button>
                 </div>
 
@@ -336,13 +337,13 @@ export default function ParentUpload() {
                     {/* Document Types */}
                     <div className="upload-sections">
                         {[
-                            { key: 'ktp_ortu', label: 'KTP Orang Tua', icon: '🪪' },
-                            { key: 'akta_kelahiran', label: 'Akta Kelahiran', icon: '📜' },
-                            { key: 'kartu_keluarga', label: 'Kartu Keluarga', icon: '👨‍👩‍👧' },
-                            { key: 'ijazah', label: 'Ijazah / SKHUN', icon: '🎓' },
-                            { key: 'rapor', label: 'Rapor', icon: '📋' },
-                            { key: 'foto', label: 'Pas Foto', icon: '📸' },
-                            { key: 'dokumen_lain', label: 'Dokumen Lainnya', icon: '📎' }
+                            { key: 'ktp_ortu', label: 'KTP Orang Tua', icon: <CreditCard size={18} /> },
+                            { key: 'akta_kelahiran', label: 'Akta Kelahiran', icon: <FileText size={18} /> },
+                            { key: 'kartu_keluarga', label: 'Kartu Keluarga', icon: <Users size={18} /> },
+                            { key: 'ijazah', label: 'Ijazah / SKHUN', icon: <GraduationCap size={18} /> },
+                            { key: 'rapor', label: 'Rapor', icon: <ClipboardList size={18} /> },
+                            { key: 'foto', label: 'Pas Foto', icon: <Camera size={18} /> },
+                            { key: 'dokumen_lain', label: 'Dokumen Lainnya', icon: <Paperclip size={18} /> }
                         ].map(doc => {
                             const uploaded = documents.filter(d => d.doc_key === doc.key);
 
@@ -353,7 +354,7 @@ export default function ParentUpload() {
                                         <span className="upload-label">{doc.label}</span>
                                         {uploaded.length > 0 && (
                                             <span className="upload-status upload-status--uploaded">
-                                                ✓ {uploaded.length} file
+                                                <Check size={14} style={{ marginRight: '0.25rem' }} /> {uploaded.length} file
                                             </span>
                                         )}
                                     </div>
@@ -367,7 +368,7 @@ export default function ParentUpload() {
                                             disabled={uploading}
                                         />
                                         <label htmlFor={`upload-${doc.key}`} className="upload-btn">
-                                            {uploading ? '📤 Mengupload...' : '📁 Pilih File'}
+                                            {uploading ? <><Upload size={16} style={{ marginRight: '0.35rem' }} /> Mengupload...</> : <><FolderOpen size={16} style={{ marginRight: '0.35rem' }} /> Pilih File</>}
                                         </label>
                                     </div>
 
@@ -378,8 +379,8 @@ export default function ParentUpload() {
                                                 <div key={file.id} className="uploaded-file">
                                                     <span className="file-name">{file.original_filename}</span>
                                                     <span className={`file-status file-status--${file.status}`}>
-                                                        {file.status === 'pending' ? '⏳ Menunggu review' :
-                                                            file.status === 'approved' ? '✅ Disetujui' : '❌ Ditolak'}
+                                                        {file.status === 'pending' ? <><Clock size={14} style={{ marginRight: '0.25rem' }} /> Menunggu review</> :
+                                                            file.status === 'approved' ? <><CheckCircle size={14} style={{ marginRight: '0.25rem' }} /> Disetujui</> : <><XCircle size={14} style={{ marginRight: '0.25rem' }} /> Ditolak</>}
                                                     </span>
                                                 </div>
                                             ))}
@@ -393,7 +394,7 @@ export default function ParentUpload() {
 
                 {/* Info Notice */}
                 <div className="info-notice">
-                    <span className="info-icon">ℹ️</span>
+                    <Info size={20} style={{ color: '#60a5fa', marginRight: '0.5rem', flexShrink: 0 }} />
                     <p>
                         Setelah Anda menyimpan data dan mengupload dokumen, petugas akan mereview dan
                         mengkonfirmasi perubahan. Anda akan dihubungi jika ada yang perlu diperbaiki.

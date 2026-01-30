@@ -1,4 +1,5 @@
 import { useAuth } from '../context/AuthContext.jsx';
+import { Rocket, CheckCircle, GraduationCap, Search, Plus, Ticket, Users, User, LogOut } from 'lucide-react';
 import TicketSearch from '../features/tickets/TicketSearch.jsx';
 import FetchUser from '../features/tickets/FetchUsers.jsx';
 import TicketsTable from '../features/tickets/TicketsTable.jsx';
@@ -9,34 +10,34 @@ import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../components/Sidebar.jsx';
 import io from 'socket.io-client';
 import Swal from 'sweetalert2';
-import CSCompleted from './CSCompleted.jsx'; 
+import CSCompleted from './CSCompleted.jsx';
 
 const groupedTabs = [
-    {
-    title:'Antrian',
+  {
+    title: 'Antrian',
     items: [
-      { value: 'cs-dashboard', label: 'Dashboard' , icon: '🚀' },
-      {value:'CSCompleted', label:'Selesai', icon:'✅' }
+      { value: 'cs-dashboard', label: 'Dashboard', icon: <Rocket size={20} /> },
+      { value: 'CSCompleted', label: 'Selesai', icon: <CheckCircle size={20} /> }
     ],
   },
-    {
+  {
     title: 'CRM',
     items: [
-      { value: 'admission', label: 'PMB' , icon: '🎓' },
+      { value: 'admission', label: 'PMB', icon: <GraduationCap size={20} /> },
     ],
   },
   {
     title: 'Tiket',
     items: [
-      { value: 'search', label: 'Cari' , icon: '🔍' },
-      { value: 'create', label: 'Buat' , icon: '➕' },
-      { value: 'tickets', label: 'Semua' , icon: '🎫' },
+      { value: 'search', label: 'Cari', icon: <Search size={20} /> },
+      { value: 'create', label: 'Buat', icon: <Plus size={20} /> },
+      { value: 'tickets', label: 'Semua', icon: <Ticket size={20} /> },
     ],
   },
   {
     title: 'Pengguna',
     items: [
-      { value: 'users', label: 'Konsumen' , icon: '👥' },
+      { value: 'users', label: 'Konsumen', icon: <Users size={20} /> },
     ],
   },
 ];
@@ -121,10 +122,33 @@ export default function CustomerService() {
 function Header({ user, onLogout }) {
   return (
     <div className="flex justify-between items-center mb-4">
-      <h1 className="mt-0">EDUCATION CONSULTANT PORTAL</h1>
-      <div className="flex gap-2 items-center">
-        <span className="badge-name">{user.username} • {user.role}</span>
-        <button onClick={onLogout} className="btn btn--primary">Logout</button>
+      <h1 className="mt-0" style={{ fontSize: '1.25rem', color: '#1e293b' }}>EDUCATION CONSULTANT PORTAL</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '8px',
+          background: '#fff', border: '1px solid #e2e8f0', borderRadius: '20px',
+          padding: '6px 12px', fontSize: '13px', color: '#64748b'
+        }}>
+          <User size={14} />
+          <span style={{ fontWeight: 600, color: '#0f172a' }}>{user.username}</span>
+          <span style={{ color: '#cbd5e1' }}>•</span>
+          <span>{user.role}</span>
+        </div>
+
+        <button
+          onClick={onLogout}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: '#fff', border: '1px solid #ef4444', borderRadius: '8px',
+            padding: '6px 12px', fontSize: '13px', fontWeight: '500',
+            color: '#ef4444', cursor: 'pointer', transition: 'all 0.2s'
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
+          onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+          title="Logout"
+        >
+          <LogOut size={14} /> Logout
+        </button>
       </div>
     </div>
   );

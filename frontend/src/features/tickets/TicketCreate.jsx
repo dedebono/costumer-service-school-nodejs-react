@@ -1,9 +1,9 @@
-// src/features/tickets/TicketCreate.jsx
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api.js';
 import Swal from 'sweetalert2';
 import TicketDetails from './TicketDetails.jsx';
+import { CheckCircle, X, Search, Plus } from 'lucide-react';
 import { qs, toLocalTime } from '../../lib/utils.js'; // NEW: reuse TicketSearch helpers
 
 export default function TicketCreate() {
@@ -259,7 +259,7 @@ export default function TicketCreate() {
             const res = await Swal.fire({
               icon: 'warning',
               title: 'Email already exists',
-              html: `Use existing customer <b>${existing.name}</b> — ${existing.phone || '-' }?`,
+              html: `Use existing customer <b>${existing.name}</b> — ${existing.phone || '-'}?`,
               showCancelButton: true,
               confirmButtonText: 'Use Existing',
               cancelButtonText: 'Cancel',
@@ -275,7 +275,7 @@ export default function TicketCreate() {
               return;
             }
           }
-        } catch (ignore) {}
+        } catch (ignore) { }
       }
 
       showError('Create Customer Error', m);
@@ -466,7 +466,7 @@ export default function TicketCreate() {
 
       await Swal.fire({
         icon: 'success',
-        title: 'Ticket Created 🎉',
+        title: 'Ticket Created',
         timer: 900,
         showConfirmButton: true,
         position: 'top',
@@ -505,41 +505,41 @@ export default function TicketCreate() {
   }
 
   async function fetchTicketsForSelectedCustomer() {
-  if (!selectedCustomer) return;
-  setTicketsLoading(true);
-  setTicketsNotice('');
-  try {
-    // Use ALL details: name — phone (email)
-    const nameQ  = (selectedCustomer.name  || '').trim();
-    const phoneQ = (selectedCustomer.phone || '').trim();
-    const emailQ = (selectedCustomer.email || '').trim().toLowerCase();
+    if (!selectedCustomer) return;
+    setTicketsLoading(true);
+    setTicketsNotice('');
+    try {
+      // Use ALL details: name — phone (email)
+      const nameQ = (selectedCustomer.name || '').trim();
+      const phoneQ = (selectedCustomer.phone || '').trim();
+      const emailQ = (selectedCustomer.email || '').trim().toLowerCase();
 
-    // Build q exactly like "josh 089650300004 josh@josh.com"
-    const q = [nameQ, phoneQ, emailQ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+      // Build q exactly like "josh 089650300004 josh@josh.com"
+      const q = [nameQ, phoneQ, emailQ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
 
-    // Primary: text search (same style as TicketSearch.jsx)
-    let data = await api(`/tickets${qs({ q, page: 1, pageSize: 50 })}`);
-    let list = data?.data || [];
+      // Primary: text search (same style as TicketSearch.jsx)
+      let data = await api(`/tickets${qs({ q, page: 1, pageSize: 50 })}`);
+      let list = data?.data || [];
 
-    // Fallback: try filtering by customerId (if your backend supports it)
-    if (list.length === 0 && selectedCustomer.id) {
-      data = await api(`/tickets${qs({ customerId: selectedCustomer.id, page: 1, pageSize: 50 })}`);
-      list = data?.data || [];
+      // Fallback: try filtering by customerId (if your backend supports it)
+      if (list.length === 0 && selectedCustomer.id) {
+        data = await api(`/tickets${qs({ customerId: selectedCustomer.id, page: 1, pageSize: 50 })}`);
+        list = data?.data || [];
+      }
+
+      setTickets(list);
+      if (list.length === 0) {
+        setTicketsNotice(
+          `No tickets found for: ${nameQ || '-'} — ${phoneQ || '-'} (${emailQ || 'no email'})`
+        );
+      }
+    } catch (e) {
+      const m = e?.message || 'Unknown error';
+      setTicketsNotice(`Search failed: ${m}`);
+    } finally {
+      setTicketsLoading(false);
     }
-
-    setTickets(list);
-    if (list.length === 0) {
-      setTicketsNotice(
-        `No tickets found for: ${nameQ || '-'} — ${phoneQ || '-'} (${emailQ || 'no email'})`
-      );
-    }
-  } catch (e) {
-    const m = e?.message || 'Unknown error';
-    setTicketsNotice(`Search failed: ${m}`);
-  } finally {
-    setTicketsLoading(false);
   }
-}
 
   return (
     <>
@@ -604,14 +604,13 @@ export default function TicketCreate() {
                 <div style={{ fontSize: 13, color: '#374151' }}>
                   <b>Customer:</b>{' '}
                   {selectedCustomer
-                    ? `${selectedCustomer.name} — ${selectedCustomer.phone || '-'} (${
-                        selectedCustomer.email || 'no email'
-                      })`
+                    ? `${selectedCustomer.name} — ${selectedCustomer.phone || '-'} (${selectedCustomer.email || 'no email'
+                    })`
                     : '-'}
                 </div>
               </div>
 
-              <label style={{backgroundColor:'black' , width:'fit-content', color:'white', padding:'1px 6px' , }}>Nama Layanan</label>
+              <label style={{ backgroundColor: 'black', width: 'fit-content', color: 'white', padding: '1px 6px', }}>Nama Layanan</label>
               <select
                 style={inp}
                 value={titleChoice}
@@ -669,7 +668,7 @@ export default function TicketCreate() {
               )}
 
               {/* Description */}
-              <label style={{backgroundColor:'black' , width:'fit-content', color:'white', padding:'1px 6px' , }} >Alur Layanan</label>
+              <label style={{ backgroundColor: 'black', width: 'fit-content', color: 'white', padding: '1px 6px', }} >Alur Layanan</label>
               {titleChoice && currentDescOptions.length > 0 ? (
                 <>
                   <select
@@ -685,16 +684,18 @@ export default function TicketCreate() {
                     ))}
                   </select>
 
-                  <label className='badge' style={{ display: 'flex', 
-                    fontSize: '15px', alignItems: 'center', 
-                    gap: 8 , width:'fit-content' , padding:'10px' , 
-                    border:'none', borderRadius:'0px'}}>
-                    <input                      
+                  <label className='badge' style={{
+                    display: 'flex',
+                    fontSize: '15px', alignItems: 'center',
+                    gap: 8, width: 'fit-content', padding: '10px',
+                    border: 'none', borderRadius: '0px'
+                  }}>
+                    <input
                       type="checkbox"
                       checked={allowExtraDesc}
                       onChange={(e) => setAllowExtraDesc(e.target.checked)}
                     />
-                    Tambahkan detail (centang ✅)
+                    Tambahkan detail
                   </label>
                   {allowExtraDesc && (
                     <textarea
@@ -843,11 +844,11 @@ export default function TicketCreate() {
           />
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" onClick={searchCustomers} style={btnPrimary}>
-              Search Customer
+            <button type="button" onClick={searchCustomers} style={{ ...btnPrimary, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Search size={16} /> Search Customer
             </button>
-            <button type="button" onClick={openCreateCustomerModal} style={btn}>
-              Create New Customer
+            <button type="button" onClick={openCreateCustomerModal} style={{ ...btn, display: 'flex', alignItems: 'center', gap: 6, color: '#16a34a', borderColor: '#22c55e' }}>
+              <Plus size={16} /> Create New Customer
             </button>
           </div>
         </div>
@@ -943,7 +944,7 @@ function Modal({ title, children, onClose }) {
             {title}
           </h3>
           <button onClick={onClose} style={btn}>
-            ×
+            <X size={20} />
           </button>
         </div>
         <div>{children}</div>
@@ -1082,7 +1083,7 @@ function norm(s) {
 /* ---------- Follow-up Modal Content ---------- */
 function FollowUpTicket({ baseTicket, customerOverride, onClose, onCloseOriginal, onOpenDetails }) {
   const co = customerOverride || {};
-  const customerName  = co.name  ?? baseTicket.customer_name  ?? '';
+  const customerName = co.name ?? baseTicket.customer_name ?? '';
   const customerPhone = co.phone ?? baseTicket.customer_phone ?? '';
   const customerEmail = co.email ?? baseTicket.customer_email ?? '';
   const customerIdForBody = baseTicket.customer_id ?? co.id;
@@ -1140,14 +1141,14 @@ Phone: ${customerPhone || '-'}${customerEmail ? `\nEmail: ${customerEmail}` : ''
   const [descOption, setDescOption] = useState(() =>
     descOptions.length ? descOptions[0] : 'Follow up'
   );
-useEffect(() => {
-  if (descOptions.length) {
-    const firstUnused = descOptions.find(opt => !usedOptionSet.has(norm(opt)));
-    setDescOption(firstUnused || descOptions[0]);
-  } else {
-    setDescOption('Follow up');
-  }    
-  setAllowExtraDesc(false);
+  useEffect(() => {
+    if (descOptions.length) {
+      const firstUnused = descOptions.find(opt => !usedOptionSet.has(norm(opt)));
+      setDescOption(firstUnused || descOptions[0]);
+    } else {
+      setDescOption('Follow up');
+    }
+    setAllowExtraDesc(false);
     setExtraDesc('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rootTitle, previousStepsText]);
@@ -1203,7 +1204,7 @@ useEffect(() => {
   }
 
   return (
-    <form onSubmit={submit} style={{ display: 'grid', gap: 10 , minWidth: 400, maxHeight: '80vh', overflowY: 'auto'}}>
+    <form onSubmit={submit} style={{ display: 'grid', gap: 10, minWidth: 400, maxHeight: '80vh', overflowY: 'auto' }}>
       <textarea
         style={{ ...inp, minHeight: 18, background: '#4a4a4aff', color: '#ffffffff' }}
         value={lockedPrefix}
@@ -1216,73 +1217,77 @@ useEffect(() => {
         readOnly
       />
       <div style={{ fontSize: 12, color: '#64748b', marginTop: -10 }}>
-      <b>{finalTitle}</b>
+        <b>{finalTitle}</b>
       </div>
 
       {/* Previous steps (read-only) */}
       <label></label>
       <textarea
-        style={{ ...inp, minHeight: 20, background: '#d3d3d3ff', color: '#000000ff' , overflowY: 'auto' }}
-        value={previousStepsText  || '(none yet — original description will become Step 1)'}
+        style={{ ...inp, minHeight: 20, background: '#d3d3d3ff', color: '#000000ff', overflowY: 'auto' }}
+        value={previousStepsText || '(none yet — original description will become Step 1)'}
         readOnly
       />
 
-{/* This step */}
-<label 
-style={{ backgroundColor:'#000000ff', 
-  borderRadius:'5px',
-  fontWeight:700,
-  padding:'1px 7px 5px', color:'white', 
-width:'fit-content' }}
->Pilih tindakan 👇
-</label>
-{!isLainLain && descOptions.length > 0 ? (
-  <>
-    <select
-      style={inp}
-      value={descOption}
-      onChange={(e) => setDescOption(e.target.value)}
-      required
-    >
-      {descOptions.map((opt) => {
-        const isUsed = usedOptionSet.has(norm(opt));
-        return (
-          <option key={opt} value={opt} disabled={isUsed}>
-            {opt}{isUsed ? '✅' : ''}
-          </option>
-        );
-      })}
-    </select>
+      {/* This step */}
+      <label
+        style={{
+          backgroundColor: '#000000ff',
+          borderRadius: '5px',
+          fontWeight: 700,
+          padding: '1px 7px 5px', color: 'white',
+          width: 'fit-content'
+        }}
+      >Pilih tindakan
+      </label>
+      {!isLainLain && descOptions.length > 0 ? (
+        <>
+          <select
+            style={inp}
+            value={descOption}
+            onChange={(e) => setDescOption(e.target.value)}
+            required
+          >
+            {descOptions.map((opt) => {
+              const isUsed = usedOptionSet.has(norm(opt));
+              return (
+                <option key={opt} value={opt} disabled={isUsed}>
+                  {opt}{isUsed ? '✅' : ''}
+                </option>
+              );
+            })}
+          </select>
 
-    {descOptions.every(o => usedOptionSet.has(norm(o))) && (
-      <div style={{ fontSize: 12, color: '#64748b', marginTop: -4 }}>
-        All preset options have been used in previous steps — add details below.
-      </div>
-    )}
+          {descOptions.every(o => usedOptionSet.has(norm(o))) && (
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: -4 }}>
+              All preset options have been used in previous steps — add details below.
+            </div>
+          )}
 
-    <label className='badge' style={{ display: 'flex', 
-                    fontSize: '15px', alignItems: 'center', 
-                    gap: 8 , width:'fit-content' , padding:'10px' , 
-                    border:'none', borderRadius:'0px'}}>
-      <input
-        type="checkbox"
-        checked={allowExtraDesc}
-        onChange={(e) => setAllowExtraDesc(e.target.checked)}
-      />
-      Tambahkan detail
-    </label>
+          <label className='badge' style={{
+            display: 'flex',
+            fontSize: '15px', alignItems: 'center',
+            gap: 8, width: 'fit-content', padding: '10px',
+            border: 'none', borderRadius: '0px'
+          }}>
+            <input
+              type="checkbox"
+              checked={allowExtraDesc}
+              onChange={(e) => setAllowExtraDesc(e.target.checked)}
+            />
+            Tambahkan detail
+          </label>
 
-    {allowExtraDesc && (
-      <textarea
-        style={{ ...inp, minHeight: 100 }}
-        value={extraDesc}
-        onChange={(e) => setExtraDesc(e.target.value)}
-        placeholder="Tulis detail tambahan… (opsional)"
-      />
-    )}
-  </>
-) : ( 
-         <>
+          {allowExtraDesc && (
+            <textarea
+              style={{ ...inp, minHeight: 100 }}
+              value={extraDesc}
+              onChange={(e) => setExtraDesc(e.target.value)}
+              placeholder="Tulis detail tambahan… (opsional)"
+            />
+          )}
+        </>
+      ) : (
+        <>
           <textarea
             style={{ ...inp, minHeight: 120 }}
             value={extraDetails}
@@ -1333,7 +1338,7 @@ function CustomerTicketsModal({
   onCloseTicket,
 }) {
   return (
-    <div style={{ display: 'grid', gap: 12 , maxHeight: '80vh'}}>
+    <div style={{ display: 'grid', gap: 12, maxHeight: '80vh' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontWeight: 600 }}>Tickets</div>
         <button onClick={onRefresh} style={btn}>Refresh</button>
@@ -1395,7 +1400,7 @@ function CustomerTicketsModal({
                     const res = await onCloseTicket?.(t);
                     if (res?.ok) onRefresh?.();
                   }}
-                  style={{ padding: '8px 12px', margin:'10px', borderRadius: 8, background: '#b91c1c', color: '#fff', border: 'none', cursor: 'pointer' }}
+                  style={{ padding: '8px 12px', margin: '10px', borderRadius: 8, background: '#b91c1c', color: '#fff', border: 'none', cursor: 'pointer' }}
                   disabled={isClosed}
                   title={isClosed ? 'Already closed' : 'Mark this ticket as closed'}
                 >
@@ -1425,12 +1430,14 @@ const btn = {
   cursor: 'pointer',
 };
 const btnPrimary = {
-  padding: '8px 12px',
+  padding: '8px 14px',
   borderRadius: 8,
-  background: '#111',
+  background: '#3b82f6', // Blue 500
   color: '#fff',
-  border: 'none',
+  border: '1px solid #3b82f6',
   cursor: 'pointer',
+  fontWeight: 500,
+  transition: 'background 0.2s'
 };
 const errorText = { color: '#b91c1c', fontSize: 12, marginTop: -4, marginBottom: 8 };
 const modalBackdrop = {

@@ -4,6 +4,7 @@ import { api } from '../api'
 import { toLocalTime } from '../lib/utils'
 import io from 'socket.io-client'
 import Swal from 'sweetalert2'
+import { Clock, Volume2, CheckCircle, PartyPopper, AlertTriangle, XCircle } from 'lucide-react'
 import dingSound from '../sounds/ding.mp3'
 import './OptionsKiosk.css'
 
@@ -322,22 +323,22 @@ export default function QueueKiosk() {
             borderRadius: '8px'
           }}>
             {currentTicket.status === 'WAITING' && (
-              <p style={{ margin: 0 }}>⏳ Silakan menunggu sampai nomor Anda dipanggil.</p>
+              <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Clock size={18} /> Silakan menunggu sampai nomor Anda dipanggil.</p>
             )}
             {currentTicket.status === 'CALLED' && (
-              <p style={{ margin: 0 }}>📢 Nomor Anda sedang dipanggil. Silakan menuju loket!</p>
+              <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Volume2 size={18} /> Nomor Anda sedang dipanggil. Silakan menuju loket!</p>
             )}
             {currentTicket.status === 'IN_SERVICE' && (
-              <p style={{ margin: 0 }}>✅ Anda sedang dilayani.</p>
+              <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle size={18} /> Anda sedang dilayani.</p>
             )}
             {currentTicket.status === 'DONE' && (
-              <p style={{ margin: 0 }}>🎉 Layanan Anda telah selesai. Terima kasih!</p>
+              <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><PartyPopper size={18} /> Layanan Anda telah selesai. Terima kasih!</p>
             )}
             {currentTicket.status === 'NO_SHOW' && (
-              <p style={{ margin: 0 }}>⚠️ Anda tidak hadir saat dipanggil.</p>
+              <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><AlertTriangle size={18} /> Anda tidak hadir saat dipanggil.</p>
             )}
             {currentTicket.status === 'CANCELED' && (
-              <p style={{ margin: 0 }}>❌ Antrian Anda telah dibatalkan.</p>
+              <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><XCircle size={18} /> Antrian Anda telah dibatalkan.</p>
             )}
           </div>
 

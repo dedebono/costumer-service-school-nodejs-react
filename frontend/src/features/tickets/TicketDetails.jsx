@@ -67,7 +67,7 @@ export default function TicketDetails({
   }
 
   if (loading) return <div style={box}>Loading…</div>;
-  if (error)   return <div style={{ ...box, color: '#b91c1c' }}>Error: {error}</div>;
+  if (error) return <div style={{ ...box, color: '#b91c1c' }}>Error: {error}</div>;
   if (!ticket) return <div style={box}>Ticket not found.</div>;
 
   const isClosed = (ticket.status || '').toLowerCase() === 'closed';
@@ -133,17 +133,17 @@ const pre = {
 };
 
 const btn = { padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, background: '#fff', cursor: 'pointer' };
-const btnPrimary = { padding: '8px 12px', borderRadius: 8, background: '#111', color: '#fff', border: 'none', cursor: 'pointer' };
-const btnDisabled = { ...btnPrimary, background: '#9ca3af', cursor: 'not-allowed' };
-const btnDanger = { padding: '8px 12px', borderRadius: 8, background: '#b91c1c', color: '#fff', border: 'none', cursor: 'pointer' };
+const btnPrimary = { padding: '8px 12px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: '1px solid #3b82f6', cursor: 'pointer', fontWeight: 500 };
+const btnDisabled = { ...btnPrimary, background: '#9ca3af', border: '1px solid #9ca3af', cursor: 'not-allowed' };
+const btnDanger = { padding: '8px 12px', borderRadius: 8, background: '#b91c1c', color: '#fff', border: '1px solid #b91c1c', cursor: 'pointer', fontWeight: 500 };
 
 function badge(status) {
   const base = { padding: '2px 8px', borderRadius: 999, fontSize: 12, textTransform: 'capitalize' };
   switch ((status || '').toLowerCase()) {
-    case 'open':         return { ...base, background: '#ecfeff', color: '#155e75', border: '1px solid #a5f3fc' };
-    case 'in_progress':  return { ...base, background: '#fef9c3', color: '#854d0e', border: '1px solid #fde68a' };
-    case 'resolved':     return { ...base, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' };
-    case 'closed':       return { ...base, background: '#e5e7eb', color: '#374151', border: '1px solid #d1d5db' };
-    default:             return { ...base, background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb' };
+    case 'open': return { ...base, background: '#ecfeff', color: '#155e75', border: '1px solid #a5f3fc' };
+    case 'in_progress': return { ...base, background: '#fef9c3', color: '#854d0e', border: '1px solid #fde68a' };
+    case 'resolved': return { ...base, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' };
+    case 'closed': return { ...base, background: '#e5e7eb', color: '#374151', border: '1px solid #d1d5db' };
+    default: return { ...base, background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb' };
   }
 }

@@ -1,5 +1,6 @@
 // src/features/tickets/TicketsTable.jsx
 import { useEffect, useMemo, useState } from 'react';
+import { Trash2, Download, Search } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { qs, toLocalTime } from '../../lib/utils.js';
 
@@ -7,12 +8,12 @@ const STATUS_OPTIONS = ['open', 'in_progress', 'resolved', 'closed'];
 
 /** ---- Follow-up prefix stripping (normalize title) ---- */
 const numberedPrefixRegex = /^Follow\s*up\s*(\d+)\s*[xX]\s*:\s*/i;
-const repeatCountRegex   = /^(?:Follow\s*up\s*:?\s*)+/i;
+const repeatCountRegex = /^(?:Follow\s*up\s*:?\s*)+/i;
 function normalizeTitle(raw) {
   let t = (raw || '').trim();
   if (!t) return '';
   if (numberedPrefixRegex.test(t)) return t.replace(numberedPrefixRegex, '').trim();
-  if (repeatCountRegex.test(t))   return t.replace(repeatCountRegex, '').trim();
+  if (repeatCountRegex.test(t)) return t.replace(repeatCountRegex, '').trim();
   return t;
 }
 
@@ -22,11 +23,11 @@ function PriorityBadge({ value }) {
   const normalized = v === 'normal' ? 'medium' : v; // backward-compat
 
   const stylesByPriority = {
-    low:    { bg: '#dcfce7', text: '#14532d', border: '#86efac' }, // light green
+    low: { bg: '#dcfce7', text: '#14532d', border: '#86efac' }, // light green
     medium: { bg: '#bbf7d0', text: '#14532d', border: '#86efac' }, // green
-    high:   { bg: '#ffedd5', text: '#9a3412', border: '#fdba74' }, // orange
+    high: { bg: '#ffedd5', text: '#9a3412', border: '#fdba74' }, // orange
     urgent: { bg: '#fee2e2', text: '#991b1b', border: '#fca5a5' }, // red
-    default:{ bg: '#e5e7eb', text: '#374151', border: '#d1d5db' },
+    default: { bg: '#e5e7eb', text: '#374151', border: '#d1d5db' },
   };
 
   const c = stylesByPriority[normalized] || stylesByPriority.default;
@@ -177,7 +178,7 @@ export default function TicketsTable({ supervisor }) {
   const COLS = supervisor ? 10 : 9;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 , padding:'20px'}}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '20px' }}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
         <input
           value={q}
@@ -219,11 +220,13 @@ export default function TicketsTable({ supervisor }) {
             setPage(1);
             load();
           }}
-          style={btn}
+          style={{ ...btn, display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: '1px solid #3b82f6', color: '#2563eb' }}
         >
-          Apply
+          <Search size={14} /> Apply
         </button>
-        <button onClick={exportToCSV} style={btn}>Export to CSV</button>
+        <button onClick={exportToCSV} style={{ ...btn, display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: '1px solid #22c55e', color: '#16a34a' }}>
+          <Download size={14} /> Export to CSV
+        </button>
       </div>
 
       <div style={{ border: '1px solid #eee', borderRadius: 8, overflow: 'auto' }}>
@@ -286,8 +289,13 @@ export default function TicketsTable({ supervisor }) {
                   <td style={td}>{toLocalTime(t.created_at)}</td>
                   {supervisor && (
                     <td style={td}>
-                      <button onClick={() => onDelete(t.id)} style={delBtn} disabled={!t.id}>
-                        Delete
+                      <button
+                        onClick={() => onDelete(t.id)}
+                        style={{ ...delBtn, display: 'flex', alignItems: 'center', gap: 4 }}
+                        disabled={!t.id}
+                        title="Delete Ticket"
+                      >
+                        <Trash2 size={14} /> Delete
                       </button>
                     </td>
                   )}
@@ -333,8 +341,8 @@ function truncate(s, n) {
 }
 
 const inp = { border: '1px solid #ddd', borderRadius: 8, padding: '8px 10px' };
-const btn = { padding: '8px 12px', background: '#111', color: '#fff', borderRadius: 8, border: 'none', cursor: 'pointer' };
+const btn = { padding: '8px 12px', background: '#fff', color: '#334155', borderRadius: 8, border: '1px solid #e2e8f0', cursor: 'pointer', fontWeight: 500 };
 const th = { padding: 8 };
 const td = { padding: 8, verticalAlign: 'top' };
 const navBtn = { padding: '6px 10px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', cursor: 'pointer' };
-const delBtn = { padding: '6px 10px', borderRadius: 8, border: 'none', background: '#dc2626', color: '#fff', cursor: 'pointer' };
+const delBtn = { padding: '6px 10px', borderRadius: 8, border: '1px solid #ef4444', background: '#fff', color: '#ef4444', cursor: 'pointer', fontWeight: 500 };

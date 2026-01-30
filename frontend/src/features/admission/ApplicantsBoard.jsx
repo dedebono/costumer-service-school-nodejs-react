@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../../lib/api.js';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
+import { Send, Eye, Check, X, Edit, FileText, Search, Download, Upload } from 'lucide-react';
 import DraggableApplicant from './DraggableApplicant.jsx';
 
 /* -------------------------------------------
@@ -587,23 +588,49 @@ export default function ApplicantsBoard({ pipeline }) {
             border: '1px solid #ccc',
           }}
         />
-        <button className="btn btn--primary" onClick={handleSearch}>
-          Search
-        </button>
-        <button
-          className="btn btn--primary"
-          onClick={handleExportCSV}
-          style={{ marginLeft: '0.5rem' }}
-        >
-          Export to CSV
-        </button>
-        <button
-          className="btn btn--primary"
-          onClick={handleImportCSVClick}
-          style={{ marginLeft: '0.5rem' }}
-        >
-          Import from CSV
-        </button>
+        <div style={{ display: 'inline-flex', gap: '8px', verticalAlign: 'middle' }}>
+          <button
+            onClick={handleSearch}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: '#fff', border: '1px solid #3b82f6', borderRadius: '8px',
+              padding: '8px 14px', fontSize: '13px', fontWeight: '500',
+              color: '#2563eb', cursor: 'pointer', boxShadow: '0 1px 2px rgba(37,99,235,0.1)'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+            onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+          >
+            <Search size={15} /> Search
+          </button>
+
+          <button
+            onClick={handleExportCSV}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: '#fff', border: '1px solid #22c55e', borderRadius: '8px',
+              padding: '8px 14px', fontSize: '13px', fontWeight: '500',
+              color: '#16a34a', cursor: 'pointer', boxShadow: '0 1px 2px rgba(34,197,94,0.1)'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#f0fdf4'}
+            onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+          >
+            <Download size={15} /> Export to CSV
+          </button>
+
+          <button
+            onClick={handleImportCSVClick}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: '#fff', border: '1px solid #f97316', borderRadius: '8px',
+              padding: '8px 14px', fontSize: '13px', fontWeight: '500',
+              color: '#ea580c', cursor: 'pointer', boxShadow: '0 1px 2px rgba(234,88,12,0.1)'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#fff7ed'}
+            onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+          >
+            <Upload size={15} /> Import from CSV
+          </button>
+        </div>
         <input
           type="file"
           ref={fileInputRef}
@@ -711,36 +738,77 @@ export default function ApplicantsBoard({ pipeline }) {
           <>
             {editMode === null && (
               <>
-                <button className="btn btn--secondary" onClick={() => setEditMode('dataSiswa')}>
-                  Edit Data Siswa
-                </button>
-                <button className="btn btn--secondary" onClick={() => setEditMode('detail')}>
-                  Update Detail
-                </button>
-                <button
-                  className="btn btn--outline"
-                  style={{ backgroundColor: '#25D366', color: '#fff', border: 'none' }}
-                  onClick={async () => {
-                    try {
-                      const result = await api(`/parent-upload/admin/generate/${selectedApplicant.id}`, { method: 'POST' });
-                      window.open(result.wa_url, '_blank');
-                      toast('success', 'Link berhasil dibuat');
-                    } catch (e) {
-                      swal.fire('Error', e.message || 'Gagal membuat link', 'error');
-                    }
-                  }}
-                >
-                  📱 Kirim Link
-                </button>
-                <button
-                  className="btn btn--outline"
-                  onClick={() => window.open(`/datasiswa/${selectedApplicant.id}`, '_blank')}
-                >
-                  👁️ Lihat Data
-                </button>
-                <button className="btn btn--primary" onClick={() => setSelectedApplicant(null)}>
-                  Close
-                </button>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setEditMode('dataSiswa')}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px',
+                      padding: '8px 14px', fontSize: '13px', fontWeight: '500',
+                      color: '#475569', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                  >
+                    <Edit size={15} /> Edit Data Siswa
+                  </button>
+
+                  <button
+                    onClick={() => setEditMode('detail')}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px',
+                      padding: '8px 14px', fontSize: '13px', fontWeight: '500',
+                      color: '#475569', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                  >
+                    <FileText size={15} /> Update Detail
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      try {
+                        const result = await api(`/parent-upload/admin/generate/${selectedApplicant.id}`, { method: 'POST' });
+                        window.open(result.wa_url, '_blank');
+                        toast('success', 'Link berhasil dibuat');
+                      } catch (e) {
+                        swal.fire('Error', e.message || 'Gagal membuat link', 'error');
+                      }
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      background: '#fff', border: '1px solid #22c55e', borderRadius: '8px',
+                      padding: '8px 14px', fontSize: '13px', fontWeight: '600',
+                      color: '#16a34a', cursor: 'pointer', boxShadow: '0 1px 2px rgba(34,197,94,0.1)'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f0fdf4'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                  >
+                    <Send size={15} /> Kirim Link
+                  </button>
+
+                  <button
+                    onClick={() => window.open(`/datasiswa/${selectedApplicant.id}`, '_blank')}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      background: '#fff', border: '1px solid #3b82f6', borderRadius: '8px',
+                      padding: '8px 14px', fontSize: '13px', fontWeight: '600',
+                      color: '#2563eb', cursor: 'pointer', boxShadow: '0 1px 2px rgba(59,130,246,0.1)'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                  >
+                    <Eye size={15} /> Lihat Data
+                  </button>
+
+                  <button className="btn btn--primary" onClick={() => setSelectedApplicant(null)}
+                    style={{ marginLeft: 'auto', borderRadius: '8px', fontSize: '13px' }}
+                  >
+                    Close
+                  </button>
+                </div>
               </>
             )}
             {editMode === 'dataSiswa' && (
@@ -974,8 +1042,8 @@ export default function ApplicantsBoard({ pipeline }) {
                           <span>
                             {detail.type === 'checkbox'
                               ? applicantDynamicDetails[detail.key] === 'true'
-                                ? '✔️'
-                                : '✖️'
+                                ? <Check size={16} style={{ color: '#22c55e' }} />
+                                : <X size={16} style={{ color: '#ef4444' }} />
                               : applicantDynamicDetails[detail.key] || <em>Belum diisi</em>}
                           </span>
                         )}

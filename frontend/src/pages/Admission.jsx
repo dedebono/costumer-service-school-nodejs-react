@@ -4,6 +4,7 @@ import PipelineBuilder from '../features/admission/PipelineBuilder.jsx';
 import ApplicantsBoard from '../features/admission/ApplicantsBoard.jsx';
 import Swal from 'sweetalert2';
 import Modal from '../components/modal.jsx'; // ⬅️ import modal
+import { UserPlus } from 'lucide-react';
 
 export default function Admission({ hideAddStep = false, hideCreatePipeline = false, hidePipelineBuilder = false }) {
   const [pipelines, setPipelines] = useState([]);
@@ -71,7 +72,7 @@ export default function Admission({ hideAddStep = false, hideCreatePipeline = fa
   return (
     <div className="container-PMB">
       <h2>Penerimaan Siswa Baru</h2>
-  
+
       <div>
         <select
           className="select-pmb"
@@ -106,9 +107,22 @@ export default function Admission({ hideAddStep = false, hideCreatePipeline = fa
       {selectedPipeline && (
         <>
           <div className="mb-4">
-            <button className="btn btn--primary" onClick={() => setShowCreateApplicant(true)}>
-              Pendaftaran Siswa
-            </button>
+            <div className="mb-4">
+              <button
+                onClick={() => setShowCreateApplicant(true)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: '#fff', border: '1px solid #eab308', borderRadius: '8px',
+                  padding: '8px 16px', fontSize: '14px', fontWeight: '600',
+                  color: '#ca8a04', cursor: 'pointer', boxShadow: '0 1px 2px rgba(234,179,8,0.1)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#fefce8'}
+                onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+              >
+                <UserPlus size={18} /> Pendaftaran Siswa
+              </button>
+            </div>
           </div>
 
           {/* ⬇️ Modal Create Applicant */}

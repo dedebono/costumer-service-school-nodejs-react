@@ -4,7 +4,7 @@ import { api } from '../api'
 import { toLocalTime } from '../lib/utils'
 import io from 'socket.io-client'
 import Swal from 'sweetalert2'
-
+import { Download } from 'lucide-react'
 const STATUS_COLORS = {
   WAITING: 'tag-accent',
   CALLED: 'tag-primary',
@@ -32,7 +32,7 @@ export default function CSDashboard() {
   // Socket + freshness refs
   const socketRef = useRef(null)
   const selectedServiceIdRef = useRef(null)
-  const loadQueueRef = useRef(() => {})
+  const loadQueueRef = useRef(() => { })
   const prevServiceIdRef = useRef(null)
   const queueUpdateTimeoutRef = useRef(null)
 
@@ -99,8 +99,8 @@ export default function CSDashboard() {
       return
     }
     const start = new Date(activeTicket.called_at)
-    const end = activeTicket.status === 'DONE' ? new Date(activeTicket.finished_at) : 
-    activeTicket.status === 'NO_SHOW' ? new Date(activeTicket.no_show_at) : new Date()
+    const end = activeTicket.status === 'DONE' ? new Date(activeTicket.finished_at) :
+      activeTicket.status === 'NO_SHOW' ? new Date(activeTicket.no_show_at) : new Date()
     const diff = end - start
     const minutes = Math.floor(diff / 60000)
     const seconds = Math.floor((diff % 60000) / 1000)
@@ -429,7 +429,7 @@ export default function CSDashboard() {
   }
   const timestamp = () => {
     const d = new Date(); const pad = (n) => String(n).padStart(2, '0')
-    return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
   }
   const exportCSV = async () => {
     try {
@@ -466,38 +466,44 @@ export default function CSDashboard() {
     <div className="page">
       <div className="w-full">
         <header>
-          <div className="container-antrian">
-            <h1 
-              style={{ color:'white', fontSize: 'var(--fs-700)', fontWeight: '700', marginBottom: 'var(--space-4)' }}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '1rem', background: '#fff', borderBottom: '1px solid #e2e8f0',
+            marginBottom: '1rem'
+          }}>
+            <h1
+              style={{ margin: 0, fontSize: '1.5rem', color: '#1e293b', fontWeight: 700 }}
             >DASHBOARD ANTRIAN</h1>
-            <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <select
                 value={selectedCounter}
                 onChange={(e) => {
                   setSelectedCounter(e.target.value)
-                  // Reset service selection when counter changes
                   setSelectedService('all')
                 }}
-                className="select"
+                style={{
+                  padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1',
+                  color: '#334155', fontSize: '14px'
+                }}
               >
                 <option value="all">All Counter</option>
                 {counters.map(counter => (
-                  <option key={counter.id} value={counter.id}>
-                    {counter.name}
-                  </option>
+                  <option key={counter.id} value={counter.id}>{counter.name}</option>
                 ))}
               </select>
               <select
                 value={selectedService === 'all' ? 'all' : selectedService?.id || ''}
                 onChange={(e) => {
-                  if (e.target.value === 'all') {
-                    setSelectedService('all')
-                  } else {
+                  if (e.target.value === 'all') { setSelectedService('all') }
+                  else {
                     const service = services.find(s => s.id === parseInt(e.target.value, 10))
                     setSelectedService(service || null)
                   }
                 }}
-                className="select"
+                style={{
+                  padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1',
+                  color: '#334155', fontSize: '14px'
+                }}
               >
                 <option value="all">All Services</option>
                 {services
@@ -507,9 +513,7 @@ export default function CSDashboard() {
                     return counter?.allowed_service_ids?.includes(service.id) || false
                   })
                   .map(service => (
-                    <option key={service.id} value={service.id}>
-                      {service.name} ({service.code_prefix})
-                    </option>
+                    <option key={service.id} value={service.id}>{service.name} ({service.code_prefix})</option>
                   ))}
               </select>
               <select
@@ -518,14 +522,14 @@ export default function CSDashboard() {
                   const building = buildings.find(b => b.id === parseInt(e.target.value, 10))
                   setSelectedBuilding(building || null)
                 }}
-                className="select"
-                style={{ minWidth: '150px' }}
+                style={{
+                  padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1',
+                  color: '#334155', fontSize: '14px', minWidth: '150px'
+                }}
               >
                 <option value="">All Buildings</option>
                 {buildings.map(building => (
-                  <option key={building.id} value={building.id}>
-                    {building.code}
-                  </option>
+                  <option key={building.id} value={building.id}>{building.code}</option>
                 ))}
               </select>
             </div>
@@ -676,11 +680,23 @@ export default function CSDashboard() {
 
             {/* Queue List */}
             <div className="surface-2">
-              <div className="flex items-center justify-between mb-4"> 
+              <div className="flex items-center justify-between mb-4">
                 <h2 style={{ fontSize: 'var(--fs-600)', fontWeight: '600', margin: 0 }}></h2>
-                <div className="flex items-center gap-2"> Download daftar antrian : 
-                  <button onClick={exportCSV} className="btn" title="Export current queue to CSV">
-                    CSV ⬇️
+                <div className="flex items-center gap-2" style={{ fontSize: '13px', color: '#64748b' }}>
+                  Download daftar antrian:
+                  <button
+                    onClick={exportCSV}
+                    title="Export current queue to CSV"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      background: '#fff', border: '1px solid #22c55e', borderRadius: '6px',
+                      padding: '4px 10px', fontSize: '13px', fontWeight: '500',
+                      color: '#16a34a', cursor: 'pointer'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f0fdf4'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                  >
+                    <Download size={14} /> CSV
                   </button>
                 </div>
               </div>
@@ -731,16 +747,17 @@ export default function CSDashboard() {
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4">
-                                <div style={{ 
-                                  fontSize: 'var(--fs-500)', 
-                                  fontWeight: '700' }}>{ticket.number}</div>
+                                <div style={{
+                                  fontSize: 'var(--fs-500)',
+                                  fontWeight: '700'
+                                }}>{ticket.number}</div>
                                 <div>
                                   <div style={{ fontWeight: '600' }}>
                                     {ticket.customer_name || ticket.queue_customer_name || 'Anonymous'}
                                   </div>
-                              <div>
-                              {ticket.service_name || 'General Service'}
-                              </div>
+                                  <div>
+                                    {ticket.service_name || 'General Service'}
+                                  </div>
 
                                   <div style={{ fontSize: 'var(--fs-300)', opacity: 0.7 }}>
                                     {toLocalTime(ticket.created_at)}

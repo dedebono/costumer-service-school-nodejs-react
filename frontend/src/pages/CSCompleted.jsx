@@ -5,13 +5,14 @@ import { api } from '../api'
 import { toLocalTime } from '../lib/utils'
 import Swal from 'sweetalert2'
 import Modal from '../components/modal.jsx'
+import { X, Download, RefreshCw } from 'lucide-react'
 
 const COMPLETED_SET = new Set(['NO_SHOW', 'DONE', 'CANCELED'])
 
 // Distinct badge styles for each completed status
 const STATUS_BADGE_STYLES = {
-  DONE:     { background: '#16a34a', color: '#ffffff' }, // green
-  NO_SHOW:  { background: '#f59e0b', color: '#111111' }, // amber
+  DONE: { background: '#16a34a', color: '#ffffff' }, // green
+  NO_SHOW: { background: '#f59e0b', color: '#111111' }, // amber
   CANCELED: { background: '#b91c1c', color: '#ffffff' }, // red
 }
 // Nice labels for UI
@@ -95,7 +96,7 @@ export default function CSCompleted() {
   }
   const timestamp = () => {
     const d = new Date(); const pad = (n) => String(n).padStart(2, '0')
-    return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
   }
   const exportCSV = async () => {
     try {
@@ -143,63 +144,88 @@ export default function CSCompleted() {
     <div className="page">
       <div className="w-full">
         <header>
-          <div className="container-antrian">
-            <h1>SELESAI</h1>
-            <select
-              value={selectedService === 'all' ? 'all' : selectedService?.id || ''}
-              onChange={(e) => {
-                if (e.target.value === 'all') {
-                  setSelectedService('all')
-                } else {
-                  const id = parseInt(e.target.value)
-                  const svc = services.find(s => s.id === id)
-                  setSelectedService(svc || null)
-                }
-              }}
-            style={{ display: 'inline-block',
-                color: 'var(--clr-text)',
-                padding: 'var(--space-2)',
-                border: '1px solid var(--clr-border)',
-                borderRadius: '4px',
-                background: 'var(--clr-bg)',
-                fontSize: 'var(--fs-400)',
-                minWidth: '200px',
-                width:'70%'
-         }}
-              title="Select service"
-            >
-              <option value="all">All Services</option>
-              {services.map(service => (
-                <option key={service.id} value={service.id}>
-                  {service.name} ({service.code_prefix})
-                </option>
-              ))}
-            </select>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '1rem', background: '#fff', borderBottom: '1px solid #e2e8f0',
+            marginBottom: '1rem'
+          }}>
+            <h1 style={{ margin: 0, fontSize: '1.5rem', color: '#1e293b', fontWeight: 700 }}>SELESAI</h1>
 
-            <div style={{ display:'flex',gap:'10px' , borderRadius:'10px' }}>
-              {/* Status filter: choose one status (or All) */}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <select
+                value={selectedService === 'all' ? 'all' : selectedService?.id || ''}
+                onChange={(e) => {
+                  if (e.target.value === 'all') { setSelectedService('all') }
+                  else {
+                    const id = parseInt(e.target.value)
+                    const svc = services.find(s => s.id === id)
+                    setSelectedService(svc || null)
+                  }
+                }}
+                style={{
+                  padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1',
+                  color: '#334155', fontSize: '14px', minWidth: '200px'
+                }}
+                title="Select service"
+              >
+                <option value="all">All Services</option>
+                {services.map(service => (
+                  <option key={service.id} value={service.id}>{service.name} ({service.code_prefix})</option>
+                ))}
+              </select>
+
               <select
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                className="select"
+                style={{
+                  padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1',
+                  color: '#334155', fontSize: '14px'
+                }}
                 title="Filter by status"
               >
-                <option value="ALL">All</option>
+                <option value="ALL">All Status</option>
                 <option value="DONE">Done</option>
                 <option value="NO_SHOW">No Show</option>
                 <option value="CANCELED">Cancelled</option>
               </select>
 
-              <button onClick={exportCSV} className="btn">Export</button>
-              <button onClick={loadCompleted} className="btn btn--primary btn--sm">Reload</button>
+              <button
+                onClick={exportCSV}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: '#fff', border: '1px solid #22c55e', borderRadius: '8px',
+                  padding: '8px 14px', fontSize: '13px', fontWeight: '500',
+                  color: '#16a34a', cursor: 'pointer'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#f0fdf4'}
+                onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+              >
+                <Download size={14} /> Export
+              </button>
+
+              <button
+                onClick={loadCompleted}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: '#fff', border: '1px solid #3b82f6', borderRadius: '8px',
+                  padding: '8px 14px', fontSize: '13px', fontWeight: '500',
+                  color: '#2563eb', cursor: 'pointer'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+              >
+                <RefreshCw size={14} /> Reload
+              </button>
             </div>
           </div>
         </header>
 
-        <main className="container-2" style={{ paddingTop: 'var(--space-6)', 
-          paddingBottom: 'var(--space-6)' , 
-          background: 'var(--clr-bg)' ,
-          height:'fit-content' }}>
+        <main className="container-2" style={{
+          paddingTop: 'var(--space-6)',
+          paddingBottom: 'var(--space-6)',
+          background: 'var(--clr-bg)',
+          height: 'fit-content'
+        }}>
           {error && (
             <div className="surface-2" style={{
               background: 'color-mix(in oklab, red 10%, var(--clr-bg))',
@@ -213,25 +239,27 @@ export default function CSCompleted() {
               <button
                 onClick={() => setError('')}
                 className="btn-icon"
-                style={{ position: 'absolute', top: 'var(--space-2)', 
-                  right: 'var(--space-2)', background: 'none', 
-                  border: 'none', fontSize: 'var(--fs-500)', cursor: 'pointer' }}
-              >×</button>
+                style={{
+                  position: 'absolute', top: 'var(--space-2)',
+                  right: 'var(--space-2)', background: 'none',
+                  border: 'none', fontSize: 'var(--fs-500)', cursor: 'pointer'
+                }}
+              ><X size={20} /></button>
             </div>
           )}
 
-          <div className="surface-2" style={{ 
-          padding: 'var(--space-4)' , 
-          border: '1px solid var(--clr-border)' ,
-          borderRadius: 'var(--space-2)',
-          background: 'var(--clr-bg)' ,
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' ,
-          marginBottom: 'var(--space-6)' ,
-          minHeight: '500px',
-          width:'100%' ,
-          boxSizing: 'border-box',
-          height:'100%'
-           }}>
+          <div className="surface-2" style={{
+            padding: 'var(--space-4)',
+            border: '1px solid var(--clr-border)',
+            borderRadius: 'var(--space-2)',
+            background: 'var(--clr-bg)',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+            marginBottom: 'var(--space-6)',
+            minHeight: '500px',
+            width: '100%',
+            boxSizing: 'border-box',
+            height: '100%'
+          }}>
             {/* colored counts */}
             <div className="flex items-center gap-3" style={{ marginBottom: 'var(--space-3)' }}>
               <span style={{ ...badgeBase, ...STATUS_BADGE_STYLES.DONE }}>{STATUS_LABEL.DONE}: {countByStatus.DONE}</span>

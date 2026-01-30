@@ -1,5 +1,5 @@
-// src/components/Modal.jsx
 import { useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
 
 export default function Modal({ open, title, onClose, children, footer }) {
   const dialogRef = useRef(null);
@@ -39,7 +39,7 @@ export default function Modal({ open, title, onClose, children, footer }) {
       >
         <header className="modal__header">
           <h3 id="modal-title" className="m-0">{title}</h3>
-          <button className="btn btn--ghost modal__close" aria-label="Close" onClick={onClose}>✕</button>
+          <button className="btn btn--ghost modal__close" aria-label="Close" onClick={onClose}><X size={20} /></button>
         </header>
         <div className="modal__body">{children}</div>
         {footer && <footer className="modal__footer">{footer}</footer>}

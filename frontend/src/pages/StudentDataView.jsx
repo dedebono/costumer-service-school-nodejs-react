@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import Swal from 'sweetalert2';
+import { Send, Check, X, AlertTriangle, Clock, Download, CheckCircle, XCircle } from 'lucide-react';
 import './StudentDataView.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -194,12 +195,12 @@ export default function StudentDataView() {
                         onClick={handleGenerateLink}
                         disabled={processing}
                     >
-                        📱 Kirim Link ke Orang Tua
+                        <Send size={18} style={{ marginRight: '0.5rem' }} /> Kirim Link ke Orang Tua
                     </button>
 
                     {hasActiveLink && (
                         <span className="link-status">
-                            ✅ Link aktif hingga {new Date(activeLinkExpires).toLocaleString('id-ID')}
+                            <CheckCircle size={16} style={{ marginRight: '0.35rem' }} /> Link aktif hingga {new Date(activeLinkExpires).toLocaleString('id-ID')}
                         </span>
                     )}
                 </div>
@@ -216,7 +217,7 @@ export default function StudentDataView() {
                             marginBottom: '1rem'
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+                                <AlertTriangle size={20} style={{ color: '#fbbf24' }} />
                                 <strong style={{ color: '#fbbf24' }}>Ada Data Pending dari Orang Tua</strong>
                                 {pendingData.submitted_at && (
                                     <span style={{ fontSize: '0.8rem', color: 'rgba(251, 191, 36, 0.8)' }}>
@@ -230,14 +231,14 @@ export default function StudentDataView() {
                                     onClick={handleApproveData}
                                     disabled={processing}
                                 >
-                                    ✅ Setujui Semua Perubahan
+                                    <Check size={16} style={{ marginRight: '0.35rem' }} /> Setujui Semua Perubahan
                                 </button>
                                 <button
                                     className="btn btn--danger"
                                     onClick={handleRejectData}
                                     disabled={processing}
                                 >
-                                    ❌ Tolak Semua Perubahan
+                                    <X size={16} style={{ marginRight: '0.35rem' }} /> Tolak Semua Perubahan
                                 </button>
                             </div>
                         </div>
@@ -250,7 +251,7 @@ export default function StudentDataView() {
                             {pendingData?.data?.name && pendingData.data.name !== applicant.name && (
                                 <div className="pending-value">
                                     <span className="pending-new">→ {pendingData.data.name}</span>
-                                    <span className="pending-badge">⏳ Menunggu</span>
+                                    <span className="pending-badge"><Clock size={12} style={{ marginRight: '0.25rem' }} /> Menunggu</span>
                                 </div>
                             )}
                         </div>
@@ -262,7 +263,7 @@ export default function StudentDataView() {
                             {pendingData?.data?.nisn && pendingData.data.nisn !== applicant.nisn && (
                                 <div className="pending-value">
                                     <span className="pending-new">→ {pendingData.data.nisn}</span>
-                                    <span className="pending-badge">⏳ Menunggu</span>
+                                    <span className="pending-badge"><Clock size={12} style={{ marginRight: '0.25rem' }} /> Menunggu</span>
                                 </div>
                             )}
                         </div>
@@ -274,7 +275,7 @@ export default function StudentDataView() {
                             {pendingData?.data?.birthdate && pendingData.data.birthdate !== (applicant.birthdate?.split('T')[0] || '') && (
                                 <div className="pending-value">
                                     <span className="pending-new">→ {pendingData.data.birthdate}</span>
-                                    <span className="pending-badge">⏳ Menunggu</span>
+                                    <span className="pending-badge"><Clock size={12} style={{ marginRight: '0.25rem' }} /> Menunggu</span>
                                 </div>
                             )}
                         </div>
@@ -286,7 +287,7 @@ export default function StudentDataView() {
                             {pendingData?.data?.parent_phone && pendingData.data.parent_phone !== applicant.parent_phone && (
                                 <div className="pending-value">
                                     <span className="pending-new">→ {pendingData.data.parent_phone}</span>
-                                    <span className="pending-badge">⏳ Menunggu</span>
+                                    <span className="pending-badge"><Clock size={12} style={{ marginRight: '0.25rem' }} /> Menunggu</span>
                                 </div>
                             )}
                         </div>
@@ -298,7 +299,7 @@ export default function StudentDataView() {
                             {pendingData?.data?.email && pendingData.data.email !== applicant.email && (
                                 <div className="pending-value">
                                     <span className="pending-new">→ {pendingData.data.email}</span>
-                                    <span className="pending-badge">⏳ Menunggu</span>
+                                    <span className="pending-badge"><Clock size={12} style={{ marginRight: '0.25rem' }} /> Menunggu</span>
                                 </div>
                             )}
                         </div>
@@ -310,7 +311,7 @@ export default function StudentDataView() {
                             {pendingData?.data?.address && pendingData.data.address !== applicant.address && (
                                 <div className="pending-value">
                                     <span className="pending-new">→ {pendingData.data.address}</span>
-                                    <span className="pending-badge">⏳ Menunggu</span>
+                                    <span className="pending-badge"><Clock size={12} style={{ marginRight: '0.25rem' }} /> Menunggu</span>
                                 </div>
                             )}
                         </div>
@@ -331,8 +332,8 @@ export default function StudentDataView() {
                                         <span className="doc-type">{doc.doc_key}</span>
                                         <span className="doc-name">{doc.original_filename || doc.filename}</span>
                                         <span className={`doc-status doc-status--${doc.status}`}>
-                                            {doc.status === 'pending' ? '⏳ Menunggu' :
-                                                doc.status === 'approved' ? '✅ Disetujui' : '❌ Ditolak'}
+                                            {doc.status === 'pending' ? <><Clock size={14} style={{ marginRight: '0.25rem' }} /> Menunggu</> :
+                                                doc.status === 'approved' ? <><CheckCircle size={14} style={{ marginRight: '0.25rem' }} /> Disetujui</> : <><XCircle size={14} style={{ marginRight: '0.25rem' }} /> Ditolak</>}
                                         </span>
                                     </div>
                                     <div className="doc-actions">
@@ -347,7 +348,7 @@ export default function StudentDataView() {
                                             }}
                                             onClick={() => handleDownload(doc.id)}
                                         >
-                                            📥 Download
+                                            <Download size={16} style={{ marginRight: '0.35rem' }} /> Download
                                         </button>
                                         {doc.status === 'pending' && (
                                             <>
@@ -355,13 +356,13 @@ export default function StudentDataView() {
                                                     className="btn btn--sm btn--success"
                                                     onClick={() => handleDocumentReview(doc.id, 'approved')}
                                                 >
-                                                    ✓
+                                                    <Check size={16} />
                                                 </button>
                                                 <button
                                                     className="btn btn--sm btn--danger"
                                                     onClick={() => handleDocumentReview(doc.id, 'rejected')}
                                                 >
-                                                    ✗
+                                                    <X size={16} />
                                                 </button>
                                             </>
                                         )}
