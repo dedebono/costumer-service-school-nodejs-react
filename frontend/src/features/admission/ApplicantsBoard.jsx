@@ -851,7 +851,7 @@ export default function ApplicantsBoard({ pipeline }) {
                     selectedApplicant.name || <em>Belum diisi</em>
                   )}
                 </div>
-                <div>
+                <div style={{ display: 'none' }}>
                   <strong>NISN:</strong>{' '}
                   {editMode === 'dataSiswa' ? (
                     <input
