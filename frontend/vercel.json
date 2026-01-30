@@ -1,9 +1,20 @@
 {
   "rewrites": [
-    { "source": "/login", "destination": "/index.html" },
-    { "source": "/(.*)", "destination": "/index.html" },
-
-    { "source": "/api/(.*)", "destination": "https://educsbackendmysql.ytcb.org/$1" },
-    { "source": "/models/(.*)", "destination": "https://educsbackendmysql.ytcb.org/$1" }
+    {
+      "source": "/api/(.*)",
+      "destination": "https://educsbackendmysql.ytcb.org/api/$1"
+    },
+    {
+      "source": "/models/(.*)",
+      "destination": "https://educsbackendmysql.ytcb.org/api/$1"
+    },
+    {
+      "source": "/uploads/(.*)",
+      "destination": "https://educsbackendmysql.ytcb.org/uploads/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
