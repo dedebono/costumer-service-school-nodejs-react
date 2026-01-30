@@ -637,20 +637,20 @@ export default function ApplicantsBoard({ pipeline }) {
                 selectedStepId === col.step.id
                   ? {}
                   : {
-                      maxWidth: '50px',
-                      maxHeight: '1.2rem',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      lineHeight: '1.2rem',
-                      verticalAlign: 'middle',
-                      textAlign: 'center',
-                      justifyContent: 'center',
-                      alignContent: 'center',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      display: 'inline-block',
-                    }
+                    maxWidth: '50px',
+                    maxHeight: '1.2rem',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    lineHeight: '1.2rem',
+                    verticalAlign: 'middle',
+                    textAlign: 'center',
+                    justifyContent: 'center',
+                    alignContent: 'center',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    display: 'inline-block',
+                  }
               }
             >
               {col.step.title}
@@ -716,6 +716,27 @@ export default function ApplicantsBoard({ pipeline }) {
                 </button>
                 <button className="btn btn--secondary" onClick={() => setEditMode('detail')}>
                   Update Detail
+                </button>
+                <button
+                  className="btn btn--outline"
+                  style={{ backgroundColor: '#25D366', color: '#fff', border: 'none' }}
+                  onClick={async () => {
+                    try {
+                      const result = await api(`/parent-upload/admin/generate/${selectedApplicant.id}`, { method: 'POST' });
+                      window.open(result.wa_url, '_blank');
+                      toast('success', 'Link berhasil dibuat');
+                    } catch (e) {
+                      swal.fire('Error', e.message || 'Gagal membuat link', 'error');
+                    }
+                  }}
+                >
+                  📱 Kirim Link
+                </button>
+                <button
+                  className="btn btn--outline"
+                  onClick={() => window.open(`/datasiswa/${selectedApplicant.id}`, '_blank')}
+                >
+                  👁️ Lihat Data
                 </button>
                 <button className="btn btn--primary" onClick={() => setSelectedApplicant(null)}>
                   Close
@@ -856,8 +877,8 @@ export default function ApplicantsBoard({ pipeline }) {
               <div>
                 <div style={{ marginTop: '0.5rem', display: 'grid', gap: '0.2rem' }}>
                   {stepDynamicDetails.map((detail) => (
-                    <div key={detail.id} style={{ marginBottom: '0.1rem' , padding:'0.1rem' , borderBottom:'1px solid #eee' }}>
-                      <label style={{ display: 'flex', flexDirection:'row', gap: '10px' }}>
+                    <div key={detail.id} style={{ marginBottom: '0.1rem', padding: '0.1rem', borderBottom: '1px solid #eee' }}>
+                      <label style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
                         <strong>
                           {detail.label}
                           {detail.required ? ' *' : ''}:
@@ -887,7 +908,7 @@ export default function ApplicantsBoard({ pipeline }) {
                                   [detail.key]: e.target.value,
                                 }))
                               }
-                              style={{ width: 'fit-content' , padding: '0.3rem' , fontFamily: 'inherit' , borderRadius:'8px', border:'1px solid #ccc'}}
+                              style={{ width: 'fit-content', padding: '0.3rem', fontFamily: 'inherit', borderRadius: '8px', border: '1px solid #ccc' }}
                             />
                           ) : detail.type === 'number' ? (
                             <input
@@ -946,7 +967,7 @@ export default function ApplicantsBoard({ pipeline }) {
                                   [detail.key]: e.target.value,
                                 }))
                               }
-                              style={{ width: 'fit-content' , padding: '0.3rem' , fontFamily: 'inherit' , borderRadius:'8px', border:'1px solid #ccc'}}
+                              style={{ width: 'fit-content', padding: '0.3rem', fontFamily: 'inherit', borderRadius: '8px', border: '1px solid #ccc' }}
                             />
                           )
                         ) : (

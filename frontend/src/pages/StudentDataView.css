@@ -1,0 +1,430 @@
+/* Student Data View Page - Matching Landing Page Style */
+
+/* Base layout - matching landing page dark blue theme */
+.student-data-page {
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+    background: linear-gradient(135deg, #0a1628 0%, #143258 50%, #1a4a7c 100%);
+    padding: 2rem 1.5rem;
+    padding-top: 1.5rem;
+}
+
+/* Animated Background */
+.student-data-page::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 80% 60% at 50% -20%, rgba(38, 77, 161, 0.4) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 100% 50%, rgba(247, 185, 23, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 50% at 0% 80%, rgba(38, 77, 161, 0.25) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.student-data-page::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.student-data-container {
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+/* Header */
+.page-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    font-weight: 800;
+    margin: 0;
+    background: linear-gradient(135deg, #ffffff 0%, #cbe2f0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.btn-back {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: rgba(203, 226, 240, 0.9);
+    cursor: pointer;
+    padding: 0.6rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+/* Actions Bar */
+.actions-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.link-status {
+    font-size: 0.85rem;
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.75rem 1.25rem;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn--primary {
+    background: linear-gradient(135deg, #f7b917 0%, #e5a913 100%);
+    color: #0a1628;
+    box-shadow: 0 4px 15px rgba(247, 185, 23, 0.3);
+}
+
+.btn--primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(247, 185, 23, 0.4);
+}
+
+.btn--success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #fff;
+}
+
+.btn--success:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.btn--danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: #fff;
+}
+
+.btn--danger:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.btn--outline {
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid #f7b917;
+    color: #f7b917;
+    font-weight: 600;
+}
+
+.btn--outline:hover {
+    background: rgba(247, 185, 23, 0.2);
+    color: #ffd700;
+}
+
+.btn--sm {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Pending Alert */
+.pending-alert {
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(12px);
+}
+
+.pending-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.pending-icon {
+    font-size: 1.25rem;
+}
+
+.pending-header strong {
+    flex: 1;
+    color: #fbbf24;
+    font-size: 1rem;
+}
+
+.pending-time {
+    font-size: 0.8rem;
+    color: rgba(251, 191, 36, 0.8);
+}
+
+.pending-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 600px) {
+    .pending-comparison {
+        grid-template-columns: 1fr;
+    }
+}
+
+.pending-col {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.pending-col h4 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem;
+    color: rgba(203, 226, 240, 0.9);
+}
+
+.pending-col--new {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.pending-col--new h4 {
+    color: #34d399;
+}
+
+.pending-col ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.85rem;
+}
+
+.pending-col li {
+    padding: 0.25rem 0;
+    color: rgba(203, 226, 240, 0.8);
+}
+
+.pending-col li strong {
+    color: #fff;
+}
+
+.pending-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* Data Card - Glassmorphism */
+.data-card {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.data-card h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0 0 1rem;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.data-card h2::before {
+    content: '';
+    width: 4px;
+    height: 1.1rem;
+    background: linear-gradient(180deg, #f7b917 0%, #e5a913 100%);
+    border-radius: 2px;
+}
+
+/* Info Grid */
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 500px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.info-item--full {
+    grid-column: 1 / -1;
+}
+
+.info-item label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(203, 226, 240, 0.6);
+}
+
+.info-item span {
+    font-size: 0.95rem;
+    color: #fff;
+}
+
+/* Pending Value Display */
+.pending-value {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.pending-new {
+    font-size: 0.9rem;
+    color: #34d399;
+    font-weight: 500;
+}
+
+.pending-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+    padding: 0.2rem 0.5rem;
+    border-radius: 8px;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+/* Documents List */
+.no-docs {
+    color: rgba(203, 226, 240, 0.6);
+    font-style: italic;
+    margin: 0;
+}
+
+.documents-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.document-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    gap: 1rem;
+    flex-wrap: wrap;
+    transition: all 0.2s ease;
+}
+
+.document-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.doc-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    flex-wrap: wrap;
+}
+
+.doc-type {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: rgba(247, 185, 23, 0.2);
+    color: #f7b917;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+}
+
+.doc-name {
+    font-size: 0.9rem;
+    color: rgba(203, 226, 240, 0.9);
+    flex: 1;
+    min-width: 150px;
+}
+
+.doc-status {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.doc-status--pending {
+    color: #fbbf24;
+}
+
+.doc-status--approved {
+    color: #34d399;
+}
+
+.doc-status--rejected {
+    color: #f87171;
+}
+
+.doc-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Loading/Error */
+.loading,
+.error {
+    text-align: center;
+    padding: 3rem;
+    color: rgba(203, 226, 240, 0.8);
+    font-size: 1rem;
+}
+
+.error {
+    color: #f87171;
+}

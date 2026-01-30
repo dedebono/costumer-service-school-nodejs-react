@@ -199,6 +199,160 @@ function setApplicantDynamicDetails(applicantId, details) {
   });
 }
 
+// =====================
+// Document Management
+// =====================
+
+function getApplicantDocuments(applicantId) {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT id, applicant_id, doc_key, filename, url, mime, original_filename,
+             status, reviewed_by, reviewed_at, uploaded_at
+      FROM applicant_documents 
+      WHERE applicant_id = ?
+      ORDER BY uploaded_at DESC`;
+    db.query(sql, [applicantId], (err, results) => {
+      if (err) reject(err);
+      else resolve(results);
+    });
+  });
+}
+
+function addApplicantDocument(applicantId, docKey, filename, url, mime, originalFilename) {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      INSERT INTO applicant_documents (applicant_id, doc_key, filename, url, mime, original_filename, status)
+      VALUES (?, ?, ?, ?, ?, ?, 'pending')
+      ON DUPLICATE KEY UPDATE 
+        filename = VALUES(filename),
+        url = VALUES(url),
+        mime = VALUES(mime),
+        original_filename = VALUES(original_filename),
+        status = 'pending',
+        reviewed_by = NULL,
+        reviewed_at = NULL,
+        uploaded_at = CURRENT_TIMESTAMP`;
+    db.query(sql, [applicantId, docKey, filename, url, mime, originalFilename], (err, result) => {
+      if (err) reject(err);
+      else resolve({ id: result.insertId, applicant_id: applicantId, doc_key: docKey });
+    });
+  });
+}
+
+function updateDocumentStatus(docId, status, reviewedBy) {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      UPDATE applicant_documents 
+      SET status = ?, reviewed_by = ?, reviewed_at = NOW()
+      WHERE id = ?`;
+    db.query(sql, [status, reviewedBy, docId], (err, result) => {
+      if (err) reject(err);
+      else resolve(true);
+    });
+  });
+}
+
+function getDocumentById(docId) {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT * FROM applicant_documents WHERE id = ?`;
+    db.query(sql, [docId], (err, results) => {
+      if (err) reject(err);
+      else resolve(results[0] || null);
+    });
+  });
+}
+
+// =====================
+// Pending Data Management
+// =====================
+
+function savePendingData(applicantId, pendingData) {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      UPDATE applicants 
+      SET pending_data = ?, pending_data_at = NOW(), updated_at = NOW()
+      WHERE id = ?`;
+    db.query(sql, [JSON.stringify(pendingData), applicantId], (err, result) => {
+      if (err) reject(err);
+      else resolve(true);
+    });
+  });
+}
+
+function getPendingData(applicantId) {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT pending_data, pending_data_at FROM applicants WHERE id = ?`;
+    db.query(sql, [applicantId], (err, results) => {
+      if (err) {
+        console.error('[getPendingData] Query error:', err);
+        return reject(err);
+      }
+      const row = results[0];
+      if (!row) {
+        return resolve(null);
+      }
+
+      // MySQL2 auto-parses JSON columns, so it might already be an object
+      let data = row.pending_data;
+      if (typeof data === 'string' && data) {
+        try {
+          data = JSON.parse(data);
+        } catch (e) {
+          console.error('[getPendingData] JSON parse error:', e);
+          data = null;
+        }
+      }
+
+      resolve({ data, submitted_at: row.pending_data_at });
+    });
+  });
+}
+
+function clearPendingData(applicantId) {
+  return new Promise((resolve, reject) => {
+    const sql = `UPDATE applicants SET pending_data = NULL, pending_data_at = NULL WHERE id = ?`;
+    db.query(sql, [applicantId], (err, result) => {
+      if (err) reject(err);
+      else resolve(true);
+    });
+  });
+}
+
+function approvePendingData(applicantId) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const pending = await getPendingData(applicantId);
+      if (!pending || !pending.data) {
+        return resolve(false);
+      }
+
+      const { name, nisn, birthdate, parent_phone, email, address, notes } = pending.data;
+
+      // Update applicant with pending data
+      const sql = `
+        UPDATE applicants 
+        SET name = COALESCE(?, name),
+            nisn = COALESCE(?, nisn),
+            birthdate = COALESCE(?, birthdate),
+            parent_phone = COALESCE(?, parent_phone),
+            email = COALESCE(?, email),
+            address = COALESCE(?, address),
+            notes = COALESCE(?, notes),
+            pending_data = NULL,
+            pending_data_at = NULL,
+            updated_at = NOW()
+        WHERE id = ?`;
+
+      db.query(sql, [name, nisn, birthdate, parent_phone, email, address, notes, applicantId], (err, result) => {
+        if (err) reject(err);
+        else resolve(true);
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
 module.exports = {
   getApplicantById,
   getApplicantsByPipeline,
@@ -214,4 +368,14 @@ module.exports = {
   setApplicantDynamicDetail,
   setApplicantDynamicDetails,
   checkRequiredDynamicDetailsFilled,
+  // Document management
+  getApplicantDocuments,
+  addApplicantDocument,
+  updateDocumentStatus,
+  getDocumentById,
+  // Pending data management
+  savePendingData,
+  getPendingData,
+  clearPendingData,
+  approvePendingData,
 };

@@ -9,6 +9,8 @@ import OptionKiosk from './pages/OptionKiosk.jsx';
 import FormKiosk from './pages/FormKiosk.jsx';
 import QueueKiosk from './pages/QueueKiosk.jsx';
 import LandingPage from './pages/LandingPage.jsx';
+import ParentUpload from './pages/ParentUpload.jsx';
+import StudentDataView from './pages/StudentDataView.jsx';
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -23,6 +25,20 @@ export default function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
+
+          {/* Public parent upload page (token-based access) */}
+          <Route path="/parent-upload/:token" element={<ParentUpload />} />
+
+          {/* Protected student data view for admin */}
+          <Route
+            path="/datasiswa/:applicantId"
+            element={
+              <Protected roles={['ADMIN', 'Supervisor', 'CustomerService']}>
+                <StudentDataView />
+              </Protected>
+            }
+          />
+
           <Route
             path="/supervisor/*"
             element={
@@ -59,3 +75,4 @@ export default function App() {
     </div>
   );
 }
+

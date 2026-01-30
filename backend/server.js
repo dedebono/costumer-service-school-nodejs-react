@@ -19,6 +19,8 @@ const adminRoutes = require('./src/routes/adminRoutes');
 const buildingRoutes = require('./src/routes/buildingRoutes');
 const queueGroupRoutes = require('./src/routes/queueGroupRoutes');
 const mailerRoutes = require('./src/routes/mailerRoutes');
+const parentUploadRoutes = require('./src/routes/parentUploadRoutes');
+const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -36,7 +38,7 @@ app.use(express.json());
 
 // Swagger (opsional)
 if (openapi) {
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapi));
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapi));
 }
 
 // Routes
@@ -54,6 +56,10 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/buildings', buildingRoutes);
 app.use('/api/queue-groups', queueGroupRoutes);
 app.use('/api/mailer', mailerRoutes);
+app.use('/api/parent-upload', parentUploadRoutes);
+
+// Static file serving for uploaded documents
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 // Health check
