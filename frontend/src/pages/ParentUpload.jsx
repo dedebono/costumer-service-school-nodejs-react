@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { XCircle, Clock, Save, Upload, FolderOpen, Info, CheckCircle, FileEdit, CreditCard, FileText, Users, GraduationCap, ClipboardList, Camera, Paperclip, Check } from 'lucide-react';
 import './ParentUpload.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 export default function ParentUpload() {
     const { token } = useParams();

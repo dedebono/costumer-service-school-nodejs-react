@@ -5,7 +5,7 @@ import Swal from 'sweetalert2';
 import { Send, Check, X, AlertTriangle, Clock, Download, CheckCircle, XCircle } from 'lucide-react';
 import './StudentDataView.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 export default function StudentDataView() {
     const { applicantId } = useParams();
